@@ -13,7 +13,16 @@ export default function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
-    console.log("[ProtectedRoute] Auth state:", { user: !!user, loading });
+    console.log("[ProtectedRoute] Auth state:", {
+      user: user
+        ? {
+            id: user.id,
+            email: user.email,
+            lastSignIn: user.last_sign_in_at,
+          }
+        : null,
+      loading,
+    });
 
     if (!loading && !user) {
       console.log("[ProtectedRoute] No user found, redirecting to login");
@@ -23,7 +32,14 @@ export default function ProtectedRoute({
 
   if (loading) {
     console.log("[ProtectedRoute] Still loading, showing loading state");
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
