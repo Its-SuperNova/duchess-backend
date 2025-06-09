@@ -13,18 +13,24 @@ export default function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
+    console.log("[ProtectedRoute] Auth state:", { user: !!user, loading });
+
     if (!loading && !user) {
+      console.log("[ProtectedRoute] No user found, redirecting to login");
       router.push("/login");
     }
   }, [user, loading, router]);
 
   if (loading) {
-    return <div>Loading...</div>; // Or a loading spinner
+    console.log("[ProtectedRoute] Still loading, showing loading state");
+    return <div>Loading...</div>;
   }
 
   if (!user) {
+    console.log("[ProtectedRoute] No user, returning null");
     return null;
   }
 
+  console.log("[ProtectedRoute] User authenticated, rendering children");
   return <>{children}</>;
 }

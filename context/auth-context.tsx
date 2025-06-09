@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const fetchUserAndProfile = async () => {
       try {
         setLoading(true);
+        console.log("[Auth] Starting to fetch user and profile");
 
         // Get current session
         const {
@@ -40,14 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error("Session error:", sessionError.message);
+          console.error("[Auth] Session error:", sessionError.message);
+          setLoading(false);
           return;
         }
 
         if (!session) {
-          console.log("No active session");
+          console.log("[Auth] No active session found");
+          setLoading(false);
           return;
         }
+
+        console.log("[Auth] Session found:", session.user.id);
 
         // Set user from session
         setUser(session.user);
@@ -60,15 +65,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (profileError) {
-          console.error("Profile fetch error:", profileError.message);
+          console.error("[Auth] Profile fetch error:", profileError.message);
+          setLoading(false);
           return;
         }
 
+        console.log("[Auth] Profile loaded successfully:", profileData);
         setProfile(profileData);
-        console.log("Profile loaded:", profileData);
       } catch (error) {
-        console.error("Auth context initialization error:", error);
+        console.error("[Auth] Context initialization error:", error);
       } finally {
+        console.log("[Auth] Finished loading state");
         setLoading(false);
       }
     };
