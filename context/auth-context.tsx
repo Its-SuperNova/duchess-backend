@@ -29,8 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user and profile on mount
   useEffect(() => {
+    let mounted = true;
+
     const fetchUserAndProfile = async () => {
       try {
+        if (!mounted) return;
         setLoading(true);
         console.log("[Auth] Starting to fetch user and profile");
 
@@ -42,20 +45,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (sessionError) {
           console.error("[Auth] Session error:", sessionError.message);
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+            setUser(null);
+            setProfile(null);
+          }
           return;
         }
 
         if (!session) {
           console.log("[Auth] No active session found");
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+            setUser(null);
+            setProfile(null);
+          }
           return;
         }
 
         console.log("[Auth] Session found:", session.user.id);
 
         // Set user from session
-        setUser(session.user);
+        if (mounted) {
+          setUser(session.user);
+        }
 
         // Fetch profile data
         const { data: profileData, error: profileError } = await supabase
@@ -66,17 +79,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) {
           console.error("[Auth] Profile fetch error:", profileError.message);
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+          }
           return;
         }
 
         console.log("[Auth] Profile loaded successfully:", profileData);
-        setProfile(profileData);
+        if (mounted) {
+          setProfile(profileData);
+          setLoading(false);
+        }
       } catch (error) {
         console.error("[Auth] Context initialization error:", error);
-      } finally {
-        console.log("[Auth] Finished loading state");
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setUser(null);
+          setProfile(null);
+        }
       }
     };
 
@@ -85,10 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event);
+        console.log("[Auth] Auth state changed:", event);
 
         if (event === "SIGNED_IN" && session) {
-          setUser(session.user);
+          if (mounted) {
+            setUser(session.user);
+            setLoading(true);
+          }
 
           // Fetch profile after sign in
           const { data: profile, error } = await supabase
@@ -99,23 +122,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (error) {
             console.error(
-              "Error fetching profile after sign in:",
+              "[Auth] Error fetching profile after sign in:",
               error.message
             );
-          } else {
+          } else if (mounted) {
             setProfile(profile);
+            setLoading(false);
           }
 
           router.refresh();
         } else if (event === "SIGNED_OUT") {
-          setUser(null);
-          setProfile(null);
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+          }
           router.push("/login");
         }
       }
     );
 
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
   }, [supabase, router]);
