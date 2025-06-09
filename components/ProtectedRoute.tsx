@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuth } from "@/context/auth-context";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 
 export default function ProtectedRoute({
   children,
@@ -13,44 +13,31 @@ export default function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
-    console.log("[ProtectedRoute] Auth state update:", {
-      hasUser: !!user,
-      loading,
-      userDetails: user
-        ? {
-            id: user.id,
-            email: user.email,
-            lastSignIn: user.last_sign_in_at,
-          }
-        : null,
-    });
-
     if (!loading && !user) {
-      console.log("[ProtectedRoute] No user found, redirecting to login");
+      console.warn("[ProtectedRoute] Redirecting: user not authenticated.");
       router.push("/login");
     }
   }, [user, loading, router]);
 
-  // Only show loading state if we're loading AND don't have a user
+  // Case 1: Still checking auth (show loading)
   if (loading && !user) {
-    console.log("[ProtectedRoute] Initial loading state, showing spinner");
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">
+            Checking authentication...
+          </p>
         </div>
       </div>
     );
   }
 
-  // If we have a user but still loading (probably fetching profile), render children
+  // Case 2: Authenticated user, render the protected content
   if (user) {
-    console.log("[ProtectedRoute] User present, rendering children");
     return <>{children}</>;
   }
 
-  // If no user and not loading, return null (will trigger redirect in useEffect)
-  console.log("[ProtectedRoute] No user and not loading, returning null");
+  // Case 3: Not loading and no user — just return null while redirect happens
   return null;
 }

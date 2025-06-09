@@ -17,32 +17,56 @@ import {
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
+// Reusable Empty State Component
+const EmptyState = ({
+  icon: Icon,
+  message,
+  buttonText,
+  buttonHref,
+}: {
+  icon: React.ElementType;
+  message: string;
+  buttonText: string;
+  buttonHref: string;
+}) => (
+  <div className="text-center py-8">
+    <Icon className="mx-auto h-12 w-12 text-gray-300" />
+    <p className="mt-2 text-gray-500">{message}</p>
+    <Button variant="outline" className="mt-4" asChild>
+      <Link href={buttonHref}>{buttonText}</Link>
+    </Button>
+  </div>
+);
+
 export default function ProfilePage() {
   const { profile, loading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Handle hydration mismatch
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Log profile state changes
+  useEffect(() => {
+    if (!loading && profile) {
+      setIsLoading(false);
+    }
+  }, [loading, profile]);
+
   useEffect(() => {
     console.log("[Profile] State update:", {
       hasProfile: !!profile,
       loading,
+      isLoading,
       profileId: profile?.id,
       fullName: profile?.full_name,
     });
-  }, [profile, loading]);
+  }, [profile, loading, isLoading]);
 
-  if (!isClient) {
-    return null; // Prevent hydration mismatch
-  }
+  if (!isClient) return null;
 
-  if (loading && !profile) {
-    console.log("[Profile] Initial loading state");
+  if (isLoading) {
     return (
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8 flex flex-col items-center space-y-4 md:flex-row md:items-start md:space-x-6 md:space-y-0">
@@ -85,11 +109,21 @@ export default function ProfilePage() {
             </p>
             <div className="flex justify-center md:justify-start">
               <Link href="/profile/edit">
-                <Button variant="outline" size="sm" className="mr-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Edit Profile"
+                  className="mr-2"
+                >
                   Edit Profile
                 </Button>
               </Link>
-              <Button variant="outline" size="sm" onClick={signOut}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                aria-label="Logout"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </Button>
@@ -97,36 +131,32 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs
-          defaultValue="overview"
-          className="mb-6"
-          value={activeTab}
-          onValueChange={setActiveTab}
-        >
+        {/* Tabs Section */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">
               <User className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Overview</span>
+              <span className="text-xs sm:text-sm">Overview</span>
             </TabsTrigger>
             <TabsTrigger value="orders">
               <ShoppingBag className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Orders</span>
+              <span className="text-xs sm:text-sm">Orders</span>
             </TabsTrigger>
             <TabsTrigger value="addresses">
               <MapPin className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Addresses</span>
+              <span className="text-xs sm:text-sm">Addresses</span>
             </TabsTrigger>
             <TabsTrigger value="wishlist">
               <Heart className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Wishlist</span>
+              <span className="text-xs sm:text-sm">Wishlist</span>
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
+              <span className="text-xs sm:text-sm">Settings</span>
             </TabsTrigger>
           </TabsList>
 
+          {/* Overview */}
           <TabsContent value="overview" className="mt-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="rounded-lg border bg-card p-6 shadow-sm">
@@ -167,32 +197,30 @@ export default function ProfilePage() {
 
               <div className="rounded-lg border bg-card p-6 shadow-sm">
                 <h3 className="mb-4 text-lg font-medium">Recent Orders</h3>
-                <div className="text-center py-8">
-                  <ShoppingBag className="mx-auto h-12 w-12 text-gray-300" />
-                  <p className="mt-2 text-gray-500">No recent orders</p>
-                  <Button variant="outline" className="mt-4">
-                    <Link href="/categories">Start Shopping</Link>
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={ShoppingBag}
+                  message="No recent orders"
+                  buttonText="Start Shopping"
+                  buttonHref="/categories"
+                />
               </div>
             </div>
           </TabsContent>
 
+          {/* Orders */}
           <TabsContent value="orders">
             <div className="rounded-lg border bg-card p-6 shadow-sm">
               <h3 className="mb-4 text-lg font-medium">Your Orders</h3>
-              <div className="text-center py-8">
-                <ShoppingBag className="mx-auto h-12 w-12 text-gray-300" />
-                <p className="mt-2 text-gray-500">
-                  You haven't placed any orders yet
-                </p>
-                <Button variant="outline" className="mt-4">
-                  <Link href="/categories">Browse Products</Link>
-                </Button>
-              </div>
+              <EmptyState
+                icon={ShoppingBag}
+                message="You haven't placed any orders yet"
+                buttonText="Browse Products"
+                buttonHref="/categories"
+              />
             </div>
           </TabsContent>
 
+          {/* Addresses */}
           <TabsContent value="addresses">
             <div className="rounded-lg border bg-card p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
@@ -201,26 +229,29 @@ export default function ProfilePage() {
                   <Button size="sm">Add New Address</Button>
                 </Link>
               </div>
-              <div className="text-center py-8">
-                <MapPin className="mx-auto h-12 w-12 text-gray-300" />
-                <p className="mt-2 text-gray-500">No addresses saved</p>
-              </div>
+              <EmptyState
+                icon={MapPin}
+                message="No addresses saved"
+                buttonText="Add Address"
+                buttonHref="/profile/addresses/new"
+              />
             </div>
           </TabsContent>
 
+          {/* Wishlist */}
           <TabsContent value="wishlist">
             <div className="rounded-lg border bg-card p-6 shadow-sm">
               <h3 className="mb-4 text-lg font-medium">Your Wishlist</h3>
-              <div className="text-center py-8">
-                <Heart className="mx-auto h-12 w-12 text-gray-300" />
-                <p className="mt-2 text-gray-500">Your wishlist is empty</p>
-                <Button variant="outline" className="mt-4">
-                  <Link href="/categories">Discover Products</Link>
-                </Button>
-              </div>
+              <EmptyState
+                icon={Heart}
+                message="Your wishlist is empty"
+                buttonText="Discover Products"
+                buttonHref="/categories"
+              />
             </div>
           </TabsContent>
 
+          {/* Settings */}
           <TabsContent value="settings">
             <div className="rounded-lg border bg-card p-6 shadow-sm">
               <h3 className="mb-4 text-lg font-medium">Account Settings</h3>
@@ -246,8 +277,8 @@ export default function ProfilePage() {
                       Change your password
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Change
+                  <Button variant="outline" size="sm" disabled>
+                    Coming Soon
                   </Button>
                 </div>
 
@@ -258,8 +289,8 @@ export default function ProfilePage() {
                       Manage your notification preferences
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Configure
+                  <Button variant="outline" size="sm" disabled>
+                    Coming Soon
                   </Button>
                 </div>
               </div>
