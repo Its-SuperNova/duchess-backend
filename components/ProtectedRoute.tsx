@@ -13,15 +13,16 @@ export default function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
-    console.log("[ProtectedRoute] Auth state:", {
-      user: user
+    console.log("[ProtectedRoute] Auth state update:", {
+      hasUser: !!user,
+      loading,
+      userDetails: user
         ? {
             id: user.id,
             email: user.email,
             lastSignIn: user.last_sign_in_at,
           }
         : null,
-      loading,
     });
 
     if (!loading && !user) {
@@ -30,8 +31,9 @@ export default function ProtectedRoute({
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    console.log("[ProtectedRoute] Still loading, showing loading state");
+  // Only show loading state if we're loading AND don't have a user
+  if (loading && !user) {
+    console.log("[ProtectedRoute] Initial loading state, showing spinner");
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -42,11 +44,13 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!user) {
-    console.log("[ProtectedRoute] No user, returning null");
-    return null;
+  // If we have a user but still loading (probably fetching profile), render children
+  if (user) {
+    console.log("[ProtectedRoute] User present, rendering children");
+    return <>{children}</>;
   }
 
-  console.log("[ProtectedRoute] User authenticated, rendering children");
-  return <>{children}</>;
+  // If no user and not loading, return null (will trigger redirect in useEffect)
+  console.log("[ProtectedRoute] No user and not loading, returning null");
+  return null;
 }

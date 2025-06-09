@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fetch user and profile on mount
   useEffect(() => {
     let mounted = true;
+    let sessionFetchTimeout: NodeJS.Timeout;
 
     const fetchUserAndProfile = async () => {
       try {
@@ -37,11 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         console.log("[Auth] Starting to fetch user and profile");
 
+        // Add timeout for session fetch
+        sessionFetchTimeout = setTimeout(() => {
+          console.warn("[Auth] Session fetch taking longer than expected");
+        }, 5000);
+
         // Get current session
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
+
+        clearTimeout(sessionFetchTimeout);
 
         if (sessionError) {
           console.error("[Auth] Session error:", sessionError.message);
@@ -53,6 +61,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        console.log("[Auth] Session fetch complete:", {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          email: session?.user?.email,
+          lastSignIn: session?.user?.last_sign_in_at,
+        });
+
         if (!session) {
           console.log("[Auth] No active session found");
           if (mounted) {
@@ -63,32 +78,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        console.log("[Auth] Session found:", session.user.id);
-
         // Set user from session
         if (mounted) {
+          console.log("[Auth] Setting user from session");
           setUser(session.user);
         }
 
-        // Fetch profile data
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+        try {
+          console.log("[Auth] Starting profile fetch");
+          // Fetch profile data
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
 
-        if (profileError) {
-          console.error("[Auth] Profile fetch error:", profileError.message);
+          if (profileError) {
+            console.error("[Auth] Profile fetch error:", profileError.message);
+            if (mounted) {
+              setLoading(false);
+              setProfile(null);
+            }
+            return;
+          }
+
+          console.log("[Auth] Profile fetch complete:", {
+            hasProfile: !!profileData,
+            profileId: profileData?.id,
+            fullName: profileData?.full_name,
+          });
+
           if (mounted) {
+            setProfile(profileData);
             setLoading(false);
           }
-          return;
-        }
-
-        console.log("[Auth] Profile loaded successfully:", profileData);
-        if (mounted) {
-          setProfile(profileData);
-          setLoading(false);
+        } catch (error) {
+          console.error("[Auth] Profile fetch error:", error);
+          if (mounted) {
+            setLoading(false);
+            setProfile(null);
+          }
         }
       } catch (error) {
         console.error("[Auth] Context initialization error:", error);
@@ -105,33 +134,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("[Auth] Auth state changed:", event);
+        console.log("[Auth] Auth state changed:", {
+          event,
+          hasSession: !!session,
+          userId: session?.user?.id,
+        });
 
         if (event === "SIGNED_IN" && session) {
           if (mounted) {
+            console.log("[Auth] Setting user from SIGNED_IN event");
             setUser(session.user);
-            setLoading(true);
           }
 
-          // Fetch profile after sign in
-          const { data: profile, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
+          try {
+            console.log("[Auth] Starting profile fetch after sign in");
+            // Fetch profile after sign in
+            const { data: profile, error } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
 
-          if (error) {
-            console.error(
-              "[Auth] Error fetching profile after sign in:",
-              error.message
-            );
-          } else if (mounted) {
-            setProfile(profile);
-            setLoading(false);
+            if (error) {
+              console.error(
+                "[Auth] Error fetching profile after sign in:",
+                error.message
+              );
+              if (mounted) {
+                setLoading(false);
+              }
+            } else {
+              console.log("[Auth] Profile fetch complete after sign in:", {
+                hasProfile: !!profile,
+                profileId: profile?.id,
+                fullName: profile?.full_name,
+              });
+              if (mounted) {
+                setProfile(profile);
+                setLoading(false);
+              }
+            }
+          } catch (error) {
+            console.error("[Auth] Error in profile fetch:", error);
+            if (mounted) {
+              setLoading(false);
+            }
           }
 
           router.refresh();
         } else if (event === "SIGNED_OUT") {
+          console.log("[Auth] Handling SIGNED_OUT event");
           if (mounted) {
             setUser(null);
             setProfile(null);
@@ -144,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(sessionFetchTimeout);
       authListener.subscription.unsubscribe();
     };
   }, [supabase, router]);
