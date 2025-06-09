@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/auth-context";
@@ -20,8 +20,29 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 export default function ProfilePage() {
   const { profile, loading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isClient, setIsClient] = useState(false);
 
-  if (loading) {
+  // Handle hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Log profile state changes
+  useEffect(() => {
+    console.log("[Profile] State update:", {
+      hasProfile: !!profile,
+      loading,
+      profileId: profile?.id,
+      fullName: profile?.full_name,
+    });
+  }, [profile, loading]);
+
+  if (!isClient) {
+    return null; // Prevent hydration mismatch
+  }
+
+  if (loading && !profile) {
+    console.log("[Profile] Initial loading state");
     return (
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8 flex flex-col items-center space-y-4 md:flex-row md:items-start md:space-x-6 md:space-y-0">

@@ -31,6 +31,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let sessionFetchTimeout: NodeJS.Timeout;
+    let profileFetchTimeout: NodeJS.Timeout;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+
+    const fetchProfile = async (userId: string) => {
+      try {
+        console.log("[Auth] Starting profile fetch attempt", { retryCount });
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+
+        if (profileError) {
+          console.error("[Auth] Profile fetch error:", profileError.message);
+          if (mounted) {
+            setLoading(false);
+            setProfile(null);
+          }
+          return null;
+        }
+
+        console.log("[Auth] Profile fetch complete:", {
+          hasProfile: !!profileData,
+          profileId: profileData?.id,
+          fullName: profileData?.full_name,
+        });
+
+        if (mounted) {
+          setProfile(profileData);
+          setLoading(false);
+        }
+        return profileData;
+      } catch (error) {
+        console.error("[Auth] Profile fetch error:", error);
+        if (mounted) {
+          setLoading(false);
+          setProfile(null);
+        }
+        return null;
+      }
+    };
 
     const fetchUserAndProfile = async () => {
       try {
@@ -84,40 +126,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user);
         }
 
-        try {
-          console.log("[Auth] Starting profile fetch");
-          // Fetch profile data
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
+        // Add timeout for profile fetch
+        profileFetchTimeout = setTimeout(() => {
+          console.warn("[Auth] Profile fetch taking longer than expected");
+        }, 5000);
 
-          if (profileError) {
-            console.error("[Auth] Profile fetch error:", profileError.message);
-            if (mounted) {
-              setLoading(false);
-              setProfile(null);
-            }
-            return;
-          }
+        const profile = await fetchProfile(session.user.id);
+        clearTimeout(profileFetchTimeout);
 
-          console.log("[Auth] Profile fetch complete:", {
-            hasProfile: !!profileData,
-            profileId: profileData?.id,
-            fullName: profileData?.full_name,
-          });
-
-          if (mounted) {
-            setProfile(profileData);
-            setLoading(false);
-          }
-        } catch (error) {
-          console.error("[Auth] Profile fetch error:", error);
-          if (mounted) {
-            setLoading(false);
-            setProfile(null);
-          }
+        // If profile fetch failed and we haven't exceeded retries, try again
+        if (!profile && retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.log("[Auth] Retrying profile fetch", { retryCount });
+          await fetchProfile(session.user.id);
         }
       } catch (error) {
         console.error("[Auth] Context initialization error:", error);
@@ -148,31 +169,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           try {
             console.log("[Auth] Starting profile fetch after sign in");
-            // Fetch profile after sign in
-            const { data: profile, error } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
+            const profile = await fetchProfile(session.user.id);
 
-            if (error) {
-              console.error(
-                "[Auth] Error fetching profile after sign in:",
-                error.message
-              );
-              if (mounted) {
-                setLoading(false);
-              }
-            } else {
-              console.log("[Auth] Profile fetch complete after sign in:", {
-                hasProfile: !!profile,
-                profileId: profile?.id,
-                fullName: profile?.full_name,
+            // If profile fetch failed and we haven't exceeded retries, try again
+            if (!profile && retryCount < MAX_RETRIES) {
+              retryCount++;
+              console.log("[Auth] Retrying profile fetch after sign in", {
+                retryCount,
               });
-              if (mounted) {
-                setProfile(profile);
-                setLoading(false);
-              }
+              await fetchProfile(session.user.id);
             }
           } catch (error) {
             console.error("[Auth] Error in profile fetch:", error);
@@ -197,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       clearTimeout(sessionFetchTimeout);
+      clearTimeout(profileFetchTimeout);
       authListener.subscription.unsubscribe();
     };
   }, [supabase, router]);
