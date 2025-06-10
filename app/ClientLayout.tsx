@@ -3,7 +3,6 @@
 import type React from "react";
 import { usePathname } from "next/navigation";
 import { Toaster } from "@/components/ui/toaster";
-import Footer from "@/components/block/Footer";
 import Header from "@/components/block/Header";
 import BottomNav from "@/components/block/BottomNav";
 import { CartProvider } from "@/context/cart-context";
@@ -24,7 +23,6 @@ export default function ClientLayout({
         <AuthNotification />
         {!isAdminRoute && <Header />}
         <main className="flex-1 min-h-screen">{children}</main>
-        {!isAdminRoute && <Footer />}
         {!isAdminRoute && <BottomNav />}
         <Toaster />
       </CartProvider>
