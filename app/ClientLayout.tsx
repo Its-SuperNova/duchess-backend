@@ -2,11 +2,12 @@
 
 import type React from "react";
 import { usePathname } from "next/navigation";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import Footer from "@/components/block/Footer";
 import Header from "@/components/block/Header";
 import BottomNav from "@/components/block/BottomNav";
+import { CartProvider } from "@/context/cart-context";
+import { FavoritesProvider } from "@/context/favorites-context";
 
 export default function ClientLayout({
   children,
@@ -14,18 +15,17 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-
-  const authRoutes = ["/login", "/register", "/forgot-password"];
-  const isAuthRoute = authRoutes.includes(pathname ?? "");
   const isAdminRoute = pathname?.startsWith("/admin") ?? false;
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      {!isAdminRoute && !isAuthRoute && <Header />}
-      <main className="flex-1 min-h-screen">{children}</main>
-      {!isAdminRoute && !isAuthRoute && <Footer />}
-      {!isAdminRoute && !isAuthRoute && <BottomNav />}
-      <Toaster />
-    </ThemeProvider>
+    <FavoritesProvider>
+      <CartProvider>
+        {!isAdminRoute && <Header />}
+        <main className="flex-1 min-h-screen">{children}</main>
+        {!isAdminRoute && <Footer />}
+        {!isAdminRoute && <BottomNav />}
+        <Toaster />
+      </CartProvider>
+    </FavoritesProvider>
   );
 }

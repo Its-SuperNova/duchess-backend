@@ -9,18 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import GoogleSignInButton from "@/components/auth/google-sign-in-button";
-import { useAuth } from "@/context/auth-context";
 
 export default function LoginClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { signIn, loading } = useAuth();
-
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
+    // Form submission logic can be added here
   };
 
   return (
@@ -54,7 +51,7 @@ export default function LoginClient() {
               </p>
             </div>
 
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label
                   htmlFor="email"
@@ -113,9 +110,8 @@ export default function LoginClient() {
               <Button
                 type="submit"
                 className="h-12 w-full rounded-full bg-primary text-white hover:bg-primary/90"
-                disabled={loading}
               >
-                {loading ? "Signing In..." : "Sign In"}
+                Sign In
               </Button>
             </form>
 

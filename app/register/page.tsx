@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import GoogleSignInButton from "@/components/auth/google-sign-in-button";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -21,43 +20,14 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-        setLoading(false);
-        return;
-      }
-
-      // If user is returned, insert profile (no email confirmation required)
-      if (data.user) {
-        await supabase.from("profiles").insert([
-          {
-            id: data.user.id,
-            full_name: fullName,
-            email: email,
-            role: "user",
-          },
-        ]);
-      }
-
-      toast.success(
-        "Registration successful! Please check your email to confirm your account."
-      );
+      // Add your authentication logic here
+      toast.success("Registration successful!");
       router.push("/login");
     } catch (error: any) {
       toast.error(error.message || "An error occurred during registration");

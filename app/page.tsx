@@ -1,5 +1,4 @@
 import HomeClient from "./home-client";
-import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function Home() {
   // Product data for the home page
@@ -127,10 +126,8 @@ export default function Home() {
   ];
 
   return (
-    <ProtectedRoute>
-      <div>
-        <HomeClient products={products} />
-      </div>
-    </ProtectedRoute>
+    <div>
+      <HomeClient products={products} />
+    </div>
   );
 }
