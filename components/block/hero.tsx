@@ -115,7 +115,7 @@ const Hero = () => {
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center space-x-1 hover:opacity-80 transition-opacity"
               >
-                <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-gray-200">
+                <div className="h-10 w-10 rounded-full overflow-hidden">
                   <Image
                     src={session?.user?.image || "/profile-avatar.png"}
                     alt="Profile"
@@ -298,9 +298,7 @@ const Hero = () => {
 
         {/* Categories */}
         <div className="flex w-full justify-between items-center px-1">
-          <h2 className="text-lg md:text-xl lg:text-2xl font-medium">
-            Categories
-          </h2>
+          <h2 className="text-lg md:text-xl  font-medium">Categories</h2>
           <div>
             <Link href="/categories" className="font-medium text-primary">
               See All

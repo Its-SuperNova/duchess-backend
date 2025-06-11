@@ -230,7 +230,7 @@ export function Footer() {
 
         {/* Mobile/Tablet Layout */}
         <div className="md:hidden">
-          <div className="grid gap-8 py-16 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-8 py-16 md:grid-cols-2">
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-800 dark:text-white">Quick Links</h3>
               <ul className="space-y-2 text-sm text-left">

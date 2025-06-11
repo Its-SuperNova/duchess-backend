@@ -1,17 +1,22 @@
-"use client"
-import Link from "next/link"
-import type React from "react"
+"use client";
+import Link from "next/link";
+import type React from "react";
 
-import Image from "next/image"
-import { ArrowLeft, Search, Clock, X } from "lucide-react"
-import { useState } from "react"
+import Image from "next/image";
+import { ArrowLeft, Search, Clock, X } from "lucide-react";
+import { useState } from "react";
 
 export default function SearchPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
 
   // Sample recent searches
-  const [recentSearches, setRecentSearches] = useState(["Chocolate cake", "Red velvet", "Birthday cake", "Croissant"])
+  const [recentSearches, setRecentSearches] = useState([
+    "Chocolate cake",
+    "Red velvet",
+    "Birthday cake",
+    "Croissant",
+  ]);
 
   // Popular categories with images - updated to include brownies
   const popularCategories = [
@@ -25,7 +30,7 @@ export default function SearchPage() {
     { name: "Muffins", image: "/images/categories/muffin.png" },
     { name: "Cake", image: "/images/categories/cake.png" },
     { name: "Brownies", image: "/images/categories/brownie.png" },
-  ]
+  ];
 
   // Sample search results
   const searchResults = [
@@ -57,27 +62,27 @@ export default function SearchPage() {
       image: "/images/blueberry-muffin.jpg",
       isVeg: true,
     },
-  ]
+  ];
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchQuery.trim()) {
-      setIsSearching(true)
+      setIsSearching(true);
       // In a real app, you would fetch search results here
       if (!recentSearches.includes(searchQuery)) {
-        setRecentSearches([searchQuery, ...recentSearches.slice(0, 3)])
+        setRecentSearches([searchQuery, ...recentSearches.slice(0, 3)]);
       }
     }
-  }
+  };
 
   const clearSearch = () => {
-    setSearchQuery("")
-    setIsSearching(false)
-  }
+    setSearchQuery("");
+    setIsSearching(false);
+  };
 
   const removeRecentSearch = (search: string) => {
-    setRecentSearches(recentSearches.filter((item) => item !== search))
-  }
+    setRecentSearches(recentSearches.filter((item) => item !== search));
+  };
 
   return (
     <div className="bg-white min-h-screen pb-32">
@@ -94,8 +99,14 @@ export default function SearchPage() {
 
         {/* Profile image on the right */}
         <Link href="/profile">
-          <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-300">
-            <Image src="/profile-avatar.png" alt="Profile" width={32} height={32} className="object-cover" />
+          <div className="relative w-8 h-8 rounded-full overflow-hidden">
+            <Image
+              src="/profile-avatar.png"
+              alt="Profile"
+              width={32}
+              height={32}
+              className="object-cover"
+            />
           </div>
         </Link>
       </div>
@@ -128,33 +139,50 @@ export default function SearchPage() {
         {isSearching ? (
           // Search Results
           <>
-            <h2 className="text-lg font-medium mb-4">Search Results for "{searchQuery}"</h2>
+            <h2 className="text-lg font-medium mb-4">
+              Search Results for "{searchQuery}"
+            </h2>
             <div className="divide-y">
               {searchResults.map((item) => (
                 <Link href={`/products/${item.id}`} key={item.id}>
                   <div className="py-4 flex items-center">
                     {/* Product image */}
                     <div className="relative h-16 w-16 rounded-md overflow-hidden mr-3">
-                      <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                      <Image
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
 
                     {/* Product details */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-800 truncate">{item.name}</h3>
+                      <h3 className="font-medium text-gray-800 truncate">
+                        {item.name}
+                      </h3>
                       <div className="flex items-center mt-1">
                         <div
                           className={`w-4 h-4 border ${
                             item.isVeg ? "border-green-600" : "border-red-600"
                           } flex items-center justify-center rounded-sm mr-2`}
                         >
-                          <div className={`w-2 h-2 ${item.isVeg ? "bg-green-600" : "bg-red-600"} rounded-full`}></div>
+                          <div
+                            className={`w-2 h-2 ${
+                              item.isVeg ? "bg-green-600" : "bg-red-600"
+                            } rounded-full`}
+                          ></div>
                         </div>
-                        <p className="font-semibold text-[#361C1C]">₹{item.price}</p>
+                        <p className="font-semibold text-[#361C1C]">
+                          ₹{item.price}
+                        </p>
                       </div>
                     </div>
 
                     {/* Add button */}
-                    <button className="ml-2 bg-[#361C1C] text-white text-xs px-3 py-1 rounded-full">Add</button>
+                    <button className="ml-2 bg-[#361C1C] text-white text-xs px-3 py-1 rounded-full">
+                      Add
+                    </button>
                   </div>
                 </Link>
               ))}
@@ -166,13 +194,20 @@ export default function SearchPage() {
             <div className="mb-6">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-medium">Recent Searches</h2>
-                {recentSearches.length > 0 && <button className="text-[#361C1C] text-sm font-medium">Clear All</button>}
+                {recentSearches.length > 0 && (
+                  <button className="text-[#361C1C] text-sm font-medium">
+                    Clear All
+                  </button>
+                )}
               </div>
 
               {recentSearches.length > 0 ? (
                 <div className="space-y-3">
                   {recentSearches.map((search, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                    >
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 text-gray-400 mr-3" />
                         <span>{search}</span>
@@ -195,17 +230,25 @@ export default function SearchPage() {
               <h2 className="text-lg font-medium mb-3">Popular Categories</h2>
               <div className="grid grid-cols-4 gap-4">
                 {popularCategories.map((category, index) => (
-                  <Link href={`/products?category=${category.name.toLowerCase()}`} key={index}>
+                  <Link
+                    href={`/products?category=${category.name.toLowerCase()}`}
+                    key={index}
+                  >
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-full overflow-hidden flex items-center justify-center">
                         <Image
-                          src={category.image || `/placeholder.svg?height=64&width=64&text=${category.name}`}
+                          src={
+                            category.image ||
+                            `/placeholder.svg?height=64&width=64&text=${category.name}`
+                          }
                           alt={category.name}
                           fill
                           className="object-cover"
                         />
                       </div>
-                      <p className="text-xs font-medium mt-2 text-center">{category.name}</p>
+                      <p className="text-xs font-medium mt-2 text-center">
+                        {category.name}
+                      </p>
                     </div>
                   </Link>
                 ))}
@@ -215,5 +258,5 @@ export default function SearchPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
