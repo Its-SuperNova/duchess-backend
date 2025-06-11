@@ -1,6 +1,6 @@
-import Image from "next/image"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 // Banner data - same as in hero component for consistency
 const banners = [
@@ -33,23 +33,30 @@ const banners = [
     alt: "Classic Indian delights - mini cheesecakes",
     link: "/offers/indian-sweets",
   },
-]
+];
 
 export default function OffersPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 pb-20">
-      {/* Back navigation - similar to other pages */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 p-4 h-[64px] flex items-center border-b">
-        <Link href="/" className="flex items-center text-[#361C1C]">
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          <span className="font-medium">Special Offers</span>
-        </Link>
+      {/* Page Header */}
+      <div className="px-4 py-4 border-b">
+        <div className="flex items-center">
+          <Link href="/" className="mr-4">
+            <div className="bg-gray-100 p-2 rounded-full">
+              <ArrowLeft className="h-5 w-5" />
+            </div>
+          </Link>
+          <h1 className="text-xl font-semibold">Special Offers</h1>
+        </div>
       </div>
 
       <main className="px-4 py-4">
         <div className="space-y-6">
           {banners.map((banner) => (
-            <div key={banner.id} className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div
+              key={banner.id}
+              className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            >
               <Link href={banner.link} className="block">
                 <div className="relative">
                   {/* Mobile and Tablet Banner */}
@@ -80,5 +87,5 @@ export default function OffersPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

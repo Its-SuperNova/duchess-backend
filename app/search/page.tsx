@@ -86,8 +86,8 @@ export default function SearchPage() {
 
   return (
     <div className="bg-white min-h-screen pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white px-4 h-[64px] flex items-center justify-between border-b shadow-sm">
+      {/* Page Header */}
+      <div className="px-4 py-4 border-b">
         <div className="flex items-center">
           <Link href="/" className="mr-4">
             <div className="bg-gray-100 p-2 rounded-full">
@@ -96,19 +96,6 @@ export default function SearchPage() {
           </Link>
           <h1 className="text-xl font-semibold">Search</h1>
         </div>
-
-        {/* Profile image on the right */}
-        <Link href="/profile">
-          <div className="relative w-8 h-8 rounded-full overflow-hidden">
-            <Image
-              src="/profile-avatar.png"
-              alt="Profile"
-              width={32}
-              height={32}
-              className="object-cover"
-            />
-          </div>
-        </Link>
       </div>
 
       {/* Search Input */}
@@ -200,53 +187,46 @@ export default function SearchPage() {
                   </button>
                 )}
               </div>
-
-              {recentSearches.length > 0 ? (
-                <div className="space-y-3">
-                  {recentSearches.map((search, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+              <div className="flex flex-wrap gap-2">
+                {recentSearches.map((search, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center bg-gray-100 rounded-full px-3 py-1"
+                  >
+                    <Clock className="h-3 w-3 text-gray-500 mr-1" />
+                    <span className="text-sm text-gray-700">{search}</span>
+                    <button
+                      onClick={() => removeRecentSearch(search)}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
                     >
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-gray-400 mr-3" />
-                        <span>{search}</span>
-                      </div>
-                      <button onClick={() => removeRecentSearch(search)}>
-                        <X className="h-4 w-4 text-gray-400" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-gray-50 p-6 rounded-lg text-center">
-                  <p className="text-gray-500">No recent searches</p>
-                </div>
-              )}
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Popular Categories */}
             <div>
-              <h2 className="text-lg font-medium mb-3">Popular Categories</h2>
-              <div className="grid grid-cols-4 gap-4">
+              <h2 className="text-lg font-medium mb-4">Popular Categories</h2>
+              <div className="grid grid-cols-2 gap-4">
                 {popularCategories.map((category, index) => (
                   <Link
-                    href={`/products?category=${category.name.toLowerCase()}`}
+                    href={`/categories/${category.name
+                      .toLowerCase()
+                      .replace(" ", "-")}`}
                     key={index}
+                    className="block"
                   >
-                    <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-full overflow-hidden flex items-center justify-center">
+                    <div className="bg-gray-50 rounded-lg p-4 text-center hover:bg-gray-100 transition-colors">
+                      <div className="relative h-16 w-16 mx-auto mb-2">
                         <Image
-                          src={
-                            category.image ||
-                            `/placeholder.svg?height=64&width=64&text=${category.name}`
-                          }
+                          src={category.image}
                           alt={category.name}
                           fill
-                          className="object-cover"
+                          className="object-cover rounded-md"
                         />
                       </div>
-                      <p className="text-xs font-medium mt-2 text-center">
+                      <p className="text-sm font-medium text-gray-800">
                         {category.name}
                       </p>
                     </div>

@@ -20,25 +20,20 @@ export default function CartClient() {
 
   return (
     <div className="bg-white min-h-screen pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white px-4 h-[64px] flex items-center border-b">
-        <Link href="/" className="mr-4">
-          <div className="bg-gray-100 p-2 rounded-full">
-            <ArrowLeft className="h-5 w-5" />
+      {/* Page Header */}
+      <div className="px-4 py-4 border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Link href="/" className="mr-4">
+              <div className="bg-gray-100 p-2 rounded-full">
+                <ArrowLeft className="h-5 w-5" />
+              </div>
+            </Link>
+            <h1 className="text-xl font-semibold">My Cart</h1>
           </div>
-        </Link>
-        <h1 className="text-xl font-semibold">My Cart</h1>
-        <div className="ml-auto text-sm text-gray-500 mr-4">
-          {cart.length} {cart.length === 1 ? "item" : "items"}
-        </div>
-        {/* Profile Picture */}
-        <div className="relative h-8 w-8 rounded-full overflow-hidden">
-          <Image
-            src="/profile-avatar.png"
-            alt="Profile"
-            fill
-            className="object-cover"
-          />
+          <div className="text-sm text-gray-500">
+            {cart.length} {cart.length === 1 ? "item" : "items"}
+          </div>
         </div>
       </div>
 

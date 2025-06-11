@@ -32,7 +32,7 @@ const Hero = () => {
 
       {/* Categories */}
       <div className="flex w-full justify-between items-center px-1">
-        <h2 className="text-lg md:text-xl lg:text-2xl font-medium">Categories</h2>
+        <h2 className="text-lg md:text-xl  font-medium">Categories</h2>
         <div>
           <Link href="/categories" className="font-medium text-[#d48926de]">
             See All
@@ -58,7 +58,7 @@ const Hero = () => {
       </div>
 
       <div className="flex w-full justify-between items-center px-1">
-        <h2 className="text-lg md:text-xl lg:text-2xl font-medium">Featured Product</h2>
+        <h2 className="text-lg md:text-xl  font-medium">Featured Product</h2>
         <div>
           <Link href="/categories" className="font-medium text-[#d48926de]">
             See All
