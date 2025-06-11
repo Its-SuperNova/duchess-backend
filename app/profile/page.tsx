@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import DesktopHeader from "@/components/block/DesktopHeader";
+import { ProfileSkeleton } from "./profile-skeleton";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +24,7 @@ import {
   ChevronRight,
   Moon,
   Heart,
+  Sun,
 } from "lucide-react";
 
 // Mock profile data type
@@ -35,6 +37,7 @@ interface Profile {
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isDark, setIsDark] = useState(false);
 
   // Mock data for demonstration, matching the Figma numbers
   const totalOrders = 12;
@@ -107,15 +110,31 @@ export default function ProfilePage() {
                   {profile?.email || "ashwin@gmail.com"}
                 </p>
               </div>
-              {/* Logout button for desktop, hidden on mobile */}
-              <Button
-                variant="ghost"
-                onClick={signOut}
-                className="hidden lg:flex items-center justify-center text-[#ff0000] hover:bg-red-50"
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                <span>Log out</span>
-              </Button>
+              {/* Logout and Theme Toggle buttons for desktop, hidden on mobile */}
+              <div className="hidden lg:flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  className="flex items-center justify-center gap-2 border border-gray-200 rounded-md"
+                  onClick={() => setIsDark((prev) => !prev)}
+                >
+                  {isDark ? (
+                    <Moon className="h-5 w-5" />
+                  ) : (
+                    <Sun className="h-5 w-5" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isDark ? "Dark" : "Light"}
+                  </span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={signOut}
+                  className="flex items-center justify-center text-[#ff0000] hover:bg-red-50 border border-gray-200 rounded-md"
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  <span>Log out</span>
+                </Button>
+              </div>
             </div>
 
             {/* Stats Cards for Desktop */}
@@ -140,19 +159,6 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-
-          {/* Logout button for mobile, hidden on desktop */}
-          <Button
-            variant="ghost"
-            onClick={signOut}
-            className="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between text-[#ff0000] hover:bg-red-50 lg:hidden"
-          >
-            <div className="flex items-center gap-4">
-              <LogOut className="h-5 w-5" />
-              <span>Log out</span>
-            </div>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
 
           {/* Appearance Section (only on mobile, hidden on desktop as per Figma) */}
           <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between lg:hidden">
@@ -365,6 +371,19 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Logout button for mobile, hidden on desktop - now after Legal section */}
+          <Button
+            variant="ghost"
+            onClick={signOut}
+            className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#ff0000] hover:bg-red-50 lg:hidden"
+          >
+            <div className="flex items-center gap-4">
+              <LogOut className="h-5 w-5" />
+              <span>Log out</span>
+            </div>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+
           {/* App Version */}
           <div className="text-center text-[#858585] text-xs pt-4">
             <p>Duchess v1.0.0</p>
@@ -372,103 +391,5 @@ export default function ProfilePage() {
         </div>
       </div>
     </>
-  );
-}
-
-function ProfileSkeleton() {
-  return (
-    <div className="min-h-screen bg-[#f4f4f7] py-8 px-4">
-      <div className="max-w-md sm:max-w-lg md:max-w-xl lg:max-w-4xl xl:max-w-6xl mx-auto space-y-4 pb-20">
-        {/* Top Section Skeleton for Desktop */}
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start lg:gap-4">
-          {/* User Info Card Skeleton */}
-          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4 lg:flex-grow lg:min-h-[140px] lg:justify-center">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <div className="space-y-2 flex-grow">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            {/* Logout button skeleton for desktop */}
-            <Skeleton className="hidden lg:block h-10 w-24 rounded-full" />
-          </div>
-
-          {/* Stats Cards Skeleton for Desktop */}
-          <div className="grid grid-cols-2 gap-4 mt-4 lg:mt-0 lg:w-1/2 xl:w-2/5">
-            <Skeleton className="h-32 w-full rounded-2xl" />
-            <Skeleton className="h-32 w-full rounded-2xl" />
-          </div>
-        </div>
-
-        {/* Logout button skeleton for mobile */}
-        <Skeleton className="h-16 w-full rounded-2xl lg:hidden" />
-
-        {/* Appearance Section Skeleton (only on mobile) */}
-        <Skeleton className="h-16 w-full rounded-2xl lg:hidden" />
-
-        {/* Main Content Sections Skeleton for Desktop */}
-        <div className="lg:grid lg:grid-cols-2 lg:gap-4">
-          {/* Left Column Skeleton */}
-          <div className="space-y-4">
-            {/* Account Section Skeleton */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 pt-4">
-                <Skeleton className="w-1 h-5 rounded-tr-full rounded-br-full" />
-                <Skeleton className="h-6 w-24 pl-4" />
-              </div>
-              <div className="space-y-2 py-4">
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-              </div>
-            </div>
-
-            {/* Support & Help Section Skeleton */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 pt-4">
-                <Skeleton className="w-1 h-5 rounded-tr-full rounded-br-full" />
-                <Skeleton className="h-6 w-32 pl-4" />
-              </div>
-              <div className="space-y-2 py-4">
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column Skeleton */}
-          <div className="space-y-4 mt-4 lg:mt-0">
-            {/* Orders Section Skeleton */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 pt-4">
-                <Skeleton className="w-1 h-5 rounded-tr-full rounded-br-full" />
-                <Skeleton className="h-6 w-20 pl-4" />
-              </div>
-              <div className="space-y-2 py-4">
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-              </div>
-            </div>
-
-            {/* Legal Section Skeleton */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 pt-4">
-                <Skeleton className="w-1 h-5 rounded-tr-full rounded-br-full" />
-                <Skeleton className="h-6 w-16 pl-4" />
-              </div>
-              <div className="space-y-2 py-4">
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-                <Skeleton className="h-12 w-full px-4 py-2" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* App Version Skeleton */}
-        <Skeleton className="h-4 w-24 mx-auto mt-4" />
-      </div>
-    </div>
   );
 }
