@@ -26,6 +26,7 @@ import {
   Heart,
   Sun,
 } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 
 // Mock profile data type
 interface Profile {
@@ -35,6 +36,7 @@ interface Profile {
 }
 
 export default function ProfilePage() {
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isDark, setIsDark] = useState(false);
@@ -43,30 +45,24 @@ export default function ProfilePage() {
   const totalOrders = 12;
   const totalFavorites = 12;
 
-  // Mock signOut function
-  const signOut = () => {
-    // TODO: Implement actual sign out logic
-    console.log("Signing out...");
-  };
-
   // Simulate loading profile data
   useEffect(() => {
-    const loadProfile = async () => {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Mock profile data
+    if (status === "loading") return;
+    if (status === "authenticated" && session?.user) {
+      setProfile({
+        full_name: session.user.name || "User",
+        email: session.user.email || "",
+        avatar_url: session.user.image || undefined,
+      });
+    } else {
       setProfile({
         full_name: "Ashwin",
         email: "ashwin@gmail.com",
-        avatar_url: undefined, // Will use fallback
+        avatar_url: undefined,
       });
-
-      setLoading(false);
-    };
-
-    loadProfile();
-  }, []);
+    }
+    setLoading(false);
+  }, [session, status]);
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -90,24 +86,31 @@ export default function ProfilePage() {
           <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start lg:gap-4">
             {/* User Info Card */}
             <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4 lg:flex-grow lg:min-h-[140px] lg:justify-center">
-              <Avatar className="h-16 w-16 border-2 border-gray-100">
-                <AvatarImage
-                  src={
-                    profile?.avatar_url ||
-                    "/placeholder.svg?height=64&width=64&query=skull with headphones"
-                  }
-                  alt={profile?.full_name || "User"}
-                />
-                <AvatarFallback className="bg-[#e0eeff] text-[#238aff] text-xl font-semibold">
-                  {getInitials(profile?.full_name || "User")}
-                </AvatarFallback>
-              </Avatar>
+              {status === "authenticated" ? (
+                <Avatar className="h-16 w-16 border-2 border-gray-100">
+                  <AvatarImage
+                    src={profile?.avatar_url || "/profile-avatar.png"}
+                    alt={profile?.full_name || "User"}
+                  />
+                  <AvatarFallback className="bg-[#e0eeff] text-[#238aff] text-xl font-semibold">
+                    {getInitials(profile?.full_name || "User")}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-[#f4f4f7] flex items-center justify-center border-2 border-gray-100">
+                  <User className="h-8 w-8 text-[#9b99ab]" />
+                </div>
+              )}
               <div className="flex-grow">
                 <h1 className="text-xl font-semibold text-[#000000]">
-                  {profile?.full_name || "Ashwin"}
+                  {status === "authenticated"
+                    ? profile?.full_name || "User Name"
+                    : "User Name"}
                 </h1>
                 <p className="text-sm text-[#858585]">
-                  {profile?.email || "ashwin@gmail.com"}
+                  {status === "authenticated"
+                    ? profile?.email || "user@email.com"
+                    : "user@email.com"}
                 </p>
               </div>
               {/* Logout and Theme Toggle buttons for desktop, hidden on mobile */}
@@ -126,14 +129,25 @@ export default function ProfilePage() {
                     {isDark ? "Dark" : "Light"}
                   </span>
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={signOut}
-                  className="flex items-center justify-center text-[#ff0000] hover:bg-red-50 border border-gray-200 rounded-md"
-                >
-                  <LogOut className="h-5 w-5 mr-2" />
-                  <span>Log out</span>
-                </Button>
+                {status === "authenticated" ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => signOut()}
+                    className="flex items-center justify-center text-[#ff0000] hover:bg-red-50 border border-gray-200 rounded-md"
+                  >
+                    <LogOut className="h-5 w-5 mr-2" />
+                    <span>Log out</span>
+                  </Button>
+                ) : (
+                  <Link href="/login">
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-center border border-gray-200 rounded-md"
+                    >
+                      <span>Login</span>
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
 
@@ -371,18 +385,32 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Logout button for mobile, hidden on desktop - now after Legal section */}
-          <Button
-            variant="ghost"
-            onClick={signOut}
-            className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#ff0000] hover:bg-red-50 lg:hidden"
-          >
-            <div className="flex items-center gap-4">
-              <LogOut className="h-5 w-5" />
-              <span>Log out</span>
-            </div>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          {/* Logout button for mobile, hidden on desktop - after Legal section */}
+          {status === "authenticated" ? (
+            <Button
+              variant="ghost"
+              onClick={() => signOut()}
+              className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#ff0000] hover:bg-red-50 lg:hidden mt-4 mb-4"
+            >
+              <div className="flex items-center gap-4">
+                <LogOut className="h-5 w-5" />
+                <span>Log out</span>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Link href="/login" className="w-full lg:hidden block mt-4 mb-4">
+              <Button
+                variant="ghost"
+                className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between border border-gray-200"
+              >
+                <div className="flex items-center gap-4">
+                  <span>Login</span>
+                </div>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
 
           {/* App Version */}
           <div className="text-center text-[#858585] text-xs pt-4">
