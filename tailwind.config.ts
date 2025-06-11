@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
@@ -33,11 +33,11 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#560000",
+          DEFAULT: "hsl(var(--duchess-primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "#fff4eb",
+          DEFAULT: "hsl(var(--duchess-secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
@@ -59,6 +59,20 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // Duchess Pastries specific colors
+        duchess: {
+          primary: "hsl(var(--duchess-primary))",
+          secondary: "hsl(var(--duchess-secondary))",
+          accent: "hsl(var(--duchess-accent))",
+          "accent-light": "hsl(var(--duchess-accent-light))",
+          pink: "hsl(var(--duchess-pink))",
+          "pink-light": "hsl(var(--duchess-pink-light))",
+          gray: "hsl(var(--duchess-gray))",
+          "gray-light": "hsl(var(--duchess-gray-light))",
+          "text-primary": "hsl(var(--duchess-text-primary))",
+          "text-secondary": "hsl(var(--duchess-text-secondary))",
+          border: "hsl(var(--duchess-border))",
         },
       },
       borderRadius: {
@@ -83,6 +97,6 @@ const config: Config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};
 
-export default config
+export default config;

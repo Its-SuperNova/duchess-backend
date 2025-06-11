@@ -9,6 +9,7 @@ import BottomNav from "@/components/block/BottomNav";
 import UserSidebar from "@/components/user-sidebar";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
+import { ThemeProvider } from "@/context/theme-context";
 import AuthNotification from "@/components/auth/auth-notification";
 
 export default function ClientLayout({
@@ -24,38 +25,40 @@ export default function ClientLayout({
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
-    <FavoritesProvider>
-      <CartProvider>
-        <AuthNotification />
-        {!isAdminRoute && !isHomePage && !isProfileRoute && (
-          <Header
-            isCollapsed={
-              !isAdminRoute && !isAuthRoute ? isCollapsed : undefined
-            }
-          />
-        )}
-        <div className="flex w-full">
-          {!isAdminRoute && !isAuthRoute && (
-            <UserSidebar
-              isCollapsed={isCollapsed}
-              setIsCollapsed={setIsCollapsed}
+    <ThemeProvider>
+      <FavoritesProvider>
+        <CartProvider>
+          <AuthNotification />
+          {!isAdminRoute && !isHomePage && !isProfileRoute && (
+            <Header
+              isCollapsed={
+                !isAdminRoute && !isAuthRoute ? isCollapsed : undefined
+              }
             />
           )}
-          <main
-            className={`flex-1 transition-all duration-300 ${
-              !isAdminRoute && !isAuthRoute && !isCollapsed
-                ? "lg:ml-64"
-                : !isAdminRoute && !isAuthRoute
-                ? "lg:ml-16"
-                : ""
-            }`}
-          >
-            {children}
-          </main>
-        </div>
-        {!isAdminRoute && <BottomNav />}
-        <Toaster />
-      </CartProvider>
-    </FavoritesProvider>
+          <div className="flex w-full">
+            {!isAdminRoute && !isAuthRoute && (
+              <UserSidebar
+                isCollapsed={isCollapsed}
+                setIsCollapsed={setIsCollapsed}
+              />
+            )}
+            <main
+              className={`flex-1 transition-all duration-300 ${
+                !isAdminRoute && !isAuthRoute && !isCollapsed
+                  ? "lg:ml-64"
+                  : !isAdminRoute && !isAuthRoute
+                  ? "lg:ml-16"
+                  : ""
+              }`}
+            >
+              {children}
+            </main>
+          </div>
+          {!isAdminRoute && <BottomNav />}
+          <Toaster />
+        </CartProvider>
+      </FavoritesProvider>
+    </ThemeProvider>
   );
 }

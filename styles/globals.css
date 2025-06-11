@@ -47,7 +47,21 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Duchess Pastries specific colors */
+    --duchess-primary: 0 100% 17%; /* #560000 */
+    --duchess-secondary: 30 100% 96%; /* #fff4eb */
+    --duchess-accent: 210 100% 50%; /* #238aff */
+    --duchess-accent-light: 210 100% 88%; /* #e0eeff */
+    --duchess-pink: 340 100% 62%; /* #ff2d7e */
+    --duchess-pink-light: 340 100% 94%; /* #ffe0ed */
+    --duchess-gray: 240 5% 65%; /* #9b99ab */
+    --duchess-gray-light: 240 5% 97%; /* #f4f4f7 */
+    --duchess-text-primary: 0 0% 0%; /* #000000 */
+    --duchess-text-secondary: 0 0% 52%; /* #858585 */
+    --duchess-border: 0 0% 89%; /* #e3e3e3 */
   }
+  
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -81,6 +95,19 @@ body {
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Duchess Pastries dark mode colors */
+    --duchess-primary: 0 100% 17%; /* Keep primary red */
+    --duchess-secondary: 30 20% 8%; /* Darker secondary */
+    --duchess-accent: 210 100% 60%; /* Brighter accent */
+    --duchess-accent-light: 210 100% 15%; /* Dark accent background */
+    --duchess-pink: 340 100% 70%; /* Brighter pink */
+    --duchess-pink-light: 340 100% 15%; /* Dark pink background */
+    --duchess-gray: 240 5% 75%; /* Lighter gray for dark mode */
+    --duchess-gray-light: 240 5% 8%; /* Dark gray background */
+    --duchess-text-primary: 0 0% 98%; /* White text */
+    --duchess-text-secondary: 0 0% 70%; /* Light gray text */
+    --duchess-border: 0 0% 20%; /* Dark border */
   }
 }
 
