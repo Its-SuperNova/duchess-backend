@@ -1,10 +1,13 @@
-"use client"
-import { useState, useEffect } from "react"
-import { FiSearch } from "react-icons/fi"
-import { IoFilter } from "react-icons/io5"
-import { Bell, ShoppingCart } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
+"use client";
+import { useState, useEffect } from "react";
+import { FiSearch } from "react-icons/fi";
+import { IoFilter } from "react-icons/io5";
+import { Bell, ShoppingCart, ChevronDown } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import LogoutButton from "@/components/auth/logout-button";
 
 const categories = [
   { name: "Cup Cake", image: "/images/categories/cupcake.png" },
@@ -19,7 +22,7 @@ const categories = [
   { name: "Muffins", image: "/images/categories/muffin.png" },
   { name: "Brownies", image: "/images/categories/brownie.png" },
   { name: "Pastries", image: "/images/categories/sweets-bowl.png" },
-]
+];
 
 // Mobile slider images (keeping existing ones)
 const mobileSlides = [
@@ -38,23 +41,27 @@ const mobileSlides = [
     image: "/images/image3.png",
     alt: "Sweet treats and desserts",
   },
-]
+];
 
 const Hero = () => {
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const { data: session, status } = useSession();
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Auto-slide functionality for mobile
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % mobileSlides.length)
-    }, 4000) // Change slide every 4 seconds
+      setCurrentSlide((prev) => (prev + 1) % mobileSlides.length);
+    }, 4000); // Change slide every 4 seconds
 
-    return () => clearInterval(timer)
-  }, [])
+    return () => clearInterval(timer);
+  }, []);
 
   const goToSlide = (index: number) => {
-    setCurrentSlide(index)
-  }
+    setCurrentSlide(index);
+  };
+
+  const isAuthenticated = status === "authenticated" && session?.user;
 
   return (
     <div className="w-full">
@@ -71,7 +78,10 @@ const Hero = () => {
         </div>
 
         {/* Notification Icon */}
-        <Link href="/notifications" className="relative hover:opacity-80 transition-opacity">
+        <Link
+          href="/notifications"
+          className="relative hover:opacity-80 transition-opacity"
+        >
           <Bell className="h-5 w-5 text-gray-600" />
           <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
             3
@@ -79,25 +89,73 @@ const Hero = () => {
         </Link>
 
         {/* Cart Icon */}
-        <Link href="/cart" className="relative hover:opacity-80 transition-opacity">
+        <Link
+          href="/cart"
+          className="relative hover:opacity-80 transition-opacity"
+        >
           <ShoppingCart className="h-5 w-5 text-gray-600" />
           <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
             2
           </span>
         </Link>
 
-        {/* Profile Image */}
-        <Link href="/profile" className="flex items-center hover:opacity-80 transition-opacity">
-          <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-gray-200">
-            <Image
-              src="/profile-avatar.png"
-              alt="Profile"
-              width={40}
-              height={40}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </Link>
+        {/* Right side - Sign Up button or Profile image */}
+        <div className="relative">
+          {!isAuthenticated ? (
+            // Show Sign Up button if not authenticated
+            <Link href="/register">
+              <Button className="h-10 px-6 text-sm bg-primary hover:bg-primary/90">
+                Sign Up
+              </Button>
+            </Link>
+          ) : (
+            // Show profile image with dropdown if authenticated
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center space-x-1 hover:opacity-80 transition-opacity"
+              >
+                <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-gray-200">
+                  <Image
+                    src={session?.user?.image || "/profile-avatar.png"}
+                    alt="Profile"
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-600" />
+              </button>
+
+              {/* Dropdown menu */}
+              {showDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="py-2">
+                    <div className="px-4 py-2 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">
+                        {session?.user?.name || "User"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {session?.user?.email}
+                      </p>
+                    </div>
+                    <div className="px-2 py-1">
+                      <LogoutButton />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Click outside to close dropdown */}
+        {showDropdown && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowDropdown(false)}
+          />
+        )}
       </div>
 
       {/* Desktop Single Card - Only visible on lg screens and up */}
@@ -105,7 +163,9 @@ const Hero = () => {
         <div className="bg-gradient-to-br from-pink-400 to-pink-600 w-full h-48 rounded-2xl flex items-center justify-center text-white">
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-2">Sweet Delights</h2>
-            <p className="text-lg opacity-90">Discover our premium collection</p>
+            <p className="text-lg opacity-90">
+              Discover our premium collection
+            </p>
           </div>
         </div>
       </div>
@@ -114,7 +174,10 @@ const Hero = () => {
       <div className="hidden lg:block w-full px-4 mb-8">
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Categories</h2>
-          <Link href="/categories" className="font-medium text-[#d48926de] hover:underline">
+          <Link
+            href="/categories"
+            className="font-medium text-[#d48926de] hover:underline"
+          >
             See All
           </Link>
         </div>
@@ -122,11 +185,17 @@ const Hero = () => {
         {/* 1536px and up: Show 12 categories */}
         <div className="hidden 2xl:grid grid-cols-12 gap-6">
           {categories.map((category, index) => (
-            <Link href={`/products?category=${category.name.toLowerCase()}`} key={index}>
+            <Link
+              href={`/products?category=${category.name.toLowerCase()}`}
+              key={index}
+            >
               <div className="flex flex-col items-center group cursor-pointer">
                 <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                   <Image
-                    src={category.image || `/placeholder.svg?height=80&width=80&text=${category.name}`}
+                    src={
+                      category.image ||
+                      `/placeholder.svg?height=80&width=80&text=${category.name}`
+                    }
                     alt={category.name}
                     width={80}
                     height={80}
@@ -144,11 +213,17 @@ const Hero = () => {
         {/* 1285px to 1535px: Show 10 categories */}
         <div className="hidden xl:grid 2xl:hidden grid-cols-10 gap-6">
           {categories.slice(0, 10).map((category, index) => (
-            <Link href={`/products?category=${category.name.toLowerCase()}`} key={index}>
+            <Link
+              href={`/products?category=${category.name.toLowerCase()}`}
+              key={index}
+            >
               <div className="flex flex-col items-center group cursor-pointer">
                 <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                   <Image
-                    src={category.image || `/placeholder.svg?height=80&width=80&text=${category.name}`}
+                    src={
+                      category.image ||
+                      `/placeholder.svg?height=80&width=80&text=${category.name}`
+                    }
                     alt={category.name}
                     width={80}
                     height={80}
@@ -166,11 +241,17 @@ const Hero = () => {
         {/* 800px to 1284px: Show 8 categories */}
         <div className="hidden lg:grid xl:hidden grid-cols-8 gap-6">
           {categories.slice(0, 8).map((category, index) => (
-            <Link href={`/products?category=${category.name.toLowerCase()}`} key={index}>
+            <Link
+              href={`/products?category=${category.name.toLowerCase()}`}
+              key={index}
+            >
               <div className="flex flex-col items-center group cursor-pointer">
                 <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                   <Image
-                    src={category.image || `/placeholder.svg?height=80&width=80&text=${category.name}`}
+                    src={
+                      category.image ||
+                      `/placeholder.svg?height=80&width=80&text=${category.name}`
+                    }
                     alt={category.name}
                     width={80}
                     height={80}
@@ -208,14 +289,18 @@ const Hero = () => {
           <div className="bg-gradient-to-br from-pink-400 to-pink-600 w-full h-full rounded-2xl flex items-center justify-center text-white">
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Sweet Delights</h2>
-              <p className="text-base opacity-90">Discover our premium collection</p>
+              <p className="text-base opacity-90">
+                Discover our premium collection
+              </p>
             </div>
           </div>
         </div>
 
         {/* Categories */}
         <div className="flex w-full justify-between items-center px-1">
-          <h2 className="text-lg md:text-xl lg:text-2xl font-medium">Categories</h2>
+          <h2 className="text-lg md:text-xl lg:text-2xl font-medium">
+            Categories
+          </h2>
           <div>
             <Link href="/categories" className="font-medium text-primary">
               See All
@@ -280,7 +365,7 @@ const Hero = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Hero
+export default Hero;

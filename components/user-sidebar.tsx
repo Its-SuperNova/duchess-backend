@@ -1,21 +1,39 @@
-"use client"
+"use client";
 
-import { Home, Search, ShoppingCart, Heart, User, Package, Settings, Menu, X } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import Image from "next/image"
+import {
+  Home,
+  Search,
+  ShoppingCart,
+  Heart,
+  User,
+  Package,
+  Settings,
+  Menu,
+  X,
+  UserPlus,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
 
 interface UserSidebarProps {
-  isCollapsed: boolean
-  setIsCollapsed: (collapsed: boolean) => void
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
 }
 
-export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebarProps) {
-  const pathname = usePathname()
+export default function UserSidebar({
+  isCollapsed,
+  setIsCollapsed,
+}: UserSidebarProps) {
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
 
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed)
-  }
+    setIsCollapsed(!isCollapsed);
+  };
+
+  const isAuthenticated = status === "authenticated" && session?.user;
 
   return (
     <aside
@@ -28,15 +46,25 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
         <div className="flex items-center h-16 flex-shrink-0 px-4 border-b border-gray-200">
           {!isCollapsed && (
             <>
-              <img className="h-8 w-auto" src="/duchess-logo.png" alt="Duchess Pastries" />
+              <img
+                className="h-8 w-auto"
+                src="/duchess-logo.png"
+                alt="Duchess Pastries"
+              />
             </>
           )}
           <button
             onClick={toggleSidebar}
-            className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${isCollapsed ? "mx-auto" : "ml-auto"}`}
+            className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+              isCollapsed ? "mx-auto" : "ml-auto"
+            }`}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? <Menu className="h-5 w-5 text-gray-600" /> : <X className="h-5 w-5 text-gray-600" />}
+            {isCollapsed ? (
+              <Menu className="h-5 w-5 text-gray-600" />
+            ) : (
+              <X className="h-5 w-5 text-gray-600" />
+            )}
           </button>
         </div>
 
@@ -45,12 +73,16 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           <Link
             href="/"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === "/"
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Home" : ""}
           >
             <Home
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/" ? "text-white" : ""} ${isCollapsed ? "" : "mr-3"}`}
+              className={`h-5 w-5 flex-shrink-0 ${
+                pathname === "/" ? "text-white" : ""
+              } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Home"}
           </Link>
@@ -58,14 +90,16 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           <Link
             href="/search"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/search" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === "/search"
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Search" : ""}
           >
             <Search
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/search" ? "text-white" : ""} ${
-                isCollapsed ? "" : "mr-3"
-              }`}
+              className={`h-5 w-5 flex-shrink-0 ${
+                pathname === "/search" ? "text-white" : ""
+              } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Search"}
           </Link>
@@ -73,14 +107,16 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           <Link
             href="/categories"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/categories" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === "/categories"
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Categories" : ""}
           >
             <Package
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/categories" ? "text-white" : ""} ${
-                isCollapsed ? "" : "mr-3"
-              }`}
+              className={`h-5 w-5 flex-shrink-0 ${
+                pathname === "/categories" ? "text-white" : ""
+              } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Categories"}
           </Link>
@@ -88,14 +124,16 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           <Link
             href="/cart"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/cart" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === "/cart"
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Cart" : ""}
           >
             <ShoppingCart
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/cart" ? "text-white" : ""} ${
-                isCollapsed ? "" : "mr-3"
-              }`}
+              className={`h-5 w-5 flex-shrink-0 ${
+                pathname === "/cart" ? "text-white" : ""
+              } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Cart"}
           </Link>
@@ -103,44 +141,58 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           <Link
             href="/favorites"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/favorites" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === "/favorites"
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Favorites" : ""}
           >
             <Heart
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/favorites" ? "text-white" : ""} ${
-                isCollapsed ? "" : "mr-3"
-              }`}
+              className={`h-5 w-5 flex-shrink-0 ${
+                pathname === "/favorites" ? "text-white" : ""
+              } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Favorites"}
           </Link>
 
           <Link
-            href="/profile"
+            href={isAuthenticated ? "/profile" : "/register"}
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/profile" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === (isAuthenticated ? "/profile" : "/register")
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
-            title={isCollapsed ? "Profile" : ""}
+            title={isCollapsed ? (isAuthenticated ? "Profile" : "Sign Up") : ""}
           >
-            <User
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/profile" ? "text-white" : ""} ${
-                isCollapsed ? "" : "mr-3"
-              }`}
-            />
-            {!isCollapsed && "Profile"}
+            {isAuthenticated ? (
+              <User
+                className={`h-5 w-5 flex-shrink-0 ${
+                  pathname === "/profile" ? "text-white" : ""
+                } ${isCollapsed ? "" : "mr-3"}`}
+              />
+            ) : (
+              <UserPlus
+                className={`h-5 w-5 flex-shrink-0 ${
+                  pathname === "/register" ? "text-white" : ""
+                } ${isCollapsed ? "" : "mr-3"}`}
+              />
+            )}
+            {!isCollapsed && (isAuthenticated ? "Profile" : "Sign Up")}
           </Link>
 
           <Link
             href="/offers"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/offers" ? "bg-primary text-white font-semibold" : "text-gray-600 hover:text-primary"
+              pathname === "/offers"
+                ? "bg-primary text-white font-semibold"
+                : "text-gray-600 hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Offers" : ""}
           >
             <Settings
-              className={`h-5 w-5 flex-shrink-0 ${pathname === "/offers" ? "text-white" : ""} ${
-                isCollapsed ? "" : "mr-3"
-              }`}
+              className={`h-5 w-5 flex-shrink-0 ${
+                pathname === "/offers" ? "text-white" : ""
+              } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Offers"}
           </Link>
@@ -157,14 +209,17 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
                 height={120}
                 className="w-full h-auto rounded-2xl mb-3"
               />
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">How to order food?</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                How to order food?
+              </h3>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Order delicious food with ease and satisfy your cravings instantly.
+                Order delicious food with ease and satisfy your cravings
+                instantly.
               </p>
             </div>
           </div>
         )}
       </div>
     </aside>
-  )
+  );
 }

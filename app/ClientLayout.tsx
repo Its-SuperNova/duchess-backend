@@ -8,6 +8,7 @@ import Header from "@/components/block/Header";
 import BottomNav from "@/components/block/BottomNav";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
+import AuthNotification from "@/components/auth/auth-notification";
 
 export default function ClientLayout({
   children,
@@ -20,6 +21,7 @@ export default function ClientLayout({
   return (
     <FavoritesProvider>
       <CartProvider>
+        <AuthNotification />
         {!isAdminRoute && <Header />}
         <main className="flex-1 min-h-screen">{children}</main>
         {!isAdminRoute && <Footer />}
