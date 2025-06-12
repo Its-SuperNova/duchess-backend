@@ -204,7 +204,11 @@ export default function ProfilePage() {
           <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 flex items-center justify-between lg:hidden border border-gray-200 dark:border-transparent">
             <div className="flex items-center gap-4">
               <div className="bg-[#f4f4f7] dark:bg-[#18171C] rounded-full w-10 h-10 flex items-center justify-center">
-                <Moon className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
+                ) : (
+                  <Moon className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
+                )}
               </div>
               <span className="text-[#000000] dark:text-white">Appearance</span>
             </div>

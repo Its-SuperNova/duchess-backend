@@ -7,21 +7,32 @@ import { Bell, ShoppingCart, ChevronDown } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import LogoutButton from "@/components/auth/logout-button";
+import { useTheme } from "@/context/theme-context";
 
 const DesktopHeader = () => {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
   const isAuthenticated = status === "authenticated" && session?.user;
 
+  // Try to get theme context, with fallback
+  let theme = "light";
+  try {
+    const themeContext = useTheme();
+    theme = themeContext.theme;
+  } catch (error) {
+    // Theme context not available, use default light theme
+    theme = "light";
+  }
+
   return (
-    <div className="hidden lg:flex bg-white border-b border-gray-200 h-16 items-center justify-end px-6 gap-4">
+    <div className="hidden lg:flex bg-white dark:bg-[#202028] border-b border-gray-200 dark:border-gray-700 h-16 items-center justify-end px-6 gap-4">
       {/* Small Search Bar */}
       <div className="relative w-80">
-        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
+        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 text-lg" />
         <input
           type="text"
           placeholder="Search..."
-          className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50 text-sm"
+          className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 dark:border-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50 dark:bg-[#18171C] text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
         />
       </div>
 
@@ -30,7 +41,7 @@ const DesktopHeader = () => {
         href="/notifications"
         className="relative hover:opacity-80 transition-opacity"
       >
-        <Bell className="h-5 w-5 text-gray-600" />
+        <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
           3
         </span>
@@ -41,7 +52,7 @@ const DesktopHeader = () => {
         href="/cart"
         className="relative hover:opacity-80 transition-opacity"
       >
-        <ShoppingCart className="h-5 w-5 text-gray-600" />
+        <ShoppingCart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
           2
         </span>
@@ -72,18 +83,18 @@ const DesktopHeader = () => {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <ChevronDown className="h-4 w-4 text-gray-600" />
+              <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-300" />
             </button>
 
             {/* Dropdown menu */}
             {showDropdown && (
-              <div className="absolute right-0 top-full mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+              <div className="absolute right-0 top-full mt-2 min-w-48 max-w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
                 <div className="py-2">
-                  <div className="px-4 py-2 border-b border-gray-200">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {session?.user?.name || "User"}
                     </p>
-                    <p className="text-xs text-gray-500 break-words">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
                       {session?.user?.email}
                     </p>
                   </div>

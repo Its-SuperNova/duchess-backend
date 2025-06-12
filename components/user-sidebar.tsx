@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { useTheme } from "@/context/theme-context";
 
 interface UserSidebarProps {
   isCollapsed: boolean;
@@ -29,6 +30,16 @@ export default function UserSidebar({
   const pathname = usePathname();
   const { data: session, status } = useSession();
 
+  // Try to get theme context, with fallback
+  let theme = "light";
+  try {
+    const themeContext = useTheme();
+    theme = themeContext.theme;
+  } catch (error) {
+    // Theme context not available, use default light theme
+    theme = "light";
+  }
+
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -37,13 +48,13 @@ export default function UserSidebar({
 
   return (
     <aside
-      className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-30 h-full transition-all duration-300 ${
+      className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 bg-white dark:bg-[#202028] border-r border-gray-200 dark:border-gray-700 z-30 h-full transition-all duration-300 ${
         isCollapsed ? "lg:w-16" : "lg:w-64"
       }`}
     >
       <div className="flex flex-col flex-1 min-h-0 w-full">
         {/* Logo */}
-        <div className="flex items-center h-16 flex-shrink-0 px-4 border-b border-gray-200">
+        <div className="flex items-center h-16 flex-shrink-0 px-4 border-b border-gray-200 dark:border-gray-700">
           {!isCollapsed && (
             <>
               <img
@@ -55,15 +66,15 @@ export default function UserSidebar({
           )}
           <button
             onClick={toggleSidebar}
-            className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+            className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
               isCollapsed ? "mx-auto" : "ml-auto"
             }`}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
-              <Menu className="h-5 w-5 text-gray-600" />
+              <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             ) : (
-              <X className="h-5 w-5 text-gray-600" />
+              <X className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             )}
           </button>
         </div>
@@ -74,8 +85,8 @@ export default function UserSidebar({
             href="/"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/"
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Home" : ""}
           >
@@ -91,8 +102,8 @@ export default function UserSidebar({
             href="/search"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/search"
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Search" : ""}
           >
@@ -108,8 +119,8 @@ export default function UserSidebar({
             href="/categories"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/categories"
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Categories" : ""}
           >
@@ -125,8 +136,8 @@ export default function UserSidebar({
             href="/cart"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/cart"
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Cart" : ""}
           >
@@ -142,8 +153,8 @@ export default function UserSidebar({
             href="/favorites"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/favorites"
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Favorites" : ""}
           >
@@ -159,8 +170,8 @@ export default function UserSidebar({
             href={isAuthenticated ? "/profile" : "/register"}
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === (isAuthenticated ? "/profile" : "/register")
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? (isAuthenticated ? "Profile" : "Sign Up") : ""}
           >
@@ -184,8 +195,8 @@ export default function UserSidebar({
             href="/offers"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/offers"
-                ? "bg-primary text-white font-semibold"
-                : "text-gray-600 hover:text-primary"
+                ? "bg-[#560000] text-white font-semibold"
+                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
             } ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Offers" : ""}
           >
@@ -209,10 +220,10 @@ export default function UserSidebar({
                 height={120}
                 className="w-full h-auto rounded-2xl mb-3"
               />
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
                 How to order food?
               </h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 Order delicious food with ease and satisfy your cravings
                 instantly.
               </p>
