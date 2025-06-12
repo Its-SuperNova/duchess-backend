@@ -1,18 +1,32 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { FiSearch } from "react-icons/fi";
-import { Bell, ShoppingCart, ChevronDown } from "lucide-react";
+import { Bell, ShoppingCart, ChevronDown, Shield } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import LogoutButton from "@/components/auth/logout-button";
 import { useTheme } from "@/context/theme-context";
+import { isUserAdmin } from "@/lib/auth-utils";
 
 const DesktopHeader = () => {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const isAuthenticated = status === "authenticated" && session?.user;
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (isAuthenticated && session?.user?.email) {
+        const adminStatus = await isUserAdmin(session.user.email);
+        setIsAdmin(adminStatus);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdminStatus();
+  }, [isAuthenticated, session]);
 
   // Try to get theme context, with fallback
   let theme = "light";
@@ -57,6 +71,16 @@ const DesktopHeader = () => {
           2
         </span>
       </Link>
+
+      {/* Admin Button */}
+      {isAdmin && (
+        <Link href="/admin">
+          <Button variant="outline" size="sm" className="h-9">
+            <Shield className="h-4 w-4 mr-2" />
+            Admin
+          </Button>
+        </Link>
+      )}
 
       {/* Right side - Sign Up button or Profile image */}
       <div className="relative">

@@ -2,12 +2,13 @@
 import { useState, useEffect } from "react";
 import { FiSearch } from "react-icons/fi";
 import { IoFilter } from "react-icons/io5";
-import { Bell, ShoppingCart, ChevronDown } from "lucide-react";
+import { Bell, ShoppingCart, ChevronDown, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import LogoutButton from "@/components/auth/logout-button";
+import { isUserAdmin } from "@/lib/auth-utils";
 
 const categories = [
   { name: "Cup Cake", image: "/images/categories/cupcake.png" },
@@ -47,6 +48,7 @@ const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Auto-slide functionality for mobile
   useEffect(() => {
@@ -62,6 +64,18 @@ const Hero = () => {
   };
 
   const isAuthenticated = status === "authenticated" && session?.user;
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (isAuthenticated && session?.user?.email) {
+        const adminStatus = await isUserAdmin(session.user.email);
+        setIsAdmin(adminStatus);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdminStatus();
+  }, [isAuthenticated, session]);
 
   return (
     <div className="w-full">
@@ -98,6 +112,16 @@ const Hero = () => {
             2
           </span>
         </Link>
+
+        {/* Admin Button */}
+        {isAdmin && (
+          <Link href="/admin">
+            <Button variant="outline" size="sm" className="h-9">
+              <Shield className="h-4 w-4 mr-2" />
+              Admin
+            </Button>
+          </Link>
+        )}
 
         {/* Right side - Sign Up button or Profile image */}
         <div className="relative">

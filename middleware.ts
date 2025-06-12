@@ -1,24 +1,22 @@
-import { withAuth } from "next-auth/middleware";
+import { auth } from "@/auth";
+import { NextResponse } from "next/server";
 
-export default withAuth(
-  function middleware(req) {
-    // Add any middleware logic here if needed
-    console.log("Middleware called for:", req.nextUrl.pathname);
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => {
-        // Allow all requests for now to test redirect
-        return true;
-      },
-    },
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+
+  // Check if user is trying to access admin routes
+  if (pathname.startsWith("/admin")) {
+    // If user is not authenticated, redirect to login
+    if (!req.auth) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // For now, we'll let the RoleGuard component handle role-based access
+    // In a production environment, you might want to check roles here as well
+    console.log("Admin route accessed by:", req.auth.user?.email);
   }
-);
+});
 
 export const config = {
-  matcher: [
-    // Temporarily disable all matchers to test redirect
-    // "/profile/:path*",
-    // "/admin/:path*",
-  ],
+  matcher: ["/admin/:path*", "/profile/:path*"],
 };

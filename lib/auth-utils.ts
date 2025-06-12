@@ -94,3 +94,63 @@ export async function updateUserProfile(
     return null;
   }
 }
+
+// Role-based access control utilities
+export async function getUserRole(
+  email: string
+): Promise<"user" | "admin" | "moderator" | null> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("role")
+      .eq("email", email)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user role:", error);
+      return null;
+    }
+
+    return data.role;
+  } catch (error) {
+    console.error("Error in getUserRole:", error);
+    return null;
+  }
+}
+
+export async function isUserAdmin(email: string): Promise<boolean> {
+  const role = await getUserRole(email);
+  return role === "admin";
+}
+
+export async function isUserModerator(email: string): Promise<boolean> {
+  const role = await getUserRole(email);
+  return role === "moderator" || role === "admin";
+}
+
+export async function updateUserRole(
+  email: string,
+  role: "user" | "admin" | "moderator"
+): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        role,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("email", email)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating user role:", error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in updateUserRole:", error);
+    return null;
+  }
+}
