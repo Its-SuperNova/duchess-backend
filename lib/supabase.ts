@@ -13,6 +13,9 @@ export interface User {
   image?: string;
   provider: string;
   provider_id: string;
+  phone_number?: string;
+  date_of_birth?: string;
+  gender?: string;
   created_at: string;
   updated_at: string;
 }

@@ -37,11 +37,15 @@ import {
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/context/theme-context";
+import { getUserByEmail } from "@/lib/auth-utils";
 
 // Mock profile data type
 interface Profile {
   full_name: string;
   email: string;
+  phone_number?: string;
+  date_of_birth?: string;
+  gender?: string;
   avatar_url?: string;
 }
 
@@ -81,21 +85,60 @@ export default function ProfilePage() {
 
   // Simulate loading profile data
   useEffect(() => {
-    if (status === "loading") return;
-    if (status === "authenticated" && session?.user) {
-      setProfile({
-        full_name: session.user.name || "User",
-        email: session.user.email || "",
-        avatar_url: session.user.image || undefined,
-      });
-    } else {
-      setProfile({
-        full_name: "Ashwin",
-        email: "ashwin@gmail.com",
-        avatar_url: undefined,
-      });
-    }
-    setLoading(false);
+    const loadProfileData = async () => {
+      if (status === "loading") return;
+
+      if (status === "authenticated" && session?.user?.email) {
+        try {
+          // Fetch user data from Supabase
+          const userData = await getUserByEmail(session.user.email);
+
+          if (userData) {
+            setProfile({
+              full_name: userData.name || "User",
+              email: userData.email || "",
+              phone_number: userData.phone_number,
+              date_of_birth: userData.date_of_birth,
+              gender: userData.gender,
+              avatar_url: userData.image || undefined,
+            });
+          } else {
+            // Fallback to session data
+            setProfile({
+              full_name: session.user.name || "User",
+              email: session.user.email || "",
+              phone_number: undefined,
+              date_of_birth: undefined,
+              gender: undefined,
+              avatar_url: session.user.image || undefined,
+            });
+          }
+        } catch (error) {
+          console.error("Error loading profile data:", error);
+          // Fallback to session data
+          setProfile({
+            full_name: session.user.name || "User",
+            email: session.user.email || "",
+            phone_number: undefined,
+            date_of_birth: undefined,
+            gender: undefined,
+            avatar_url: session.user.image || undefined,
+          });
+        }
+      } else {
+        setProfile({
+          full_name: "Ashwin",
+          email: "ashwin@gmail.com",
+          phone_number: "+91 98765 43210",
+          date_of_birth: "1995-06-15",
+          gender: "Male",
+          avatar_url: undefined,
+        });
+      }
+      setLoading(false);
+    };
+
+    loadProfileData();
   }, [session, status]);
 
   if (loading || !mounted) {

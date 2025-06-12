@@ -61,3 +61,36 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     return null;
   }
 }
+
+export async function updateUserProfile(
+  email: string,
+  profileData: {
+    name?: string;
+    phone_number?: string;
+    date_of_birth?: string;
+    gender?: string;
+    image?: string;
+  }
+): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        ...profileData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("email", email)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating user profile:", error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in updateUserProfile:", error);
+    return null;
+  }
+}
