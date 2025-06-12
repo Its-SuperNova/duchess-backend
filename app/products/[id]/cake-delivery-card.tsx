@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { format, addDays, startOfToday } from "date-fns";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Function to calculate delivery time based on stock status and location
 const calculateDeliveryTime = (stock: number, location: string) => {
@@ -94,18 +94,6 @@ const calculateDeliveryTime = (stock: number, location: string) => {
     isDelayed: stock === 0,
   };
 };
-
-// Hook to detect mobile
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isMobile;
-}
 
 // AddressDrawer component
 function AddressDrawer({
