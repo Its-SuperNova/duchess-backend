@@ -11,13 +11,22 @@ export default function AuthNotification() {
   const hasShownNotification = useRef(false);
 
   useEffect(() => {
+    // Check if we've already shown the notification for this session
+    const hasShownForSession = localStorage.getItem(
+      `auth-notification-${session?.user?.email}`
+    );
+
     // Show success message when user is authenticated for the first time
     if (
       status === "authenticated" &&
       session?.user &&
-      !hasShownNotification.current
+      !hasShownNotification.current &&
+      !hasShownForSession
     ) {
       hasShownNotification.current = true;
+
+      // Mark that we've shown the notification for this user session
+      localStorage.setItem(`auth-notification-${session.user.email}`, "true");
 
       toast({
         title: "Authentication Successful! 🎉",
@@ -32,6 +41,14 @@ export default function AuthNotification() {
     // Reset the flag when user signs out
     if (status === "unauthenticated") {
       hasShownNotification.current = false;
+      // Clear the notification flag for all users when signing out
+      // This ensures the notification shows again when they sign back in
+      const keys = Object.keys(localStorage);
+      keys.forEach((key) => {
+        if (key.startsWith("auth-notification-")) {
+          localStorage.removeItem(key);
+        }
+      });
     }
   }, [status, session, toast]);
 

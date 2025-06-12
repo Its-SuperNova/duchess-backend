@@ -183,7 +183,7 @@ export default function ProfilePage() {
   return (
     <>
       <DesktopHeader />
-      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4">
+      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
         <div className="max-w-md sm:max-w-lg md:max-w-xl lg:max-w-4xl xl:max-w-6xl mx-auto space-y-4 pb-20">
           {/* Top Section for Desktop: User Info, Logout, Stats */}
           <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start lg:gap-4">
@@ -396,7 +396,7 @@ export default function ProfilePage() {
                 </h2>
                 <div className="space-y-2 py-4">
                   <Link
-                    href="#"
+                    href="/faq"
                     className="flex items-center justify-between px-4 py-2 cursor-pointer"
                   >
                     <div className="flex items-center gap-4">

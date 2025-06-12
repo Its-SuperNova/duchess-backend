@@ -1,141 +1,327 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
+import type React from "react";
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Loader2, Search, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { createAddress } from "@/lib/address-utils";
 
 export default function NewAddressPage() {
-  const router = useRouter()
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [formData, setFormData] = useState({
-    addressName: "",
+    addressName: "Home",
     fullAddress: "",
     city: "",
     state: "",
     zipCode: "",
-  })
+    additionalDetails: "",
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
-  }
+    }));
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Here you would typically save the address to your backend
-    // For now, we'll just navigate back
-    router.push("/profile/addresses")
-  }
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    setLocationLoading(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const pos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+
+        // Use reverse geocoding to get address from coordinates
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: pos }, (results, status) => {
+          if (status === "OK" && results?.[0]) {
+            const addressComponents = results[0].address_components;
+            let streetNumber = "";
+            let route = "";
+            let city = "";
+            let state = "";
+            let zipCode = "";
+
+            addressComponents.forEach((component) => {
+              const types = component.types;
+              if (types.includes("street_number")) {
+                streetNumber = component.long_name;
+              } else if (types.includes("route")) {
+                route = component.long_name;
+              } else if (types.includes("locality")) {
+                city = component.long_name;
+              } else if (types.includes("administrative_area_level_1")) {
+                state = component.long_name;
+              } else if (types.includes("postal_code")) {
+                zipCode = component.long_name;
+              }
+            });
+
+            setFormData((prev) => ({
+              ...prev,
+              fullAddress: `${streetNumber} ${route}`.trim(),
+              city: city,
+              state: state,
+              zipCode: zipCode,
+            }));
+          } else {
+            setFormData((prev) => ({
+              ...prev,
+              fullAddress: "Location detected - please verify address",
+            }));
+          }
+          setLocationLoading(false);
+        });
+      },
+      (error) => {
+        setLocationLoading(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setError(
+              "Location access denied. Please enable location services in your browser settings."
+            );
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setError("Location information is unavailable. Please try again.");
+            break;
+          case error.TIMEOUT:
+            setError("Location request timed out. Please try again.");
+            break;
+          default:
+            setError("An unknown error occurred while getting your location.");
+            break;
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!session?.user?.email) {
+      setError("You must be logged in to add an address.");
+      return;
+    }
+
+    if (
+      !formData.fullAddress ||
+      !formData.city ||
+      !formData.state ||
+      !formData.zipCode
+    ) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const userId = session.user.email;
+      const newAddress = await createAddress(userId, {
+        address_name: formData.addressName,
+        full_address: formData.fullAddress,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+        is_default: false,
+      });
+
+      if (newAddress) {
+        router.push("/profile/addresses");
+      } else {
+        setError("Failed to create address. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error creating address:", err);
+      setError("Failed to create address. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white p-4 flex items-center border-b shadow-sm">
-        <Link href="/profile/addresses" className="mr-4">
-          <div className="bg-gray-100 p-2 rounded-full">
-            <ArrowLeft className="h-5 w-5" />
-          </div>
-        </Link>
-        <h1 className="text-xl font-semibold">Add New Address</h1>
-      </div>
-
-      {/* Form */}
-      <div className="flex-1 p-4 pb-24">
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+      <div className="max-w-md mx-auto space-y-6 pb-20">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/profile/addresses">
+            <div className="bg-white dark:bg-[#202028] p-2 rounded-lg shadow-sm">
+              <ArrowLeft className="h-5 w-5" />
+            </div>
+          </Link>
           <div>
-            <label htmlFor="addressName" className="block text-sm font-medium text-gray-700 mb-1">
-              Address Name
-            </label>
-            <input
-              type="text"
-              id="addressName"
-              name="addressName"
-              value={formData.addressName}
-              onChange={handleChange}
-              className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
-              placeholder="Home, Office, etc."
-              required
-            />
+            <h1 className="text-xl font-semibold text-[#000000] dark:text-white">
+              Add New Address
+            </h1>
+            <p className="text-[#858585] dark:text-gray-400 text-sm">
+              Enter your delivery address details
+            </p>
           </div>
+        </div>
 
-          <div>
-            <label htmlFor="fullAddress" className="block text-sm font-medium text-gray-700 mb-1">
-              Street Address
-            </label>
-            <input
-              type="text"
-              id="fullAddress"
-              name="fullAddress"
-              value={formData.fullAddress}
-              onChange={handleChange}
-              className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
-              placeholder="Enter your street address"
-              required
-            />
+        {/* Use Current Location Button */}
+        <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 border border-gray-200 dark:border-transparent">
+          <button
+            onClick={handleUseCurrentLocation}
+            disabled={locationLoading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#7a0000] bg-white text-[#7a0000] hover:bg-[#7a0000] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {locationLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Getting location...</span>
+              </>
+            ) : (
+              <>
+                <MapPin className="h-5 w-5" />
+                <span>Use Current Location</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+            <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
           </div>
+        )}
 
-          <div className="grid grid-cols-2 gap-4">
+        {/* Address Form */}
+        <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent">
+          <h2 className="text-lg font-semibold text-[#000000] dark:text-white mb-6">
+            Address Details
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                City
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                Address Label*
               </label>
               <input
                 type="text"
-                id="city"
+                name="addressName"
+                value={formData.addressName}
+                onChange={handleInputChange}
+                placeholder="e.g., Home, Work, Office"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                Street Address*
+              </label>
+              <input
+                type="text"
+                name="fullAddress"
+                value={formData.fullAddress}
+                onChange={handleInputChange}
+                placeholder="Enter your street address"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                City*
+              </label>
+              <input
+                type="text"
                 name="city"
                 value={formData.city}
-                onChange={handleChange}
-                className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
-                placeholder="City"
+                onChange={handleInputChange}
+                placeholder="Enter your city"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
                 required
               />
             </div>
+
             <div>
-              <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                State
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                State*
               </label>
               <input
                 type="text"
-                id="state"
                 name="state"
                 value={formData.state}
-                onChange={handleChange}
-                className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
-                placeholder="State"
+                onChange={handleInputChange}
+                placeholder="Enter your state"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
                 required
               />
             </div>
-          </div>
 
-          <div>
-            <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
-              ZIP Code
-            </label>
-            <input
-              type="text"
-              id="zipCode"
-              name="zipCode"
-              value={formData.zipCode}
-              onChange={handleChange}
-              className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
-              placeholder="ZIP Code"
-              required
-            />
-          </div>
-        </form>
-      </div>
+            <div>
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                ZIP Code*
+              </label>
+              <input
+                type="text"
+                name="zipCode"
+                value={formData.zipCode}
+                onChange={handleInputChange}
+                placeholder="Enter your ZIP code"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+                required
+              />
+            </div>
 
-      {/* Fixed Save Button */}
-      <div className="fixed bottom-[60px] left-0 right-0 p-4 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-        <button onClick={handleSubmit} className="w-full py-3 bg-[#8B4513] text-white rounded-full font-medium">
-          Save Address
-        </button>
+            <div>
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                Additional Details
+              </label>
+              <input
+                type="text"
+                name="additionalDetails"
+                value={formData.additionalDetails}
+                onChange={handleInputChange}
+                placeholder="e.g., Floor, House no., Landmark"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-[#7a0000] dark:bg-[#7a0000] text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                "Save Address"
+              )}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
-  )
+  );
 }

@@ -25,7 +25,7 @@ const DesktopHeader = () => {
   }
 
   return (
-    <div className="hidden lg:flex bg-white dark:bg-[#202028] border-b border-gray-200 dark:border-gray-700 h-16 items-center justify-end px-6 gap-4">
+    <div className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#202028] border-b border-gray-200 dark:border-gray-700 h-16 items-center justify-end px-6 gap-4">
       {/* Small Search Bar */}
       <div className="relative w-80">
         <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 text-lg" />

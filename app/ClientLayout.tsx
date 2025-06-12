@@ -22,6 +22,7 @@ export default function ClientLayout({
   const isAuthRoute = pathname === "/login" || pathname === "/register";
   const isHomePage = pathname === "/";
   const isProfileRoute = pathname.startsWith("/profile");
+  const isFAQPage = pathname === "/faq";
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
@@ -29,13 +30,17 @@ export default function ClientLayout({
       <FavoritesProvider>
         <CartProvider>
           <AuthNotification />
-          {!isAdminRoute && !isHomePage && !isProfileRoute && (
-            <Header
-              isCollapsed={
-                !isAdminRoute && !isAuthRoute ? isCollapsed : undefined
-              }
-            />
-          )}
+          {!isAdminRoute &&
+            !isHomePage &&
+            !isProfileRoute &&
+            !isFAQPage &&
+            !isAuthRoute && (
+              <Header
+                isCollapsed={
+                  !isAdminRoute && !isAuthRoute ? isCollapsed : undefined
+                }
+              />
+            )}
           <div className="flex w-full">
             {!isAdminRoute && !isAuthRoute && (
               <UserSidebar
@@ -55,7 +60,9 @@ export default function ClientLayout({
               {children}
             </main>
           </div>
-          {!isAdminRoute && <BottomNav />}
+          {!isAdminRoute && !isProfileRoute && !isFAQPage && !isAuthRoute && (
+            <BottomNav />
+          )}
           <Toaster />
         </CartProvider>
       </FavoritesProvider>

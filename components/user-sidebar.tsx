@@ -48,7 +48,7 @@ export default function UserSidebar({
 
   return (
     <aside
-      className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 bg-white dark:bg-[#202028] border-r border-gray-200 dark:border-gray-700 z-30 h-full transition-all duration-300 ${
+      className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 bg-white dark:bg-[#202028] border-r border-gray-200 dark:border-gray-700 z-[60] h-full transition-all duration-300 ${
         isCollapsed ? "lg:w-16" : "lg:w-64"
       }`}
     >

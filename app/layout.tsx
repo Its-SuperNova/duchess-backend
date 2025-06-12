@@ -2,7 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import ClientLayout from "./ClientLayout";
+import LayoutWrapper from "./layout-wrapper";
 import AuthSessionProvider from "@/components/providers/session-provider";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} overflow-x-hidden`}>
         <AuthSessionProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <LayoutWrapper>{children}</LayoutWrapper>
         </AuthSessionProvider>
       </body>
     </html>
