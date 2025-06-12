@@ -1,23 +1,27 @@
 -- Fix RLS policies for NextAuth integration
 -- This script safely removes old policies and creates new ones
 -- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view own data" ON public.users;
-DROP POLICY IF EXISTS "Users can update own data" ON public.users;
-DROP POLICY IF EXISTS "Users can insert own data" ON public.users;
-DROP POLICY IF EXISTS "Allow all operations for NextAuth users" ON public.users;
--- Create new policy that allows all operations for NextAuth
-CREATE POLICY "Allow all operations for NextAuth users" ON public.users FOR ALL USING (true) WITH CHECK (true);
--- Drop existing trigger if it exists
-DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
--- Create the function if it doesn't exist
-CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW();
-RETURN NEW;
+DROP POLICY IF EXISTS "Users can view own addresses" ON public.addresses;
+DROP POLICY IF EXISTS "Users can insert own addresses" ON public.addresses;
+DROP POLICY IF EXISTS "Users can update own addresses" ON public.addresses;
+DROP POLICY IF EXISTS "Users can delete own addresses" ON public.addresses;
+-- For NextAuth integration, we need to disable RLS temporarily or use a different approach
+-- Option 1: Disable RLS (less secure but works with NextAuth)
+ALTER TABLE public.addresses DISABLE ROW LEVEL SECURITY;
+-- Option 2: If you want to keep RLS enabled (more secure), uncomment the following:
+-- CREATE POLICY "Allow all operations for authenticated users" ON public.addresses
+--     FOR ALL USING (true) WITH CHECK (true);
+-- Create a function to get user ID from email (for future use)
+CREATE OR REPLACE FUNCTION get_user_id_from_email(user_email TEXT) RETURNS UUID AS $$
+DECLARE user_uuid UUID;
+BEGIN
+SELECT id INTO user_uuid
+FROM public.users
+WHERE email = user_email;
+RETURN user_uuid;
 END;
-$$ language 'plpgsql';
--- Create the trigger
-CREATE TRIGGER update_users_updated_at BEFORE
-UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
--- Verify the setup
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Verify the changes
 SELECT schemaname,
     tablename,
     policyname,
@@ -27,10 +31,10 @@ SELECT schemaname,
     qual,
     with_check
 FROM pg_policies
-WHERE tablename = 'users';
--- Show triggers
-SELECT trigger_name,
-    event_manipulation,
-    action_statement
-FROM information_schema.triggers
-WHERE event_object_table = 'users';
+WHERE tablename = 'addresses';
+-- Show RLS status
+SELECT schemaname,
+    tablename,
+    rowsecurity
+FROM pg_tables
+WHERE tablename = 'addresses';

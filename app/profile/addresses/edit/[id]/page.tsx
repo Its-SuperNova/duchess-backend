@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { updateAddress, getUserAddresses } from "@/lib/address-utils";
+import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
 
 export default function EditAddressPage() {
@@ -40,8 +41,15 @@ export default function EditAddressPage() {
         setLoading(true);
         setError(null);
 
-        const userId = session.user.email;
-        const userAddresses = await getUserAddresses(userId);
+        // Get the actual user ID from the database using email
+        const user = await getUserByEmail(session.user.email);
+        if (!user) {
+          setError("User not found. Please try logging in again.");
+          setLoading(false);
+          return;
+        }
+
+        const userAddresses = await getUserAddresses(user.id);
         const targetAddress = userAddresses.find(
           (addr) => addr.id === addressId
         );

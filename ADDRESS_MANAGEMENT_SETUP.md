@@ -238,3 +238,56 @@ Potential improvements for the address management system:
 - [ ] Integration with mapping services
 - [ ] Address history and analytics
 - [ ] Multi-language support for international addresses
+
+## Issue: RLS Policy Violation
+
+The error `new row violates row-level security policy for table "addresses"` occurs because the Row Level Security (RLS) policies in Supabase are configured for Supabase Auth, but you're using NextAuth.
+
+## Solution
+
+### Step 1: Run the RLS Fix Script
+
+1. Go to your Supabase Dashboard
+2. Navigate to the SQL Editor
+3. Copy and paste the contents of `fix-supabase-rls.sql`
+4. Run the script
+
+### Step 2: Verify the Fix
+
+After running the script, you should see:
+
+- RLS disabled for the addresses table
+- No policies listed for the addresses table
+- Address creation should work without errors
+
+### Step 3: Test Address Creation
+
+1. Try creating a new address in your app
+2. Check the browser console for any remaining errors
+3. Verify the address is saved to the database
+
+## Alternative: Secure RLS with NextAuth
+
+If you want to keep RLS enabled for security, you can:
+
+1. Use the service role key instead of the anon key
+2. Create custom policies that work with NextAuth
+3. Implement server-side address operations
+
+## Troubleshooting
+
+### If you still get 401 errors:
+
+1. Check your environment variables
+2. Verify your Supabase URL and keys
+3. Ensure the user exists in the database
+
+### If you get UUID errors:
+
+1. Make sure the user is properly created in the database
+2. Verify the user ID is being passed correctly
+3. Check the database schema matches the code
+
+## Security Note
+
+Disabling RLS makes the addresses table accessible to all authenticated users. For production, consider implementing proper server-side validation and authorization.

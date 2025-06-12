@@ -177,6 +177,8 @@ export async function createAddress(
   addressData: CreateAddressData
 ): Promise<Address | null> {
   try {
+    console.log("Creating address with data:", { userId, addressData });
+
     const { data, error } = await supabase
       .from("addresses")
       .insert({
@@ -188,9 +190,16 @@ export async function createAddress(
 
     if (error) {
       console.error("Error creating address:", error);
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       return null;
     }
 
+    console.log("Address created successfully:", data);
     return data;
   } catch (error) {
     console.error("Error in createAddress:", error);

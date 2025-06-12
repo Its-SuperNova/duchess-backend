@@ -17,6 +17,7 @@ import {
   setDefaultAddress,
   deleteAddress,
 } from "@/lib/address-utils";
+import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
@@ -39,11 +40,15 @@ export default function ManageAddressPage() {
         setLoading(true);
         setError(null);
 
-        // Get user ID from session or fetch from database
-        // For now, we'll use a simple approach - you might need to adjust this based on your auth setup
-        const userId = session.user.email; // This should be the actual user ID from your auth system
+        // Get the actual user ID from the database using email
+        const user = await getUserByEmail(session.user.email);
+        if (!user) {
+          setError("User not found. Please try logging in again.");
+          setLoading(false);
+          return;
+        }
 
-        const userAddresses = await getUserAddresses(userId);
+        const userAddresses = await getUserAddresses(user.id);
         setAddresses(userAddresses);
       } catch (err) {
         console.error("Error loading addresses:", err);
@@ -60,8 +65,14 @@ export default function ManageAddressPage() {
     if (!session?.user?.email) return;
 
     try {
-      const userId = session.user.email;
-      const success = await setDefaultAddress(userId, addressId);
+      // Get the actual user ID from the database using email
+      const user = await getUserByEmail(session.user.email);
+      if (!user) {
+        setError("User not found. Please try logging in again.");
+        return;
+      }
+
+      const success = await setDefaultAddress(user.id, addressId);
 
       if (success) {
         // Update local state

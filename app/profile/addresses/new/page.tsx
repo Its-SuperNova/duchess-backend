@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Search, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createAddress, getCurrentLocationAddress } from "@/lib/address-utils";
+import { getUserByEmail } from "@/lib/auth-utils";
 
 export default function NewAddressPage() {
   const router = useRouter();
@@ -83,8 +84,14 @@ export default function NewAddressPage() {
       setLoading(true);
       setError(null);
 
-      const userId = session.user.email;
-      const newAddress = await createAddress(userId, {
+      // Get the actual user ID from the database using email
+      const user = await getUserByEmail(session.user.email);
+      if (!user) {
+        setError("User not found. Please try logging in again.");
+        return;
+      }
+
+      const newAddress = await createAddress(user.id, {
         address_name: formData.addressName,
         full_address: formData.fullAddress,
         city: formData.city,
