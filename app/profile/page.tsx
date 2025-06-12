@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
   LogOut,
   User,
   MapPin,
@@ -25,6 +32,8 @@ import {
   Moon,
   Heart,
   Sun,
+  Monitor,
+  Check,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/context/theme-context";
@@ -51,12 +60,15 @@ export default function ProfilePage() {
     // Theme context not available, use local state
     themeContext = {
       theme: themeState,
+      resolvedTheme: themeState,
       toggleTheme: () =>
         setThemeState((prev) => (prev === "light" ? "dark" : "light")),
+      setTheme: (theme: "light" | "dark" | "system") =>
+        setThemeState(theme as "light" | "dark"),
     };
   }
 
-  const { theme, toggleTheme } = themeContext;
+  const { theme, resolvedTheme, toggleTheme, setTheme } = themeContext;
 
   // Mock data for demonstration, matching the Figma numbers
   const totalOrders = 12;
@@ -97,6 +109,32 @@ export default function ProfilePage() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getThemeDisplayName = (theme: string) => {
+    switch (theme) {
+      case "light":
+        return "Light";
+      case "dark":
+        return "Dark";
+      case "system":
+        return "Use device theme";
+      default:
+        return "Light";
+    }
+  };
+
+  const getThemeIcon = (theme: string) => {
+    switch (theme) {
+      case "light":
+        return <Sun className="h-5 w-5" />;
+      case "dark":
+        return <Moon className="h-5 w-5" />;
+      case "system":
+        return <Monitor className="h-5 w-5" />;
+      default:
+        return <Sun className="h-5 w-5" />;
+    }
   };
 
   return (
@@ -142,13 +180,9 @@ export default function ProfilePage() {
                   className="flex items-center justify-center gap-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-800"
                   onClick={toggleTheme}
                 >
-                  {theme === "dark" ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
+                  {getThemeIcon(theme)}
                   <span className="text-sm font-medium">
-                    {theme === "dark" ? "Light" : "Dark"}
+                    {getThemeDisplayName(theme)}
                   </span>
                 </Button>
                 {status === "authenticated" ? (
@@ -201,25 +235,59 @@ export default function ProfilePage() {
           </div>
 
           {/* Appearance Section (only on mobile, hidden on desktop as per Figma) */}
-          <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 flex items-center justify-between lg:hidden border border-gray-200 dark:border-transparent">
-            <div className="flex items-center gap-4">
-              <div className="bg-[#f4f4f7] dark:bg-[#18171C] rounded-full w-10 h-10 flex items-center justify-center">
-                {theme === "dark" ? (
-                  <Sun className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
-                ) : (
-                  <Moon className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
+          <Drawer>
+            <DrawerTrigger asChild>
+              <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 flex items-center justify-between lg:hidden border border-gray-200 dark:border-transparent cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="bg-[#f4f4f7] dark:bg-[#18171C] rounded-full w-10 h-10 flex items-center justify-center">
+                    {resolvedTheme === "dark" ? (
+                      <Moon className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
+                    ) : (
+                      <Sun className="h-5 w-5 text-[#9b99ab] dark:text-[#9B99AB]" />
+                    )}
+                  </div>
+                  <span className="text-[#000000] dark:text-white">
+                    Appearance
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[#858585] dark:text-gray-400">
+                  <span>{getThemeDisplayName(theme)}</span>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              </div>
+            </DrawerTrigger>
+            <DrawerContent className="dark:bg-[#18171C] dark:border-none">
+              <DrawerHeader>
+                <DrawerTitle className="text-left">Choose theme</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-2 pb-8 space-y-0">
+                {(["light", "dark", "system"] as const).map(
+                  (themeOption, index) => (
+                    <div key={themeOption}>
+                      <button
+                        onClick={() => setTheme(themeOption)}
+                        className="w-full flex items-center justify-between p-3 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[#f4f4f7] dark:bg-[#202028] rounded-full w-10 h-10 flex items-center justify-center">
+                            {getThemeIcon(themeOption)}
+                          </div>
+                          <span className="text-[#000000] dark:text-white font-medium">
+                            {getThemeDisplayName(themeOption)}
+                          </span>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                          {theme === themeOption && (
+                            <div className="w-3 h-3 rounded-full bg-[#238aff] dark:bg-[#8CC2FF]"></div>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
-              <span className="text-[#000000] dark:text-white">Appearance</span>
-            </div>
-            <button
-              onClick={toggleTheme}
-              className="flex items-center gap-2 text-[#858585] dark:text-gray-400"
-            >
-              <span>{theme === "dark" ? "Dark" : "Light"}</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+            </DrawerContent>
+          </Drawer>
 
           {/* Main Content Sections for Desktop */}
           <div className="lg:grid lg:grid-cols-2 lg:gap-4">
