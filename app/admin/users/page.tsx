@@ -21,15 +21,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search, Users, Shield, User, UserCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { User } from "@/lib/supabase";
+import type { User as UserType } from "@/lib/supabase";
 import { updateUserRole } from "@/lib/auth-utils";
 import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+type UserWithAddress = UserType & { address: string | null };
+
+const ITEMS_PER_PAGE = 10;
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserWithAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
+  const [addressFilter, setAddressFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchUsers();
@@ -38,21 +62,41 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching users:", error);
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
         toast.error("Failed to fetch users");
+        setLoading(false);
         return;
       }
 
-      setUsers(data || []);
+      const { data: addressesData, error: addressesError } = await supabase
+        .from("addresses")
+        .select("user_id, city, state")
+        .eq("is_default", true);
+
+      if (addressesError) {
+        // This is not a fatal error, so we just log it
+        console.warn("Could not fetch user addresses:", addressesError.message);
+      }
+
+      const combinedUsers = usersData.map((user) => {
+        const address = addressesData?.find((addr) => addr.user_id === user.id);
+        return {
+          ...user,
+          address: address ? `${address.city}, ${address.state}` : null,
+        };
+      });
+
+      setUsers(combinedUsers);
     } catch (error) {
       console.error("Error in fetchUsers:", error);
-      toast.error("Failed to fetch users");
+      toast.error("An unexpected error occurred while fetching users.");
     } finally {
       setLoading(false);
     }
@@ -63,20 +107,32 @@ export default function UsersPage() {
     newRole: "user" | "admin" | "moderator"
   ) => {
     try {
-      const user = users.find((u) => u.id === userId);
-      if (!user) return;
+      const userToUpdate = users.find((u) => u.id === userId);
+      if (!userToUpdate) return;
 
-      const updatedUser = await updateUserRole(user.email, newRole);
+      const updatedUserFromDB = await updateUserRole(
+        userToUpdate.email,
+        newRole
+      );
 
-      if (updatedUser) {
-        setUsers(users.map((u) => (u.id === userId ? updatedUser : u)));
-        toast.success(`Role updated to ${newRole}`);
+      if (updatedUserFromDB) {
+        // Re-apply the address to the user object after update
+        setUsers(
+          users.map((u) =>
+            u.id === userId
+              ? { ...updatedUserFromDB, address: userToUpdate.address }
+              : u
+          )
+        );
+        toast.success(
+          `Role for ${updatedUserFromDB.name} updated to ${newRole}`
+        );
       } else {
         toast.error("Failed to update role");
       }
     } catch (error) {
       console.error("Error updating role:", error);
-      toast.error("Failed to update role");
+      toast.error("An unexpected error occurred while updating the role.");
     }
   };
 
@@ -107,12 +163,39 @@ export default function UsersPage() {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const userCity = user.address?.split(",")[0].trim();
+    return (
+      (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (roleFilter === "all" || user.role === roleFilter) &&
+      (genderFilter === "all" || user.gender === genderFilter) &&
+      (addressFilter === "all" || userCity === addressFilter)
+    );
   });
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const genderOptions = [
+    "all",
+    ...Array.from(new Set(users.map((u) => u.gender).filter(Boolean))),
+  ];
+
+  const addressOptions = [
+    "all",
+    ...Array.from(
+      new Set(users.map((u) => u.address?.split(",")[0].trim()).filter(Boolean))
+    ),
+  ];
 
   if (loading) {
     return (
@@ -163,16 +246,40 @@ export default function UsersPage() {
                 />
               </div>
             </div>
-            <div className="w-full sm:w-48">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="user">Users</SelectItem>
-                  <SelectItem value="moderator">Moderators</SelectItem>
-                  <SelectItem value="admin">Admins</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={genderFilter} onValueChange={setGenderFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  {genderOptions.map((gender) => (
+                    <SelectItem key={gender} value={gender}>
+                      {gender === "all" ? "All Genders" : gender}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={addressFilter} onValueChange={setAddressFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by address" />
+                </SelectTrigger>
+                <SelectContent>
+                  {addressOptions.map((address) => (
+                    <SelectItem key={address} value={address}>
+                      {address === "all" ? "All Addresses" : address}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -180,74 +287,129 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {/* Users List */}
+      {/* Users Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
-          <CardDescription>Manage user roles and permissions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredUsers.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No users found</p>
-              </div>
-            ) : (
-              filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src={user.image || undefined} />
-                      <AvatarFallback>
-                        {user.name?.charAt(0).toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-medium">{user.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {user.email}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge className={getRoleColor(user.role)}>
-                          <span className="flex items-center gap-1">
-                            {getRoleIcon(user.role)}
-                            {user.role}
-                          </span>
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Joined{" "}
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </span>
+        <CardContent className="pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead className="hidden md:table-cell">Provider</TableHead>
+                <TableHead className="hidden md:table-cell">Joined</TableHead>
+                <TableHead className="hidden lg:table-cell">Gender</TableHead>
+                <TableHead className="hidden lg:table-cell">Address</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-4">
+                        <Avatar>
+                          <AvatarImage src={user.image || undefined} />
+                          <AvatarFallback>
+                            {user.name?.charAt(0).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={user.role}
-                      onValueChange={(value: "user" | "admin" | "moderator") =>
-                        handleRoleChange(user.id, value)
-                      }
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="moderator">Moderator</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getRoleColor(user.role)}>
+                        <span className="flex items-center gap-1">
+                          {getRoleIcon(user.role)}
+                          {user.role}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {user.provider}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {user.gender || "N/A"}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {user.address || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={user.role}
+                        onValueChange={(
+                          value: "user" | "admin" | "moderator"
+                        ) => handleRoleChange(user.id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="moderator">Moderator</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={() => handlePageChange(currentPage - 1)}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  href="#"
+                  onClick={() => handlePageChange(i + 1)}
+                  isActive={currentPage === i + 1}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={() => handlePageChange(currentPage + 1)}
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 }
