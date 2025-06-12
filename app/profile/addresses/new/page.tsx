@@ -43,16 +43,15 @@ export default function NewAddressPage() {
       } else if (result.address) {
         setFormData((prev) => ({
           ...prev,
-          fullAddress: result.address!.street,
+          // Don't auto-fill street address - user should enter it manually
           city: result.address!.city,
           state: result.address!.state,
           zipCode: result.address!.zipCode,
         }));
       } else {
-        setFormData((prev) => ({
-          ...prev,
-          fullAddress: "Location detected - please verify address",
-        }));
+        setError(
+          "Location detected but couldn't get address details. Please fill in manually."
+        );
       }
     } catch (error) {
       console.error("Error getting location:", error);
@@ -142,10 +141,14 @@ export default function NewAddressPage() {
             ) : (
               <>
                 <MapPin className="h-5 w-5" />
-                <span>Use Current Location</span>
+                <span>Auto-fill City, State & ZIP</span>
               </>
             )}
           </button>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+            Automatically fills city, state, and ZIP code. Street address must
+            be entered manually.
+          </p>
         </div>
 
         {/* Error Message */}

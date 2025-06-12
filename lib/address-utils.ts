@@ -25,7 +25,6 @@ export interface LocationData {
 }
 
 export interface AddressFromLocation {
-  street: string;
   city: string;
   state: string;
   zipCode: string;
@@ -38,7 +37,7 @@ export const reverseGeocode = async (
 ): Promise<AddressFromLocation | null> => {
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=14`
     );
 
     if (!response.ok) {
@@ -50,15 +49,20 @@ export const reverseGeocode = async (
     if (data && data.address) {
       const address = data.address;
 
-      // Extract address components
-      const streetNumber = address.house_number || "";
-      const street = address.road || "";
-      const city = address.city || address.town || address.village || "";
+      // Extract only city, state, and zipcode - street address should be entered manually
+      // Try multiple fallbacks for city name
+      const city =
+        address.city ||
+        address.town ||
+        address.village ||
+        address.county ||
+        address.municipality ||
+        address.district ||
+        "";
       const state = address.state || "";
       const zipCode = address.postcode || "";
 
       return {
-        street: `${streetNumber} ${street}`.trim(),
         city: city,
         state: state,
         zipCode: zipCode,

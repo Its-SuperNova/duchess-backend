@@ -136,14 +136,18 @@ function AddressDrawer({
       } else if (result.address) {
         setAddressFormData({
           label: "Home",
-          street: result.address.street,
+          street: "", // Leave street address empty for manual entry
           city: result.address.city,
           state: result.address.state,
           pincode: result.address.zipCode,
         });
-        setLocationError("Location detected! Address filled automatically.");
+        setLocationError(
+          "Location detected! City, state, and zipcode filled automatically. Please enter your street address."
+        );
       } else {
-        setLocationError("Location detected! Please verify the address below.");
+        setLocationError(
+          "Location detected but couldn't get address details. Please fill in manually."
+        );
       }
     } catch (error) {
       console.error("Error getting location:", error);
@@ -178,7 +182,7 @@ function AddressDrawer({
               ) : (
                 <>
                   <MapPin className="h-4 w-4" />
-                  <span>Use Current Location</span>
+                  <span>Auto-fill City, State & ZIP</span>
                 </>
               )}
             </button>
