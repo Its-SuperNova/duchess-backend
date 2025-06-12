@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, Search, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { createAddress } from "@/lib/address-utils";
+import { createAddress, getCurrentLocationAddress } from "@/lib/address-utils";
 
 export default function NewAddressPage() {
   const router = useRouter();
@@ -31,89 +31,35 @@ export default function NewAddressPage() {
     }));
   };
 
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by this browser.");
-      return;
-    }
-
+  const handleUseCurrentLocation = async () => {
     setLocationLoading(true);
     setError(null);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const pos = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
+    try {
+      const result = await getCurrentLocationAddress();
 
-        // Use reverse geocoding to get address from coordinates
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ location: pos }, (results, status) => {
-          if (status === "OK" && results?.[0]) {
-            const addressComponents = results[0].address_components;
-            let streetNumber = "";
-            let route = "";
-            let city = "";
-            let state = "";
-            let zipCode = "";
-
-            addressComponents.forEach((component) => {
-              const types = component.types;
-              if (types.includes("street_number")) {
-                streetNumber = component.long_name;
-              } else if (types.includes("route")) {
-                route = component.long_name;
-              } else if (types.includes("locality")) {
-                city = component.long_name;
-              } else if (types.includes("administrative_area_level_1")) {
-                state = component.long_name;
-              } else if (types.includes("postal_code")) {
-                zipCode = component.long_name;
-              }
-            });
-
-            setFormData((prev) => ({
-              ...prev,
-              fullAddress: `${streetNumber} ${route}`.trim(),
-              city: city,
-              state: state,
-              zipCode: zipCode,
-            }));
-          } else {
-            setFormData((prev) => ({
-              ...prev,
-              fullAddress: "Location detected - please verify address",
-            }));
-          }
-          setLocationLoading(false);
-        });
-      },
-      (error) => {
-        setLocationLoading(false);
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setError(
-              "Location access denied. Please enable location services in your browser settings."
-            );
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setError("Location information is unavailable. Please try again.");
-            break;
-          case error.TIMEOUT:
-            setError("Location request timed out. Please try again.");
-            break;
-          default:
-            setError("An unknown error occurred while getting your location.");
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
+      if (result.error) {
+        setError(result.error);
+      } else if (result.address) {
+        setFormData((prev) => ({
+          ...prev,
+          fullAddress: result.address!.street,
+          city: result.address!.city,
+          state: result.address!.state,
+          zipCode: result.address!.zipCode,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          fullAddress: "Location detected - please verify address",
+        }));
       }
-    );
+    } catch (error) {
+      console.error("Error getting location:", error);
+      setError("Failed to get your location. Please try again.");
+    } finally {
+      setLocationLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

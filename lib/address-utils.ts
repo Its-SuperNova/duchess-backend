@@ -19,6 +19,132 @@ export interface UpdateAddressData {
   is_default?: boolean;
 }
 
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+}
+
+export interface AddressFromLocation {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
+// Function to reverse geocode coordinates using Nominatim (free service)
+export const reverseGeocode = async (
+  lat: number,
+  lng: number
+): Promise<AddressFromLocation | null> => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch address data");
+    }
+
+    const data = await response.json();
+
+    if (data && data.address) {
+      const address = data.address;
+
+      // Extract address components
+      const streetNumber = address.house_number || "";
+      const street = address.road || "";
+      const city = address.city || address.town || address.village || "";
+      const state = address.state || "";
+      const zipCode = address.postcode || "";
+
+      return {
+        street: `${streetNumber} ${street}`.trim(),
+        city: city,
+        state: state,
+        zipCode: zipCode,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Reverse geocoding error:", error);
+    return null;
+  }
+};
+
+// Function to get current location and reverse geocode it
+export const getCurrentLocationAddress = async (): Promise<{
+  location: LocationData | null;
+  address: AddressFromLocation | null;
+  error: string | null;
+}> => {
+  if (!navigator.geolocation) {
+    return {
+      location: null,
+      address: null,
+      error: "Geolocation is not supported by this browser.",
+    };
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const location = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        try {
+          const address = await reverseGeocode(
+            location.latitude,
+            location.longitude
+          );
+          resolve({
+            location,
+            address,
+            error: null,
+          });
+        } catch (error) {
+          resolve({
+            location,
+            address: null,
+            error: "Failed to get address from location.",
+          });
+        }
+      },
+      (error) => {
+        let errorMessage =
+          "An unknown error occurred while getting your location.";
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage =
+              "Location access denied. Please enable location services in your browser settings.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage =
+              "Location information is unavailable. Please try again.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out. Please try again.";
+            break;
+        }
+
+        resolve({
+          location: null,
+          address: null,
+          error: errorMessage,
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  });
+};
+
 // Get all addresses for a user
 export async function getUserAddresses(userId: string): Promise<Address[]> {
   try {

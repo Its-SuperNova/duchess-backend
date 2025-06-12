@@ -48,6 +48,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { format, addDays, startOfToday } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getCurrentLocationAddress } from "@/lib/address-utils";
 
 // Function to calculate delivery time based on stock status and location
 const calculateDeliveryTime = (stock: number, location: string) => {
@@ -115,60 +116,41 @@ function AddressDrawer({
 }) {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [addressFormData, setAddressFormData] = useState({
+    label: "Home",
+    street: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
 
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by this browser.");
-      return;
-    }
-
+  const handleUseCurrentLocation = async () => {
     setLocationLoading(true);
     setLocationError(null);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const pos = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
+    try {
+      const result = await getCurrentLocationAddress();
 
-        // Here you would typically reverse geocode the coordinates
-        // For now, we'll just show a success message
+      if (result.error) {
+        setLocationError(result.error);
+      } else if (result.address) {
+        setAddressFormData({
+          label: "Home",
+          street: result.address.street,
+          city: result.address.city,
+          state: result.address.state,
+          pincode: result.address.zipCode,
+        });
+        setLocationError("Location detected! Address filled automatically.");
+      } else {
         setLocationError("Location detected! Please verify the address below.");
-        setLocationLoading(false);
-
-        // You could also automatically fill the address fields here
-        // by calling a reverse geocoding service
-      },
-      (error) => {
-        setLocationLoading(false);
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError(
-              "Location access denied. Please enable location services."
-            );
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationError(
-              "Location information is unavailable. Please try again."
-            );
-            break;
-          case error.TIMEOUT:
-            setLocationError("Location request timed out. Please try again.");
-            break;
-          default:
-            setLocationError(
-              "An unknown error occurred while getting your location."
-            );
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
       }
-    );
+    } catch (error) {
+      console.error("Error getting location:", error);
+      setLocationError("Failed to get your location. Please try again.");
+    } finally {
+      setLocationLoading(false);
+    }
   };
 
   return (
@@ -249,6 +231,13 @@ function AddressDrawer({
               <Input
                 placeholder="Label (e.g. Home, Work)"
                 className="bg-white text-sm pl-10"
+                value={addressFormData.label}
+                onChange={(e) =>
+                  setAddressFormData((prev) => ({
+                    ...prev,
+                    label: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="relative">
@@ -256,19 +245,56 @@ function AddressDrawer({
               <Input
                 placeholder="Street, Area"
                 className="bg-white text-sm pl-10"
+                value={addressFormData.street}
+                onChange={(e) =>
+                  setAddressFormData((prev) => ({
+                    ...prev,
+                    street: e.target.value,
+                  }))
+                }
               />
             </div>
             <div className="relative">
               <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="City" className="bg-white text-sm pl-10" />
+              <Input
+                placeholder="City"
+                className="bg-white text-sm pl-10"
+                value={addressFormData.city}
+                onChange={(e) =>
+                  setAddressFormData((prev) => ({
+                    ...prev,
+                    city: e.target.value,
+                  }))
+                }
+              />
             </div>
             <div className="relative">
               <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="State" className="bg-white text-sm pl-10" />
+              <Input
+                placeholder="State"
+                className="bg-white text-sm pl-10"
+                value={addressFormData.state}
+                onChange={(e) =>
+                  setAddressFormData((prev) => ({
+                    ...prev,
+                    state: e.target.value,
+                  }))
+                }
+              />
             </div>
             <div className="relative">
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="Pincode" className="bg-white text-sm pl-10" />
+              <Input
+                placeholder="Pincode"
+                className="bg-white text-sm pl-10"
+                value={addressFormData.pincode}
+                onChange={(e) =>
+                  setAddressFormData((prev) => ({
+                    ...prev,
+                    pincode: e.target.value,
+                  }))
+                }
+              />
             </div>
           </form>
           <DrawerFooter className="flex flex-row gap-3">
@@ -866,6 +892,13 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                               <Input
                                 placeholder="Label (e.g. Home, Work)"
                                 className="bg-white text-sm pl-10"
+                                value={addressFormData.label}
+                                onChange={(e) =>
+                                  setAddressFormData((prev) => ({
+                                    ...prev,
+                                    label: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                             <div className="relative">
@@ -873,6 +906,13 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                               <Input
                                 placeholder="Street, Area"
                                 className="bg-white text-sm pl-10"
+                                value={addressFormData.street}
+                                onChange={(e) =>
+                                  setAddressFormData((prev) => ({
+                                    ...prev,
+                                    street: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                             <div className="relative">
@@ -880,6 +920,13 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                               <Input
                                 placeholder="City"
                                 className="bg-white text-sm pl-10"
+                                value={addressFormData.city}
+                                onChange={(e) =>
+                                  setAddressFormData((prev) => ({
+                                    ...prev,
+                                    city: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                             <div className="relative">
@@ -887,6 +934,13 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                               <Input
                                 placeholder="State"
                                 className="bg-white text-sm pl-10"
+                                value={addressFormData.state}
+                                onChange={(e) =>
+                                  setAddressFormData((prev) => ({
+                                    ...prev,
+                                    state: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                             <div className="relative">
@@ -894,6 +948,13 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                               <Input
                                 placeholder="Pincode"
                                 className="bg-white text-sm pl-10"
+                                value={addressFormData.pincode}
+                                onChange={(e) =>
+                                  setAddressFormData((prev) => ({
+                                    ...prev,
+                                    pincode: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                           </form>
