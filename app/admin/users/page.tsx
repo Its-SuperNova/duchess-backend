@@ -18,8 +18,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Users, Shield, User, UserCheck } from "lucide-react";
+import {
+  Search,
+  Users,
+  Shield,
+  User,
+  UserCheck,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { User as UserType } from "@/lib/supabase";
 import { updateUserRole } from "@/lib/auth-utils";
@@ -41,8 +59,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { LuChefHat } from "react-icons/lu";
+import { MdDeliveryDining } from "react-icons/md";
 
-type UserWithAddress = UserType & { address: string | null };
+type UserWithAddress = UserType & {
+  address: string | null;
+  totalOrders?: number;
+  totalAmountPaid?: number;
+};
 
 const ITEMS_PER_PAGE = 10;
 
@@ -54,6 +78,32 @@ export default function UsersPage() {
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [addressFilter, setAddressFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    userId: string;
+    newRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+    userName: string;
+    originalRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+  } | null>(null);
+
+  // Delete confirmation dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{
+    userId: string;
+    userName: string;
+  } | null>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+
+  // Edit user dialog state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [pendingEdit, setPendingEdit] = useState<{
+    userId: string;
+    userName: string;
+    currentRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+    newRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+  } | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -85,11 +135,34 @@ export default function UsersPage() {
         console.warn("Could not fetch user addresses:", addressesError.message);
       }
 
+      // Fetch orders data for all users
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select("user_id, total_amount, status");
+
+      if (ordersError) {
+        console.warn("Could not fetch orders data:", ordersError.message);
+      }
+
       const combinedUsers = usersData.map((user) => {
         const address = addressesData?.find((addr) => addr.user_id === user.id);
+
+        // Calculate total orders and amount for this user
+        const userOrders =
+          ordersData?.filter((order) => order.user_id === user.id) || [];
+        const totalOrders = userOrders.length;
+        const totalAmountPaid = userOrders
+          .filter(
+            (order) =>
+              order.status === "completed" || order.status === "delivered"
+          )
+          .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+
         return {
           ...user,
           address: address ? `${address.city}, ${address.state}` : null,
+          totalOrders,
+          totalAmountPaid,
         };
       });
 
@@ -104,7 +177,7 @@ export default function UsersPage() {
 
   const handleRoleChange = async (
     userId: string,
-    newRole: "user" | "admin" | "moderator"
+    newRole: "user" | "admin" | "delivery_agent" | "shop_worker"
   ) => {
     try {
       const userToUpdate = users.find((u) => u.id === userId);
@@ -136,11 +209,152 @@ export default function UsersPage() {
     }
   };
 
+  const initiateRoleChange = (
+    userId: string,
+    newRole: "user" | "admin" | "delivery_agent" | "shop_worker",
+    userName: string
+  ) => {
+    const originalRole = users.find((u) => u.id === userId)?.role || "user";
+    setPendingRoleChange({
+      userId,
+      newRole,
+      userName,
+      originalRole,
+    });
+    setShowConfirmDialog(true);
+  };
+
+  const confirmRoleChange = async () => {
+    if (!pendingRoleChange) return;
+
+    await handleRoleChange(pendingRoleChange.userId, pendingRoleChange.newRole);
+    setShowConfirmDialog(false);
+    setPendingRoleChange(null);
+  };
+
+  const cancelRoleChange = () => {
+    if (!pendingRoleChange) return;
+
+    setShowConfirmDialog(false);
+    setPendingRoleChange(null);
+  };
+
+  const initiateDeleteUser = (userId: string, userName: string) => {
+    setPendingDelete({ userId, userName });
+    setDeleteConfirmationText("");
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!pendingDelete || deleteConfirmationText !== "delete the user") return;
+
+    try {
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", pendingDelete.userId);
+
+      if (error) {
+        console.error("Error deleting user:", error);
+        toast.error("Failed to delete user");
+        return;
+      }
+
+      // Remove user from local state
+      setUsers(users.filter((user) => user.id !== pendingDelete.userId));
+      toast.success(`User ${pendingDelete.userName} deleted successfully`);
+
+      setShowDeleteDialog(false);
+      setPendingDelete(null);
+      setDeleteConfirmationText("");
+    } catch (error) {
+      console.error("Error in confirmDeleteUser:", error);
+      toast.error("An unexpected error occurred while deleting the user.");
+    }
+  };
+
+  const cancelDeleteUser = () => {
+    setShowDeleteDialog(false);
+    setPendingDelete(null);
+    setDeleteConfirmationText("");
+  };
+
+  const initiateEditUser = (
+    userId: string,
+    userName: string,
+    currentRole: "user" | "admin" | "delivery_agent" | "shop_worker"
+  ) => {
+    setPendingEdit({
+      userId,
+      userName,
+      currentRole,
+      newRole: currentRole,
+    });
+    setShowEditDialog(true);
+  };
+
+  const confirmEditUser = async () => {
+    if (!pendingEdit) return;
+
+    try {
+      const userToUpdate = users.find((u) => u.id === pendingEdit.userId);
+      if (!userToUpdate) return;
+
+      console.log("Attempting to update user role:", {
+        userId: pendingEdit.userId,
+        userEmail: userToUpdate.email,
+        currentRole: pendingEdit.currentRole,
+        newRole: pendingEdit.newRole,
+      });
+
+      const updatedUserFromDB = await updateUserRole(
+        userToUpdate.email,
+        pendingEdit.newRole
+      );
+
+      console.log("Update result:", updatedUserFromDB);
+
+      if (updatedUserFromDB) {
+        // Update the user in local state
+        setUsers(
+          users.map((u) =>
+            u.id === pendingEdit.userId
+              ? {
+                  ...updatedUserFromDB,
+                  address: u.address,
+                  totalOrders: u.totalOrders,
+                  totalAmountPaid: u.totalAmountPaid,
+                }
+              : u
+          )
+        );
+        toast.success(
+          `Role for ${updatedUserFromDB.name} updated to ${pendingEdit.newRole}`
+        );
+      } else {
+        toast.error("Failed to update role");
+      }
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("An unexpected error occurred while updating the role.");
+    }
+
+    setShowEditDialog(false);
+    setPendingEdit(null);
+  };
+
+  const cancelEditUser = () => {
+    setShowEditDialog(false);
+    setPendingEdit(null);
+  };
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case "admin":
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "moderator":
+      case "delivery_agent":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "shop_worker":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
       case "user":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
@@ -153,8 +367,10 @@ export default function UsersPage() {
     switch (role) {
       case "admin":
         return <Shield className="h-4 w-4" />;
-      case "moderator":
-        return <UserCheck className="h-4 w-4" />;
+      case "delivery_agent":
+        return <MdDeliveryDining className="h-4 w-4" />;
+      case "shop_worker":
+        return <LuChefHat className="h-4 w-4" />;
       case "user":
         return <User className="h-4 w-4" />;
       default:
@@ -187,13 +403,23 @@ export default function UsersPage() {
 
   const genderOptions = [
     "all",
-    ...Array.from(new Set(users.map((u) => u.gender).filter(Boolean))),
+    ...Array.from(
+      new Set(
+        users
+          .map((u) => u.gender)
+          .filter((gender): gender is string => Boolean(gender))
+      )
+    ),
   ];
 
   const addressOptions = [
     "all",
     ...Array.from(
-      new Set(users.map((u) => u.address?.split(",")[0].trim()).filter(Boolean))
+      new Set(
+        users
+          .map((u) => u.address?.split(",")[0].trim())
+          .filter((address): address is string => Boolean(address))
+      )
     ),
   ];
 
@@ -254,8 +480,9 @@ export default function UsersPage() {
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="moderator">Moderator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="delivery_agent">Delivery Agent</SelectItem>
+                  <SelectItem value="shop_worker">Shop Worker</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={genderFilter} onValueChange={setGenderFilter}>
@@ -295,10 +522,14 @@ export default function UsersPage() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead className="hidden md:table-cell">Provider</TableHead>
-                <TableHead className="hidden md:table-cell">Joined</TableHead>
                 <TableHead className="hidden lg:table-cell">Gender</TableHead>
                 <TableHead className="hidden lg:table-cell">Address</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Total Orders
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Total Amount
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -317,30 +548,30 @@ export default function UsersPage() {
                         <Avatar>
                           <AvatarImage src={user.image || undefined} />
                           <AvatarFallback>
-                            {user.name?.charAt(0).toUpperCase() || "U"}
+                            {(user.name?.charAt(0) || "U").toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{user.name}</p>
+                          <p className="font-medium">
+                            {user.name || "Unknown User"}
+                          </p>
                           <p className="text-sm text-muted-foreground">
-                            {user.email}
+                            {user.email || "No email"}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getRoleColor(user.role)}>
+                      <Badge
+                        className={`${getRoleColor(
+                          user.role
+                        )} hover:no-underline hover:bg-opacity-100`}
+                      >
                         <span className="flex items-center gap-1">
                           {getRoleIcon(user.role)}
                           {user.role}
                         </span>
                       </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {user.provider}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {user.gender || "N/A"}
@@ -348,22 +579,40 @@ export default function UsersPage() {
                     <TableCell className="hidden lg:table-cell">
                       {user.address || "N/A"}
                     </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {user.totalOrders || 0}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      ₹
+                      {user.totalAmountPaid
+                        ? user.totalAmountPaid.toFixed(2)
+                        : "0.00"}
+                    </TableCell>
                     <TableCell>
-                      <Select
-                        value={user.role}
-                        onValueChange={(
-                          value: "user" | "admin" | "moderator"
-                        ) => handleRoleChange(user.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="moderator">Moderator</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            initiateEditUser(
+                              user.id,
+                              user.name || "User",
+                              user.role
+                            );
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            initiateDeleteUser(user.id, user.name || "User");
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -409,6 +658,128 @@ export default function UsersPage() {
             </PaginationItem>
           </PaginationContent>
         </Pagination>
+      )}
+
+      {showConfirmDialog && (
+        <AlertDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Role Change</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to change the role of{" "}
+                {pendingRoleChange?.userName} to {pendingRoleChange?.newRole}?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelRoleChange}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={confirmRoleChange}>
+                Confirm
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {showDeleteDialog && (
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the user{" "}
+                {pendingDelete?.userName}?
+                <br />
+                <br />
+                To confirm, please type <strong>"delete the user"</strong> in
+                the box below:
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Type 'delete the user' to confirm"
+                value={deleteConfirmationText}
+                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelDeleteUser}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteUser}
+                disabled={deleteConfirmationText !== "delete the user"}
+                className={`${
+                  deleteConfirmationText !== "delete the user"
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                } bg-blue-600 hover:bg-blue-700 text-white`}
+              >
+                Delete User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {showEditDialog && (
+        <AlertDialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Edit User Role</AlertDialogTitle>
+              <AlertDialogDescription>
+                Change the role for user:{" "}
+                <span className="text-black font-semibold">
+                  {pendingEdit?.userName}
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Role:</label>
+                <Select
+                  value={pendingEdit?.newRole}
+                  onValueChange={(
+                    value: "user" | "admin" | "delivery_agent" | "shop_worker"
+                  ) => {
+                    setPendingEdit((prev) =>
+                      prev ? { ...prev, newRole: value } : null
+                    );
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="delivery_agent">
+                      Delivery Agent
+                    </SelectItem>
+                    <SelectItem value="shop_worker">Shop Worker</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelEditUser}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmEditUser}
+                disabled={pendingEdit?.newRole === pendingEdit?.currentRole}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Confirm Change
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

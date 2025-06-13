@@ -98,7 +98,7 @@ export async function updateUserProfile(
 // Role-based access control utilities
 export async function getUserRole(
   email: string
-): Promise<"user" | "admin" | "moderator" | null> {
+): Promise<"user" | "admin" | "delivery_agent" | "shop_worker" | null> {
   try {
     const { data, error } = await supabase
       .from("users")
@@ -125,14 +125,18 @@ export async function isUserAdmin(email: string): Promise<boolean> {
 
 export async function isUserModerator(email: string): Promise<boolean> {
   const role = await getUserRole(email);
-  return role === "moderator" || role === "admin";
+  return (
+    role === "delivery_agent" || role === "shop_worker" || role === "admin"
+  );
 }
 
 export async function updateUserRole(
   email: string,
-  role: "user" | "admin" | "moderator"
+  role: "user" | "admin" | "delivery_agent" | "shop_worker"
 ): Promise<User | null> {
   try {
+    console.log("updateUserRole called with:", { email, role });
+
     const { data, error } = await supabase
       .from("users")
       .update({
@@ -145,9 +149,16 @@ export async function updateUserRole(
 
     if (error) {
       console.error("Error updating user role:", error);
+      console.error("Error details:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
       return null;
     }
 
+    console.log("Role updated successfully:", data);
     return data;
   } catch (error) {
     console.error("Error in updateUserRole:", error);

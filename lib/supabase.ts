@@ -40,7 +40,7 @@ export interface User {
   phone_number?: string;
   date_of_birth?: string;
   gender?: string;
-  role: "user" | "admin" | "moderator";
+  role: "user" | "admin" | "delivery_agent" | "shop_worker";
   created_at: string;
   updated_at: string;
 }
