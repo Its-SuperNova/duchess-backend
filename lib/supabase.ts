@@ -57,6 +57,7 @@ export interface Address {
   updated_at: string;
   distance: number | null;
   duration: number | null;
+  alternate_phone: string;
 }
 
 export interface Database {

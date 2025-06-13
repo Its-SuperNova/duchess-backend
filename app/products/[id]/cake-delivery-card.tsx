@@ -19,6 +19,7 @@ import {
   CalendarIcon,
   ChevronRight,
   Loader2,
+  Phone,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -122,6 +123,7 @@ function AddressDrawer({
     city: "",
     state: "",
     pincode: "",
+    alternatePhone: "",
   });
 
   const handleUseCurrentLocation = async () => {
@@ -140,9 +142,10 @@ function AddressDrawer({
           city: result.address.city,
           state: result.address.state,
           pincode: result.address.zipCode,
+          alternatePhone: "",
         });
         setLocationError(
-          "Location detected! City, state, and zipcode filled automatically. Please enter your street address."
+          "Location detected! City, state, and zipcode filled automatically. Please enter your street address and alternate phone."
         );
       } else {
         setLocationError(
@@ -155,6 +158,18 @@ function AddressDrawer({
     } finally {
       setLocationLoading(false);
     }
+  };
+
+  // Validation function for address form
+  const isAddressFormValid = () => {
+    return (
+      addressFormData.label.trim() !== "" &&
+      addressFormData.street.trim() !== "" &&
+      addressFormData.city.trim() !== "" &&
+      addressFormData.state.trim() !== "" &&
+      addressFormData.pincode.trim() !== "" &&
+      addressFormData.alternatePhone.trim() !== ""
+    );
   };
 
   return (
@@ -300,6 +315,21 @@ function AddressDrawer({
                 }
               />
             </div>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Alternate Phone*"
+                className="bg-white text-sm pl-10"
+                value={addressFormData.alternatePhone}
+                onChange={(e) =>
+                  setAddressFormData((prev) => ({
+                    ...prev,
+                    alternatePhone: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
           </form>
           <DrawerFooter className="flex flex-row gap-3">
             <button
@@ -310,8 +340,21 @@ function AddressDrawer({
             </button>
             <DrawerClose asChild>
               <button
-                className="flex-1 px-4 py-3 rounded-lg border !border-[#560000] bg-black text-white font-semibold hover:bg-gray-900"
-                onClick={() => setOpen(false)}
+                className={`flex-1 px-4 py-3 rounded-lg border font-semibold transition-colors ${
+                  isAddressFormValid()
+                    ? "!border-[#560000] bg-black text-white hover:bg-gray-900"
+                    : "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+                onClick={() => {
+                  if (isAddressFormValid()) {
+                    setOpen(false);
+                  } else {
+                    setLocationError(
+                      "Please fill in all required fields including alternate phone number."
+                    );
+                  }
+                }}
+                disabled={!isAddressFormValid()}
               >
                 Save
               </button>
@@ -961,6 +1004,21 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                                 }
                               />
                             </div>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <Input
+                                placeholder="Alternate Phone*"
+                                className="bg-white text-sm pl-10"
+                                value={addressFormData.alternatePhone}
+                                onChange={(e) =>
+                                  setAddressFormData((prev) => ({
+                                    ...prev,
+                                    alternatePhone: e.target.value,
+                                  }))
+                                }
+                                required
+                              />
+                            </div>
                           </form>
                           <DialogFooter>
                             <button
@@ -971,8 +1029,21 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                             </button>
                             <DialogClose asChild>
                               <button
-                                className="px-4 py-2 rounded-lg border border-primary bg-primary text-white font-semibold hover:bg-primary/90"
-                                onClick={() => setAddressDialogOpen(false)}
+                                className={`flex-1 px-4 py-3 rounded-lg border font-semibold transition-colors ${
+                                  isAddressFormValid()
+                                    ? "!border-[#560000] bg-black text-white hover:bg-gray-900"
+                                    : "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
+                                }`}
+                                onClick={() => {
+                                  if (isAddressFormValid()) {
+                                    setAddressDialogOpen(false);
+                                  } else {
+                                    setLocationError(
+                                      "Please fill in all required fields including alternate phone number."
+                                    );
+                                  }
+                                }}
+                                disabled={!isAddressFormValid()}
                               >
                                 Save
                               </button>

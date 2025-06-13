@@ -236,6 +236,18 @@ export default function ManageAddressPage() {
                         <AddressDistanceDisplay address={address} />
                       </div>
 
+                      {/* Alternate Phone */}
+                      {address.alternate_phone && (
+                        <div className="mb-3">
+                          <p className="text-gray-500 text-sm">
+                            <span className="font-medium">
+                              Alternate Phone:
+                            </span>{" "}
+                            {address.alternate_phone}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Set as default button */}
                       {!address.is_default && (
                         <button

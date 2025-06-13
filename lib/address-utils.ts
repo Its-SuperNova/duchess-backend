@@ -10,6 +10,7 @@ export interface CreateAddressData {
   is_default?: boolean;
   distance?: number;
   duration?: number;
+  alternate_phone: string;
 }
 
 export interface UpdateAddressData {
@@ -21,6 +22,7 @@ export interface UpdateAddressData {
   is_default?: boolean;
   distance?: number;
   duration?: number;
+  alternate_phone?: string;
 }
 
 export interface LocationData {

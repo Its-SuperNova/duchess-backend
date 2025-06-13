@@ -1,7 +1,7 @@
 "use client";
 
 import { MapPin, Clock } from "lucide-react";
-import { formatDistance, formatDuration } from "@/lib/distance-utils";
+import { formatDistance, formatDuration } from "@/lib/distance";
 import type { Address } from "@/lib/supabase";
 
 interface AddressDistanceDisplayProps {

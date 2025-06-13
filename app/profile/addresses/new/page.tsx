@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createAddress, getCurrentLocationAddress } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
-import { calculateAddressDistance } from "@/lib/distance-utils";
+import { calculateDeliveryFromAddress } from "@/lib/distance";
 
 export default function NewAddressPage() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function NewAddressPage() {
     state: "",
     zipCode: "",
     additionalDetails: "",
+    alternatePhone: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +76,8 @@ export default function NewAddressPage() {
       !formData.fullAddress ||
       !formData.city ||
       !formData.state ||
-      !formData.zipCode
+      !formData.zipCode ||
+      !formData.alternatePhone
     ) {
       setError("Please fill in all required fields.");
       return;
@@ -93,7 +95,7 @@ export default function NewAddressPage() {
       }
 
       // Calculate distance
-      const distanceResult = await calculateAddressDistance({
+      const distanceResult = await calculateDeliveryFromAddress({
         full_address: formData.fullAddress,
         city: formData.city,
         state: formData.state,
@@ -109,6 +111,7 @@ export default function NewAddressPage() {
         is_default: false,
         distance: distanceResult?.distance,
         duration: distanceResult?.duration,
+        alternate_phone: formData.alternatePhone,
       });
 
       if (newAddress) {
@@ -269,6 +272,21 @@ export default function NewAddressPage() {
                 onChange={handleInputChange}
                 placeholder="e.g., Floor, House no., Landmark"
                 className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
+                Alternate Phone*
+              </label>
+              <input
+                type="text"
+                name="alternatePhone"
+                value={formData.alternatePhone}
+                onChange={handleInputChange}
+                placeholder="Enter your alternate phone"
+                className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+                required
               />
             </div>
 

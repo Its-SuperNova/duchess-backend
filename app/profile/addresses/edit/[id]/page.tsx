@@ -10,7 +10,7 @@ import { useSession } from "next-auth/react";
 import { updateAddress, getUserAddresses } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
-import { calculateAddressDistance } from "@/lib/distance-utils";
+import { calculateDeliveryFromAddress } from "@/lib/distance";
 
 export default function EditAddressPage() {
   const router = useRouter();
@@ -26,6 +26,7 @@ export default function EditAddressPage() {
     city: "",
     state: "",
     zipCode: "",
+    alternatePhone: "",
   });
 
   const addressId = params.id as string;
@@ -68,6 +69,7 @@ export default function EditAddressPage() {
           city: targetAddress.city,
           state: targetAddress.state,
           zipCode: targetAddress.zip_code,
+          alternatePhone: targetAddress.alternate_phone,
         });
       } catch (err) {
         console.error("Error loading address:", err);
@@ -102,7 +104,8 @@ export default function EditAddressPage() {
       !formData.fullAddress.trim() ||
       !formData.city.trim() ||
       !formData.state.trim() ||
-      !formData.zipCode.trim()
+      !formData.zipCode.trim() ||
+      !formData.alternatePhone.trim()
     ) {
       setError("Please fill in all fields.");
       return;
@@ -113,7 +116,7 @@ export default function EditAddressPage() {
       setError(null);
 
       // Recalculate distance
-      const distanceResult = await calculateAddressDistance({
+      const distanceResult = await calculateDeliveryFromAddress({
         full_address: formData.fullAddress.trim(),
         city: formData.city.trim(),
         state: formData.state.trim(),
@@ -128,6 +131,7 @@ export default function EditAddressPage() {
         zip_code: formData.zipCode.trim(),
         distance: distanceResult?.distance,
         duration: distanceResult?.duration,
+        alternate_phone: formData.alternatePhone.trim(),
       });
 
       if (updatedAddress) {
@@ -307,6 +311,26 @@ export default function EditAddressPage() {
               onChange={handleChange}
               className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
               placeholder="ZIP Code"
+              required
+              disabled={saving}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="alternatePhone"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Alternate Phone*
+            </label>
+            <input
+              type="text"
+              id="alternatePhone"
+              name="alternatePhone"
+              value={formData.alternatePhone}
+              onChange={handleChange}
+              className="w-full p-3 pl-5 bg-[#F0F4F8] rounded-full border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C] placeholder:text-sm"
+              placeholder="Alternate phone number"
               required
               disabled={saving}
             />
