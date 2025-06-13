@@ -21,6 +21,16 @@ import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import AddressDistanceDisplay from "@/components/address-distance-display";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ManageAddressPage() {
   const router = useRouter();
@@ -28,6 +38,9 @@ export default function ManageAddressPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<Address | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Load addresses from database
   useEffect(() => {
@@ -91,19 +104,39 @@ export default function ManageAddressPage() {
   };
 
   const handleDeleteAddress = async (addressId: string) => {
-    if (!confirm("Are you sure you want to delete this address?")) return;
+    const address = addresses.find((addr) => addr.id === addressId);
+    if (address) {
+      setAddressToDelete(address);
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDeleteAddress = async () => {
+    if (!addressToDelete) return;
 
     try {
-      const success = await deleteAddress(addressId);
+      setDeleting(true);
+      const success = await deleteAddress(addressToDelete.id);
 
       if (success) {
         // Remove from local state
-        setAddresses((prev) => prev.filter((addr) => addr.id !== addressId));
+        setAddresses((prev) =>
+          prev.filter((addr) => addr.id !== addressToDelete.id)
+        );
+        setDeleteDialogOpen(false);
+        setAddressToDelete(null);
       }
     } catch (err) {
       console.error("Error deleting address:", err);
       setError("Failed to delete address. Please try again.");
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setAddressToDelete(null);
   };
 
   const formatAddress = (address: Address) => {
@@ -283,6 +316,43 @@ export default function ManageAddressPage() {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-white dark:bg-[#202028] border border-gray-200 dark:border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#000000] dark:text-white">
+              Delete Address
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
+              Are you sure you want to delete "{addressToDelete?.address_name}"?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={cancelDelete}
+              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteAddress}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                "Delete Address"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
