@@ -1,10 +1,17 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react" // Import useEffect
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState, useEffect } from "react"; // Import useEffect
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +19,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Pagination,
   PaginationContent,
@@ -21,379 +28,254 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { AlertCircle, FileDown, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
-import { HiOutlineSquares2X2 } from "react-icons/hi2"
-import { CiCircleList } from "react-icons/ci"
-import Image from "next/image"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertCircle,
+  FileDown,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { HiOutlineSquares2X2 } from "react-icons/hi2";
+import { CiCircleList } from "react-icons/ci";
+import Image from "next/image";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
-// Sample products data
-const initialProducts = [
-  {
-    id: 1,
-    name: "Chocolate Cake",
-    image: "/decadent-chocolate-cake.png",
-    category: "Cakes",
-    price: 499,
-    stock: 25,
-    status: "in-stock",
-    description: "Rich chocolate cake with creamy ganache frosting.",
-    isActive: true,
-    discountPercent: 0,
-    longDescription:
-      "A rich and moist chocolate cake, perfect for any occasion. Made with premium cocoa and topped with a smooth chocolate ganache.",
-    isVeg: true,
-    hasOffer: false,
-    offerUpToPrice: 0,
-    weightOptions: [{ weight: "0.5 Kg", price: "499", stock: "25", isActive: true }],
-    pieceOptions: [{ quantity: "1 piece", price: "499", stock: "25", isActive: true }],
-    sellingType: "weight",
-    calories: "350",
-    netWeight: "500",
-    protein: "5",
-    fats: "20",
-    carbs: "40",
-    sugars: "30",
-    fiber: "2",
-    sodium: "100",
-    deliveryOption: "both",
-    addTextOnCake: false,
-    addCandles: false,
-    addKnife: false,
-    addMessageCard: false,
-    highlights: ["Rich Flavor", "Moist Texture"],
-    ingredients: ["Flour", "Sugar", "Cocoa", "Eggs", "Butter"],
-    additionalImages: [],
-  },
-  {
-    id: 2,
-    name: "Red Velvet Cupcake",
-    image: "/red-velvet-cheesecake.png",
-    category: "Cupcakes",
-    price: 199,
-    stock: 5,
-    status: "low-stock",
-    description: "Classic red velvet cupcake with cream cheese frosting.",
-    isActive: true,
-    discountPercent: 10,
-    longDescription:
-      "A delightful red velvet cupcake, topped with tangy cream cheese frosting. A perfect individual treat.",
-    isVeg: true,
-    hasOffer: true,
-    offerUpToPrice: 60,
-    weightOptions: [],
-    pieceOptions: [{ quantity: "1 piece", price: "199", stock: "5", isActive: true }],
-    sellingType: "piece",
-    calories: "250",
-    netWeight: "100",
-    protein: "3",
-    fats: "15",
-    carbs: "25",
-    sugars: "20",
-    fiber: "1",
-    sodium: "80",
-    deliveryOption: "same-day",
-    addTextOnCake: false,
-    addCandles: true,
-    addKnife: false,
-    addMessageCard: true,
-    highlights: ["Vibrant Color", "Cream Cheese Frosting"],
-    ingredients: ["Flour", "Sugar", "Cocoa", "Buttermilk", "Cream Cheese"],
-    additionalImages: [],
-  },
-  {
-    id: 3,
-    name: "Oatmeal Cookie",
-    image: "/classic-chocolate-chip-cookies.png",
-    category: "Cookies",
-    price: 99,
-    stock: 0,
-    status: "out-of-stock",
-    description: "Chewy oatmeal cookies with raisins.",
-    isActive: false,
-    discountPercent: 0,
-    longDescription: "Hearty and chewy oatmeal cookies packed with plump raisins. A classic comfort food.",
-    isVeg: true,
-    hasOffer: false,
-    offerUpToPrice: 0,
-    weightOptions: [],
-    pieceOptions: [{ quantity: "1 piece", price: "99", stock: "0", isActive: false }],
-    sellingType: "piece",
-    calories: "150",
-    netWeight: "50",
-    protein: "2",
-    fats: "8",
-    carbs: "20",
-    sugars: "10",
-    fiber: "3",
-    sodium: "50",
-    deliveryOption: "both",
-    addTextOnCake: false,
-    addCandles: false,
-    addKnife: false,
-    addMessageCard: false,
-    highlights: ["Chewy Texture", "Healthy Oats"],
-    ingredients: ["Oats", "Flour", "Brown Sugar", "Raisins", "Cinnamon"],
-    additionalImages: [],
-  },
-  {
-    id: 4,
-    name: "Classic Croissant",
-    image: "/golden-butter-croissant.png",
-    category: "Pastries",
-    price: 149,
-    stock: 18,
-    status: "in-stock",
-    description: "Buttery, flaky croissants baked fresh daily.",
-    isActive: true,
-    discountPercent: 0,
-    longDescription:
-      "Authentic French croissants, made with layers of buttery, flaky pastry. Perfect for breakfast or a light snack.",
-    isVeg: true,
-    hasOffer: false,
-    offerUpToPrice: 0,
-    weightOptions: [],
-    pieceOptions: [{ quantity: "1 piece", price: "149", stock: "18", isActive: true }],
-    sellingType: "piece",
-    calories: "280",
-    netWeight: "80",
-    protein: "4",
-    fats: "18",
-    carbs: "25",
-    sugars: "5",
-    fiber: "1",
-    sodium: "150",
-    deliveryOption: "same-day",
-    addTextOnCake: false,
-    addCandles: false,
-    addKnife: false,
-    addMessageCard: false,
-    highlights: ["Flaky Layers", "Buttery Taste"],
-    ingredients: ["Flour", "Butter", "Milk", "Yeast", "Sugar"],
-    additionalImages: [],
-  },
-  {
-    id: 5,
-    name: "Strawberry Cheesecake",
-    image: "/classic-strawberry-cheesecake.png",
-    category: "Cakes",
-    price: 599,
-    stock: 7,
-    status: "in-stock",
-    description: "Creamy cheesecake topped with fresh strawberries.",
-    isActive: true,
-    discountPercent: 5,
-    longDescription: "A luscious cheesecake with a rich, creamy texture and a vibrant topping of fresh strawberries.",
-    isVeg: true,
-    hasOffer: true,
-    offerUpToPrice: 100,
-    weightOptions: [{ weight: "1 Kg", price: "599", stock: "7", isActive: true }],
-    pieceOptions: [],
-    sellingType: "weight",
-    calories: "400",
-    netWeight: "1000",
-    protein: "8",
-    fats: "25",
-    carbs: "50",
-    sugars: "40",
-    fiber: "3",
-    sodium: "120",
-    deliveryOption: "both",
-    addTextOnCake: true,
-    addCandles: true,
-    addKnife: true,
-    addMessageCard: true,
-    highlights: ["Creamy Texture", "Fresh Strawberries"],
-    ingredients: ["Cream Cheese", "Sugar", "Eggs", "Strawberries", "Graham Cracker Crust"],
-    additionalImages: [],
-  },
-  {
-    id: 6,
-    name: "Chocolate Chip Cookie",
-    image: "/classic-chocolate-chip-cookies.png",
-    category: "Cookies",
-    price: 79,
-    stock: 42,
-    status: "in-stock",
-    description: "Classic cookies with chocolate chips in every bite.",
-    isActive: true,
-    discountPercent: 0,
-    longDescription: "The timeless favorite, soft and chewy chocolate chip cookies loaded with rich chocolate morsels.",
-    isVeg: true,
-    hasOffer: false,
-    offerUpToPrice: 0,
-    weightOptions: [],
-    pieceOptions: [{ quantity: "1 piece", price: "79", stock: "42", isActive: true }],
-    sellingType: "piece",
-    calories: "180",
-    netWeight: "60",
-    protein: "2",
-    fats: "10",
-    carbs: "22",
-    sugars: "15",
-    fiber: "1",
-    sodium: "70",
-    deliveryOption: "same-day",
-    addTextOnCake: false,
-    addCandles: false,
-    addKnife: false,
-    addMessageCard: false,
-    highlights: ["Classic Taste", "Plenty of Chocolate Chips"],
-    ingredients: ["Flour", "Butter", "Sugar", "Chocolate Chips", "Eggs"],
-    additionalImages: [],
-  },
-  {
-    id: 7,
-    name: "Blueberry Muffin",
-    image: "/images/blueberry-muffin.jpg",
-    category: "Pastries",
-    price: 129,
-    stock: 0,
-    status: "out-of-stock",
-    description: "Fluffy muffins bursting with fresh blueberries.",
-    isActive: true,
-    discountPercent: 0,
-    longDescription: "Light and fluffy muffins generously studded with juicy blueberries. A perfect breakfast treat.",
-    isVeg: true,
-    hasOffer: false,
-    offerUpToPrice: 0,
-    weightOptions: [],
-    pieceOptions: [{ quantity: "1 piece", price: "129", stock: "0", isActive: true }],
-    sellingType: "piece",
-    calories: "200",
-    netWeight: "90",
-    protein: "3",
-    fats: "10",
-    carbs: "30",
-    sugars: "18",
-    fiber: "2",
-    sodium: "90",
-    deliveryOption: "both",
-    addTextOnCake: false,
-    addCandles: false,
-    addKnife: false,
-    addMessageCard: false,
-    highlights: ["Moist & Fluffy", "Real Blueberries"],
-    ingredients: ["Flour", "Sugar", "Blueberries", "Milk", "Eggs"],
-    additionalImages: [],
-  },
-]
-
-// Sample categories data
-const categories = [
-  { id: 1, name: "Cakes" },
-  { id: 2, name: "Cupcakes" },
-  { id: 3, name: "Cookies" },
-  { id: 4, name: "Pastries" },
-  { id: 5, name: "Breads" },
-  { id: 6, name: "Donuts" },
-  { id: 7, name: "Brownies" },
-]
+// Import server actions
+import {
+  getProducts,
+  deleteProduct,
+  toggleProductVisibility,
+} from "@/lib/actions/products";
+import { getCategories } from "@/lib/actions/categories";
 
 export default function ProductsPage() {
-  const router = useRouter()
-  const [showEmptyState, setShowEmptyState] = useState(false)
-  const [products, setProducts] = useState(initialProducts)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [productToDelete, setProductToDelete] = useState<number | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
-  const [stockFilter, setStockFilter] = useState("all")
-  const [viewMode, setViewMode] = useState<"table" | "card">("table")
+  const router = useRouter();
+  const [showEmptyState, setShowEmptyState] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
+  // Fetch products and categories on component mount
   useEffect(() => {
-    // Load all products from localStorage, merging with initialProducts
-    const storedProductsString = localStorage.getItem("allProducts")
-    let allProducts = initialProducts // Start with initial products
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [productsData, categoriesData] = await Promise.all([
+          getProducts(),
+          getCategories(),
+        ]);
+        setProducts(productsData || []);
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to fetch products and categories");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (storedProductsString) {
-      const newlyAddedOrEditedProducts = JSON.parse(storedProductsString)
-      // Merge: prioritize newly added/edited products if IDs conflict
-      const mergedProductsMap = new Map(initialProducts.map((p) => [p.id, p]))
-      newlyAddedOrEditedProducts.forEach((p: any) => mergedProductsMap.set(p.id, p))
-      allProducts = Array.from(mergedProductsMap.values())
-    } else {
-      // If no 'allProducts' in localStorage, save initial products there
-      localStorage.setItem("allProducts", JSON.stringify(initialProducts))
-    }
-    setProducts(allProducts)
-  }, [])
+    fetchData();
+  }, []);
 
   // Delete product
-  const confirmDelete = () => {
-    if (productToDelete !== null) {
-      const updatedProducts = products.filter((product) => product.id !== productToDelete)
-      setProducts(updatedProducts)
-      localStorage.setItem("allProducts", JSON.stringify(updatedProducts)) // Persist deletion
-      setIsDeleteDialogOpen(false)
-      setProductToDelete(null)
+  const confirmDelete = async () => {
+    if (productToDelete && !deleting) {
+      try {
+        setDeleting(true);
+        await deleteProduct(productToDelete);
+        setProducts(
+          products.filter((product) => product.id !== productToDelete)
+        );
+        setIsDeleteDialogOpen(false);
+        setProductToDelete(null);
+        toast.success("Product deleted successfully");
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        toast.error("Failed to delete product");
+      } finally {
+        setDeleting(false);
+      }
     }
-  }
+  };
 
   // Handle navigation to edit product
   const handleEditProduct = (product: any) => {
-    // No need to store product in localStorage here, the edit page will fetch it by ID
-    router.push(`/admin/products/edit/${product.id}`)
-  }
+    router.push(`/admin/products/edit/${product.id}`);
+  };
 
-  // Add a new function to handle visibility change:
-  const handleProductVisibilityChange = (productId: number | string, checked: boolean) => {
-    setProducts((prevProducts) => {
-      const updatedProducts = prevProducts.map((product) =>
-        product.id === productId ? { ...product, isActive: checked } : product,
-      )
-      localStorage.setItem("allProducts", JSON.stringify(updatedProducts))
-      return updatedProducts
-    })
-  }
+  // Handle product visibility change
+  const handleProductVisibilityChange = async (
+    productId: string,
+    checked: boolean
+  ) => {
+    try {
+      await toggleProductVisibility(productId, checked);
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.id === productId
+            ? { ...product, is_active: checked }
+            : product
+        )
+      );
+      toast.success(
+        `Product ${checked ? "activated" : "deactivated"} successfully`
+      );
+    } catch (error) {
+      console.error("Error toggling product visibility:", error);
+      toast.error("Failed to update product visibility");
+    }
+  };
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "in-stock":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "low-stock":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
       case "out-of-stock":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
-  }
+  };
+
+  // Get stock status based on product data
+  const getStockStatus = (product: any) => {
+    if (!product.is_active) return "out-of-stock";
+
+    // Check weight options
+    if (product.weight_options && product.weight_options.length > 0) {
+      const activeWeightOptions = product.weight_options.filter(
+        (opt: any) => opt.isActive
+      );
+      if (activeWeightOptions.length === 0) return "out-of-stock";
+
+      const totalStock = activeWeightOptions.reduce((sum: number, opt: any) => {
+        const stock = parseInt(opt.stock) || 0;
+        return sum + stock;
+      }, 0);
+
+      if (totalStock === 0) return "out-of-stock";
+      if (totalStock <= 5) return "low-stock";
+      return "in-stock";
+    }
+
+    // Check piece options
+    if (product.piece_options && product.piece_options.length > 0) {
+      const activePieceOptions = product.piece_options.filter(
+        (opt: any) => opt.isActive
+      );
+      if (activePieceOptions.length === 0) return "out-of-stock";
+
+      const totalStock = activePieceOptions.reduce((sum: number, opt: any) => {
+        const stock = parseInt(opt.stock) || 0;
+        return sum + stock;
+      }, 0);
+
+      if (totalStock === 0) return "out-of-stock";
+      if (totalStock <= 5) return "low-stock";
+      return "in-stock";
+    }
+
+    return "out-of-stock";
+  };
+
+  // Get price from product
+  const getProductPrice = (product: any) => {
+    if (product.weight_options && product.weight_options.length > 0) {
+      const activeOption = product.weight_options.find(
+        (opt: any) => opt.isActive
+      );
+      return activeOption ? parseInt(activeOption.price) : 0;
+    }
+
+    if (product.piece_options && product.piece_options.length > 0) {
+      const activeOption = product.piece_options.find(
+        (opt: any) => opt.isActive
+      );
+      return activeOption ? parseInt(activeOption.price) : 0;
+    }
+
+    return 0;
+  };
 
   // Filter products based on search term, category, and stock status
   const filteredProducts = products.filter((product) => {
     // Search filter
     const matchesSearch =
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      (product.short_description &&
+        product.short_description
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()));
 
     // Category filter
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter
+    const matchesCategory =
+      categoryFilter === "all" || product.categories?.name === categoryFilter;
 
     // Stock filter
+    const stockStatus = getStockStatus(product);
     const matchesStock =
       stockFilter === "all" ||
-      (stockFilter === "in-stock" && product.status === "in-stock") ||
-      (stockFilter === "low-stock" && product.status === "low-stock") ||
-      (stockFilter === "out-of-stock" && product.status === "out-of-stock")
+      (stockFilter === "in-stock" && stockStatus === "in-stock") ||
+      (stockFilter === "low-stock" && stockStatus === "low-stock") ||
+      (stockFilter === "out-of-stock" && stockStatus === "out-of-stock");
 
-    return matchesSearch && matchesCategory && matchesStock
-  })
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex-1 space-y-6 p-6 md:p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading products...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-6 p-6 md:p-8">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
-          <p className="text-muted-foreground">Manage your product catalog and inventory</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Products
+          </h1>
+          <p className="text-muted-foreground">
+            Manage your product catalog and inventory
+          </p>
         </div>
         <Button
           onClick={() => router.push("/admin/products/create")}
@@ -439,7 +321,10 @@ export default function ProductsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => setCategoryFilter(value)}
+            >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -453,7 +338,10 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={stockFilter} onValueChange={(value) => setStockFilter(value)}>
+            <Select
+              value={stockFilter}
+              onValueChange={(value) => setStockFilter(value)}
+            >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Stock Status" />
               </SelectTrigger>
@@ -484,15 +372,18 @@ export default function ProductsPage() {
       </div>
 
       {/* Products Table or Empty State */}
-      {showEmptyState || products.length === 0 ? (
+      {showEmptyState || filteredProducts.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-blue-100 p-4 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
               <Package className="h-10 w-10" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold">No products available yet</h3>
+            <h3 className="mt-4 text-lg font-semibold">
+              No products available yet
+            </h3>
             <p className="mt-2 max-w-sm text-center text-muted-foreground">
-              Start adding delicious treats to your catalog! Products you add will appear here.
+              Start adding delicious treats to your catalog! Products you add
+              will appear here.
             </p>
             <Button
               className="mt-6 bg-blue-600 hover:bg-blue-700"
@@ -510,7 +401,9 @@ export default function ProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
-                  <TableHead className="hidden md:table-cell">Category</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Category
+                  </TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead className="hidden sm:table-cell">Stock</TableHead>
                   <TableHead>Status</TableHead>
@@ -519,162 +412,194 @@ export default function ProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-10 w-10 overflow-hidden rounded-md bg-gray-100">
-                          <Image
-                            src={product.image || "/placeholder.svg"}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                          />
+                {filteredProducts.map((product) => {
+                  const stockStatus = getStockStatus(product);
+                  const price = getProductPrice(product);
+
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
+                            <Image
+                              src={product.banner_image || "/placeholder.svg"}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div>
+                            <div className="font-medium">{product.name}</div>
+                            <div className="text-sm text-muted-foreground line-clamp-1">
+                              {product.short_description}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium leading-none">{product.name}</p>
-                          <p className="text-xs text-muted-foreground md:hidden mt-1">{product.category}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{product.category}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">₹{product.price}</span>
-                        {product.discountPercent > 0 && (
-                          <span className="text-xs text-green-600">{product.discountPercent}% off</span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant="outline">
+                          {product.categories?.name}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">₹{price}</div>
+                        {product.has_offer && product.offer_percentage && (
+                          <div className="text-sm text-green-600">
+                            {product.offer_percentage}% off
+                          </div>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{product.stock} pcs</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusBadgeColor(product.status)}>
-                        {product.status.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`product-visibility-${product.id}`}
-                          checked={product.isActive}
-                          onCheckedChange={(checked) => handleProductVisibilityChange(product.id, checked)}
-                          className="data-[state=checked]:bg-blue-600"
-                        />
-                        <Label htmlFor={`product-visibility-${product.id}`} className="sr-only">
-                          Toggle visibility for {product.name}
-                        </Label>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => handleEditProduct(product)}>
-                                <Pencil className="h-4 w-4" />
-                                <span className="sr-only">Edit Product</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit Product</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => {
-                                  setProductToDelete(product.id)
-                                  setIsDeleteDialogOpen(true)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Delete Product</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete Product</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="text-sm text-muted-foreground">
+                          {stockStatus === "in-stock"
+                            ? "Available"
+                            : stockStatus === "low-stock"
+                            ? "Low Stock"
+                            : "Out of Stock"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusBadgeColor(stockStatus)}>
+                          {stockStatus.replace("-", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={product.is_active}
+                            onCheckedChange={(checked) =>
+                              handleProductVisibilityChange(product.id, checked)
+                            }
+                            className="data-[state=checked]:bg-blue-600"
+                          />
+                          <Label className="text-sm">
+                            {product.is_active ? "Active" : "Inactive"}
+                          </Label>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditProduct(product)}
+                                  className="h-8 w-8"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  <span className="sr-only">Edit</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit product</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setProductToDelete(product.id);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                  className="h-8 w-8 text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Delete</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete product</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="overflow-hidden admin-card">
-              <div className="relative h-48 w-full dark:bg-[#1f1f1f]">
-                <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
-                {product.discountPercent > 0 && (
-                  <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
-                    {product.discountPercent}% OFF
+        // Card view implementation would go here
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => {
+            const stockStatus = getStockStatus(product);
+            const price = getProductPrice(product);
+
+            return (
+              <Card key={product.id} className="overflow-hidden">
+                <div className="relative h-48 bg-gray-100">
+                  <Image
+                    src={product.banner_image || "/placeholder.svg"}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                  />
+                  {product.has_offer && product.offer_percentage && (
+                    <Badge className="absolute top-2 left-2 bg-red-500">
+                      {product.offer_percentage}% OFF
+                    </Badge>
+                  )}
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold line-clamp-1">
+                      {product.name}
+                    </h3>
+                    <Badge className={getStatusBadgeColor(stockStatus)}>
+                      {stockStatus.replace("-", " ")}
+                    </Badge>
                   </div>
-                )}
-                <Badge variant="outline" className={`absolute bottom-2 left-2 ${getStatusBadgeColor(product.status)}`}>
-                  {product.status.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                </Badge>
-              </div>
-              <CardContent className="p-4 dark:bg-[#1f1f1f]">
-                <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-sm text-muted-foreground">{product.category}</span>
-                  <span className="font-bold">₹{product.price}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{product.description}</p>
-                <div className="flex items-center mt-2 text-sm">
-                  <span className={product.stock === 0 ? "text-red-500" : "text-muted-foreground"}>
-                    {product.stock} in stock
-                  </span>
-                </div>
-              </CardContent>
-              <CardFooter className="p-4 flex justify-between gap-2 border-t dark:bg-[#141414]">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditProduct(product)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Edit Product</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    {product.short_description}
+                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-medium">₹{price}</span>
+                    <Badge variant="outline">{product.categories?.name}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={product.is_active}
+                        onCheckedChange={(checked) =>
+                          handleProductVisibilityChange(product.id, checked)
+                        }
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                      <Label className="text-sm">
+                        {product.is_active ? "Active" : "Inactive"}
+                      </Label>
+                    </div>
+                    <div className="flex space-x-1">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700"
-                        onClick={() => {
-                          setProductToDelete(product.id)
-                          setIsDeleteDialogOpen(true)
-                        }}
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditProduct(product)}
+                        className="h-8 w-8"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Delete Product</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </CardFooter>
-            </Card>
-          ))}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setProductToDelete(product.id);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        className="h-8 w-8 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -682,8 +607,8 @@ export default function ProductsPage() {
       {!showEmptyState && products.length > 0 && (
         <div className="flex items-center justify-end">
           <div className="text-sm text-muted-foreground mr-4">
-            Showing <strong>1 - {Math.min(10, filteredProducts.length)}</strong> of{" "}
-            <strong>{filteredProducts.length}</strong> products
+            Showing <strong>1 - {Math.min(10, filteredProducts.length)}</strong>{" "}
+            of <strong>{filteredProducts.length}</strong> products
           </div>
           <Pagination>
             <PaginationContent>
@@ -711,32 +636,35 @@ export default function ProductsPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] w-[95vw] max-w-[95vw] sm:w-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Product</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this product? This action cannot be undone.
+              Are you sure you want to delete this product? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-4 py-4">
-            <div className="rounded-full bg-red-100 p-2 text-red-600">
-              <AlertCircle className="h-6 w-6" />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Deleting this product will remove it from your catalog and customers will no longer be able to purchase
-              it.
-            </div>
-          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setProductToDelete(null);
+              }}
+              disabled={deleting}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

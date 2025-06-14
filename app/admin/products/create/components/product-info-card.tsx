@@ -1,27 +1,36 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import type React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface ProductInfoCardProps {
   formData: {
-    name: string
-    shortDescription: string
-    category: string
-    isVeg: boolean
-    hasOffer: boolean
-    offerPercentage: string
-    offerUpToPrice: string
-  }
-  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
-  handleSelectChange: (name: string, value: string) => void
-  handleSwitchChange: (name: string, checked: boolean) => void
+    name: string;
+    shortDescription: string;
+    category: string;
+    isVeg: boolean;
+    hasOffer: boolean;
+    offerPercentage: string;
+    offerUpToPrice: string;
+  };
+  handleChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
+  handleSelectChange: (name: string, value: string) => void;
+  handleSwitchChange: (name: string, checked: boolean) => void;
+  categories: any[];
 }
 
 export function ProductInfoCard({
@@ -29,6 +38,7 @@ export function ProductInfoCard({
   handleChange,
   handleSelectChange,
   handleSwitchChange,
+  categories,
 }: ProductInfoCardProps) {
   return (
     <Card>
@@ -64,18 +74,19 @@ export function ProductInfoCard({
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)}>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => handleSelectChange("category", value)}
+          >
             <SelectTrigger className="focus-visible:ring-blue-500 focus-visible:ring-1 focus-visible:ring-offset-0">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Cakes">Cakes</SelectItem>
-              <SelectItem value="Cupcakes">Cupcakes</SelectItem>
-              <SelectItem value="Cookies">Cookies</SelectItem>
-              <SelectItem value="Pastries">Pastries</SelectItem>
-              <SelectItem value="Breads">Breads</SelectItem>
-              <SelectItem value="Donuts">Donuts</SelectItem>
-              <SelectItem value="Brownies">Brownies</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.name}>
+                  {category.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -85,7 +96,9 @@ export function ProductInfoCard({
           <div className="flex items-center space-x-2">
             <RadioGroup
               value={formData.isVeg ? "veg" : "nonveg"}
-              onValueChange={(value) => handleSwitchChange("isVeg", value === "veg")}
+              onValueChange={(value) =>
+                handleSwitchChange("isVeg", value === "veg")
+              }
               className="flex space-x-4"
             >
               <div className="flex items-center space-x-2">
@@ -116,7 +129,9 @@ export function ProductInfoCard({
             <Switch
               id="hasOffer"
               checked={formData.hasOffer}
-              onCheckedChange={(checked) => handleSwitchChange("hasOffer", checked)}
+              onCheckedChange={(checked) =>
+                handleSwitchChange("hasOffer", checked)
+              }
               className="data-[state=checked]:bg-blue-600"
             />
           </div>
@@ -162,5 +177,5 @@ export function ProductInfoCard({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,24 +1,33 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { TagInput } from "@/components/shared/tag-input"
+import type React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TagInput } from "@/components/shared/tag-input";
 
 interface ProductDetailsCardProps {
   formData: {
-    longDescription: string
-    category: string
-    offer: string
-    isVeg: boolean
-    highlights: string[]
-    ingredients: string[]
-  }
-  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
-  handleSelectChange: (name: string, value: string | string[]) => void
-  handleSwitchChange: (name: string, checked: boolean) => void
+    longDescription: string;
+    category: string;
+    offer: string;
+    isVeg: boolean;
+    highlights: string[];
+    ingredients: string[];
+  };
+  handleChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
+  handleSelectChange: (name: string, value: string | string[]) => void;
+  handleSwitchChange: (name: string, checked: boolean) => void;
+  categories: any[];
 }
 
 export function ProductDetailsCard({
@@ -26,6 +35,7 @@ export function ProductDetailsCard({
   handleChange,
   handleSelectChange,
   handleSwitchChange,
+  categories,
 }: ProductDetailsCardProps) {
   return (
     <Card>
@@ -48,25 +58,19 @@ export function ProductDetailsCard({
 
         <div className="space-y-2">
           <Label htmlFor="category-details">Category</Label>
-          <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)}>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => handleSelectChange("category", value)}
+          >
             <SelectTrigger className="focus-visible:ring-blue-500 focus-visible:ring-1 focus-visible:ring-offset-0">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Cakes">Cakes</SelectItem>
-              <SelectItem value="Cupcakes">Cupcakes</SelectItem>
-              <SelectItem value="Cookies">Cookies</SelectItem>
-              <SelectItem value="Pastries">Pastries</SelectItem>
-              <SelectItem value="Breads">Breads</SelectItem>
-              <SelectItem value="Donuts">Donuts</SelectItem>
-              <SelectItem value="Brownies">Brownies</SelectItem>
-              <SelectItem value="Tarts">Tarts</SelectItem>
-              <SelectItem value="Macarons">Macarons</SelectItem>
-              <SelectItem value="Croissants">Croissants</SelectItem>
-              <SelectItem value="Pies">Pies</SelectItem>
-              <SelectItem value="Muffins">Muffins</SelectItem>
-              <SelectItem value="Sweets">Sweets</SelectItem>
-              <SelectItem value="Chocolates">Chocolates</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.name}>
+                  {category.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -79,7 +83,9 @@ export function ProductDetailsCard({
             onTagsChange={(tags) => handleSelectChange("highlights", tags)}
             initialTags={formData.highlights}
           />
-          <p className="text-xs text-muted-foreground">Add key features or selling points of the product</p>
+          <p className="text-xs text-muted-foreground">
+            Add key features or selling points of the product
+          </p>
         </div>
 
         {/* Ingredients Section */}
@@ -90,9 +96,11 @@ export function ProductDetailsCard({
             onTagsChange={(tags) => handleSelectChange("ingredients", tags)}
             initialTags={formData.ingredients}
           />
-          <p className="text-xs text-muted-foreground">List all ingredients used in the product</p>
+          <p className="text-xs text-muted-foreground">
+            List all ingredients used in the product
+          </p>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

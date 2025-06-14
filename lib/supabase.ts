@@ -61,6 +61,75 @@ export interface Address {
   alternate_phone: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  products_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  short_description: string | null;
+  long_description: string | null;
+  category_id: string;
+  is_veg: boolean;
+  has_offer: boolean;
+  offer_percentage: number | null;
+  offer_up_to_price: number;
+
+  // Images
+  banner_image: string | null;
+  additional_images: string[];
+
+  // Selling options
+  selling_type: "weight" | "piece" | "both";
+  weight_options: Array<{
+    weight: string;
+    price: string;
+    stock: string;
+    isActive: boolean;
+  }>;
+  piece_options: Array<{
+    quantity: string;
+    price: string;
+    stock: string;
+    isActive: boolean;
+  }>;
+
+  // Nutrition information
+  calories: number | null;
+  net_weight: number | null; // in grams
+  protein: number | null; // in grams
+  fats: number | null; // in grams
+  carbs: number | null; // in grams
+  sugars: number | null; // in grams
+  fiber: number | null; // in grams
+  sodium: number | null; // in mg
+
+  // Customization options
+  add_text_on_cake: boolean;
+  add_candles: boolean;
+  add_knife: boolean;
+  add_message_card: boolean;
+
+  // Delivery options
+  delivery_option: "same-day" | "both";
+
+  // Tags and features
+  highlights: string[];
+  ingredients: string[];
+
+  // Status and timestamps
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -73,6 +142,21 @@ export interface Database {
         Row: Address;
         Insert: Omit<Address, "id" | "created_at" | "updated_at">;
         Update: Partial<Address>;
+      };
+      categories: {
+        Row: Category;
+        Insert: Omit<
+          Category,
+          "id" | "created_at" | "updated_at" | "products_count"
+        >;
+        Update: Partial<
+          Omit<Category, "id" | "created_at" | "updated_at" | "products_count">
+        >;
+      };
+      products: {
+        Row: Product;
+        Insert: Omit<Product, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<Product, "id" | "created_at" | "updated_at">>;
       };
     };
   };
