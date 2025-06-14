@@ -17,7 +17,12 @@ import { useSession } from "next-auth/react";
 import { createAddress, getCurrentLocationAddress } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import { calculateDeliveryFromAddress } from "@/lib/distance";
+import {
+  autofillAddressFromPincode,
+  validateAddressForCoimbatoreDelivery,
+} from "@/lib/coimbatore-validation";
 import DesktopHeader from "@/components/block/DesktopHeader";
+import RouteInfoDisplay from "@/components/RouteInfoDisplay";
 
 export default function NewAddressPage() {
   const router = useRouter();
@@ -37,100 +42,82 @@ export default function NewAddressPage() {
     alternatePhone: "",
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+
+    // Handle pincode autofill
+    if (name === "zipCode" && value.length === 6) {
+      setPincodeLoading(true);
+      try {
+        const autofillResult = await autofillAddressFromPincode(value);
+        if (autofillResult.isValid && autofillResult.area) {
+          setFormData((prev) => ({
+            ...prev,
+            area: autofillResult.area || "",
+          }));
+
+          // Validate the address for delivery
+          const validationResult = await validateAddressForCoimbatoreDelivery({
+            city: autofillResult.city,
+            state: autofillResult.state,
+            zip_code: value,
+          });
+          setValidationResult(validationResult);
+        } else {
+          setValidationResult({
+            isCoimbatoreArea: false,
+            error: autofillResult.error || "Invalid pincode",
+          });
+        }
+      } catch (error) {
+        console.error("Error in pincode autofill:", error);
+        setValidationResult({
+          isCoimbatoreArea: false,
+          error: "Failed to validate pincode",
+        });
+      } finally {
+        setPincodeLoading(false);
+      }
+    }
+
+    // Clear validation if zipCode is being modified
+    if (name === "zipCode" && value.length < 6) {
+      setValidationResult(null);
+    }
   };
 
-  // Auto-populate area when ZIP code changes
+  // Auto-clear validation when form data changes (other than pincode)
   useEffect(() => {
-    const getAreaFromPincode = async () => {
-      if (formData.zipCode && formData.zipCode.length === 6) {
-        setPincodeLoading(true);
+    // Clear validation when area is manually changed (not from pincode autofill)
+    if (formData.area && formData.zipCode && formData.zipCode.length === 6) {
+      // Only re-validate if both area and zipCode are present
+      const revalidate = async () => {
         try {
-          const response = await fetch("/api/coimbatore-validation", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              type: "pincode",
-              pincode: formData.zipCode,
-            }),
+          const validationResult = await validateAddressForCoimbatoreDelivery({
+            city: "Coimbatore",
+            state: "Tamil Nadu",
+            zip_code: formData.zipCode,
           });
-
-          const data = await response.json();
-          if (data.success && data.result.locationDetails) {
-            const locationDetails = data.result.locationDetails;
-            // Use specific locality if available, otherwise fallback to district or city
-            const area =
-              locationDetails.locality ||
-              locationDetails.district ||
-              locationDetails.city ||
-              "";
-            setFormData((prev) => ({
-              ...prev,
-              area: area,
-            }));
-          }
-        } catch (error) {
-          console.error("Error getting area from pincode:", error);
-        } finally {
-          setPincodeLoading(false);
-        }
-      }
-    };
-
-    // Debounce to avoid too many API calls
-    const timeoutId = setTimeout(getAreaFromPincode, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [formData.zipCode]);
-
-  // Real-time validation when area or zipCode changes
-  useEffect(() => {
-    const validateAddress = async () => {
-      if (formData.area && formData.zipCode) {
-        setValidationLoading(true);
-        try {
-          const response = await fetch("/api/coimbatore-validation", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              type: "address",
-              address: {
-                city: formData.area,
-                state: "Tamil Nadu", // Always Tamil Nadu for Coimbatore
-                zip_code: formData.zipCode,
-              },
-            }),
-          });
-
-          const data = await response.json();
-          if (data.success) {
-            setValidationResult(data.result);
-          } else {
-            setValidationResult({ error: data.error || "Validation failed" });
-          }
+          setValidationResult(validationResult);
         } catch (error) {
           console.error("Validation error:", error);
-          setValidationResult({ error: "Failed to validate address" });
-        } finally {
-          setValidationLoading(false);
+          setValidationResult({
+            isCoimbatoreArea: false,
+            error: "Failed to validate address",
+          });
         }
-      } else {
-        setValidationResult(null);
-      }
-    };
+      };
 
-    // Debounce validation to avoid too many API calls
-    const timeoutId = setTimeout(validateAddress, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [formData.area, formData.zipCode]);
+      const timeoutId = setTimeout(revalidate, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setValidationResult(null);
+    }
+  }, [formData.area]);
 
   const handleUseCurrentLocation = async () => {
     setLocationLoading(true);
@@ -202,9 +189,10 @@ export default function NewAddressPage() {
       const result = await createAddress(user.id, {
         address_name: formData.addressName,
         full_address: formData.fullAddress,
-        city: formData.area,
+        city: "Coimbatore", // Always Coimbatore for our delivery area
         state: "Tamil Nadu", // Always Tamil Nadu for Coimbatore
         zip_code: formData.zipCode,
+        area: formData.area,
         is_default: false,
         alternate_phone: formData.alternatePhone,
         additional_details: formData.additionalDetails,
@@ -225,12 +213,12 @@ export default function NewAddressPage() {
 
   // Validation status component
   const ValidationStatus = () => {
-    if (validationLoading) {
+    if (validationLoading || pincodeLoading) {
       return (
         <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
           <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
           <span className="text-blue-700 dark:text-blue-300 text-sm">
-            Validating address...
+            {pincodeLoading ? "Checking pincode..." : "Validating address..."}
           </span>
         </div>
       );
@@ -238,37 +226,34 @@ export default function NewAddressPage() {
 
     if (!validationResult) return null;
 
-    if (validationResult.error) {
+    if (!validationResult.isCoimbatoreArea || validationResult.error) {
       return (
         <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
           <XCircle className="h-4 w-4 text-red-600" />
           <span className="text-red-700 dark:text-red-300 text-sm">
-            {validationResult.error}
+            {validationResult.error || "Address is outside our delivery area"}
           </span>
         </div>
       );
     }
 
-    if (validationResult.isCoimbatoreArea && validationResult.isDeliverable) {
+    if (validationResult.isCoimbatoreArea) {
       return (
-        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <span className="text-green-700 dark:text-green-300 text-sm">
-            ✓ Address is within our Coimbatore delivery area (
-            {validationResult.distance.toFixed(1)}km away)
-          </span>
-        </div>
-      );
-    }
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <span className="text-green-700 dark:text-green-300 text-sm">
+              ✓ Address is within our Coimbatore delivery area
+            </span>
+          </div>
 
-    if (validationResult.isCoimbatoreArea && !validationResult.isDeliverable) {
-      return (
-        <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <span className="text-yellow-700 dark:text-yellow-300 text-sm">
-            Address is in Coimbatore area but outside our delivery range (
-            {validationResult.distance.toFixed(1)}km away)
-          </span>
+          <RouteInfoDisplay
+            distance={validationResult.distance}
+            duration={validationResult.duration}
+            area={formData.area}
+            pincode={formData.zipCode}
+            showMapLink={true}
+          />
         </div>
       );
     }

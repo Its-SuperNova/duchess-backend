@@ -163,29 +163,18 @@ function AddressDrawer({
     const getAreaFromPincode = async () => {
       if (addressFormData.pincode && addressFormData.pincode.length === 6) {
         try {
-          const response = await fetch("/api/coimbatore-validation", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              type: "pincode",
-              pincode: addressFormData.pincode,
-            }),
-          });
+          // Import the validation function at the top of this file instead of making API call
+          const { autofillAddressFromPincode } = await import(
+            "@/lib/coimbatore-validation"
+          );
+          const result = await autofillAddressFromPincode(
+            addressFormData.pincode
+          );
 
-          const data = await response.json();
-          if (data.success && data.result.locationDetails) {
-            const locationDetails = data.result.locationDetails;
-            // Use specific locality if available, otherwise fallback to district or city
-            const area =
-              locationDetails.locality ||
-              locationDetails.district ||
-              locationDetails.city ||
-              "";
+          if (result.isValid && result.area) {
             setAddressFormData((prev) => ({
               ...prev,
-              area: area,
+              area: result.area || "",
             }));
           }
         } catch (error) {

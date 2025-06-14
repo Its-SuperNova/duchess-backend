@@ -1,3 +1,5 @@
+import { SHOP_LOCATION as SHOP_CONFIG } from "./shop-config";
+
 /**
  * OSRM Route Response Types
  */
@@ -449,15 +451,14 @@ export async function testDeliveryCalculation(addressParts: {
 }
 
 /**
- * Shop location configuration
+ * Shop location configuration (unified with shop-config.ts)
  */
 export const SHOP_LOCATION = {
-  name: "Duchess Pastries",
-  address:
-    "Door No : 7/68-62-B, Street 1, Vijayalakshmi Nagar, Sivasakthi Gardens, Keeranatham",
+  name: SHOP_CONFIG.name,
+  address: SHOP_CONFIG.address,
   coordinates: {
-    lat: 11.106207,
-    lon: 77.001487,
+    lat: SHOP_CONFIG.latitude,
+    lon: SHOP_CONFIG.longitude,
   },
 };
 

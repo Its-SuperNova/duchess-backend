@@ -8,6 +8,7 @@ export interface CreateAddressData {
   city: string;
   state: string;
   zip_code: string;
+  area?: string;
   is_default?: boolean;
   distance?: number;
   duration?: number;
@@ -21,6 +22,7 @@ export interface UpdateAddressData {
   city?: string;
   state?: string;
   zip_code?: string;
+  area?: string;
   is_default?: boolean;
   distance?: number;
   duration?: number;
@@ -241,11 +243,12 @@ export async function createAddress(
     const isFirstAddress = existingAddresses.length === 0;
     const shouldBeDefault = isFirstAddress || addressData.is_default;
 
-    // Add distance and duration to address data
+    // Add distance, duration, and area to address data
     const addressDataWithDistance = {
       ...addressData,
       distance: validationResult.distance,
       duration: validationResult.duration,
+      area: validationResult.area,
       is_default: shouldBeDefault,
     };
 
@@ -332,9 +335,10 @@ export async function updateAddress(
           };
         }
 
-        // Add distance and duration to address data
+        // Add distance, duration, and area to address data
         addressData.distance = validationResult.distance;
         addressData.duration = validationResult.duration;
+        addressData.area = validationResult.area;
       }
     }
 
