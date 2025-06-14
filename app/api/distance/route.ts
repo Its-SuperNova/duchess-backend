@@ -4,6 +4,7 @@ import {
   calculateDeliveryDistanceByPincode,
   testPincodeDeliveryCalculation,
 } from "@/lib/distance";
+import { SHOP_LOCATION } from "@/lib/shop-config";
 
 export async function GET() {
   try {
@@ -25,67 +26,85 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { type, pincode, district, state, address } = body;
+    const { area, pincode } = await request.json();
 
-    // Handle pincode-based calculation
-    if (type === "pincode" && pincode) {
-      console.log("Processing pincode-based distance calculation:", {
-        pincode,
-        district,
-        state,
-      });
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-      const result = await calculateDeliveryDistanceByPincode(
-        pincode,
-        district,
-        state
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Google Maps API key not configured" },
+        { status: 500 }
       );
-
-      return NextResponse.json({
-        success: true,
-        result,
-        method: "pincode-based",
-      });
     }
 
-    // Handle address-based calculation (backward compatibility)
-    if (address) {
-      console.log("Processing address-based distance calculation:", address);
+    // Construct origin and destination
+    const origin = `${SHOP_LOCATION.latitude},${SHOP_LOCATION.longitude}`;
+    const destination = `${area}, ${pincode}, Coimbatore, Tamil Nadu, India`;
 
-      const result = await calculateDeliveryDistance({
-        street: address.full_address,
-        district: address.city,
-        pincode: address.zip_code,
-        state: address.state,
-        country: "India",
-      });
+    console.log(`🗺️ Server-side Google Maps API call`);
+    console.log(`📍 Origin: ${origin}`);
+    console.log(`📍 Destination: ${destination}`);
 
-      return NextResponse.json({
-        success: true,
-        result,
-        method: "address-based",
-      });
+    // Google Maps Distance Matrix API URL
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
+      origin
+    )}&destinations=${encodeURIComponent(
+      destination
+    )}&units=metric&mode=driving&traffic_model=best_guess&departure_time=now&key=${apiKey}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Google Maps API error: ${response.status}`);
     }
 
-    // If neither pincode nor address is provided
-    return NextResponse.json(
-      {
-        error: "Invalid request",
-        message:
-          "Please provide either pincode (with type: 'pincode') or address object",
-      },
-      { status: 400 }
+    const data = await response.json();
+    console.log("📊 Google Maps API Response:", JSON.stringify(data, null, 2));
+
+    if (data.status !== "OK") {
+      throw new Error(`Google Maps API status: ${data.status}`);
+    }
+
+    if (!data.rows || data.rows.length === 0) {
+      throw new Error("No route data returned");
+    }
+
+    const element = data.rows[0].elements[0];
+
+    if (element.status !== "OK") {
+      throw new Error(`Route status: ${element.status}`);
+    }
+
+    // Extract distance and duration
+    const distanceText = element.distance?.text || "";
+    const distanceValue = element.distance?.value || 0; // in meters
+    const durationText = element.duration?.text || "";
+    const durationValue = element.duration?.value || 0; // in seconds
+
+    // Convert to our format
+    const distanceKm = Math.round((distanceValue / 1000) * 10) / 10; // Convert to km, round to 1 decimal
+    const durationMin = Math.round(durationValue / 60); // Convert to minutes
+
+    console.log(
+      `✅ Google Maps result: ${distanceKm}km (${distanceText}), ${durationMin}min (${durationText})`
     );
+
+    return NextResponse.json({
+      distance: distanceKm,
+      duration: durationMin,
+      success: true,
+      distanceText,
+      durationText,
+    });
   } catch (error) {
-    console.error("Distance calculation API error:", error);
+    console.error("❌ Google Maps distance calculation error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Distance calculation failed",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      distance: 15, // Default fallback
+      duration: 30, // Default fallback
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Distance calculation failed",
+    });
   }
 }
