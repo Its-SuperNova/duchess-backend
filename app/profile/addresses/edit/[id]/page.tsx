@@ -22,7 +22,7 @@ import { calculateDeliveryFromAddress } from "@/lib/distance";
 import {
   autofillAddressFromPincode,
   validateAddressForCoimbatoreDelivery,
-} from "@/lib/coimbatore-validation";
+} from "@/lib/address-validation";
 import DesktopHeader from "@/components/block/DesktopHeader";
 import RouteInfoDisplay from "@/components/RouteInfoDisplay";
 

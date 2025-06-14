@@ -165,7 +165,7 @@ function AddressDrawer({
         try {
           // Import the validation function at the top of this file instead of making API call
           const { autofillAddressFromPincode } = await import(
-            "@/lib/coimbatore-validation"
+            "@/lib/address-validation"
           );
           const result = await autofillAddressFromPincode(
             addressFormData.pincode

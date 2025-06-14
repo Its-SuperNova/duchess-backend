@@ -1,191 +1,31 @@
 import { SHOP_LOCATION as SHOP_CONFIG } from "./shop-config";
 
 /**
- * OSRM Route Response Types
+ * Google Maps Distance Matrix API Response Types
  */
-interface OSRMRoute {
-  distance: number; // in meters
-  duration: number; // in seconds
-  geometry: string;
+interface GoogleMapsDistanceElement {
+  distance: {
+    text: string;
+    value: number; // in meters
+  };
+  duration: {
+    text: string;
+    value: number; // in seconds
+  };
+  status: string;
 }
 
-interface OSRMResponse {
-  code: string;
-  routes: OSRMRoute[];
-  waypoints: Array<{
-    location: [number, number];
-    name: string;
-  }>;
+interface GoogleMapsDistanceRow {
+  elements: GoogleMapsDistanceElement[];
+}
+
+interface GoogleMapsDistanceResponse {
+  status: string;
+  rows: GoogleMapsDistanceRow[];
 }
 
 /**
- * Convert an address object to coordinates using Nominatim
- * Prioritizes pincode-based geocoding for better reliability
- * @param addressParts Address components
- * @returns Coordinates { lat: number; lon: number }
- */
-export async function getCoordinatesFromAddressParts({
-  street,
-  district,
-  pincode,
-  state = "Tamil Nadu",
-  country = "India",
-}: {
-  street: string;
-  district: string;
-  pincode: string;
-  state?: string;
-  country?: string;
-}): Promise<{ lat: number; lon: number }> {
-  console.log("Geocoding address with pincode priority:", {
-    street,
-    district,
-    pincode,
-    state,
-    country,
-  });
-
-  // First try: Pincode-based geocoding (most reliable for Indian addresses)
-  try {
-    const pincodeQuery = `${pincode}, ${district}, ${state}, ${country}`;
-    const pincodeEncoded = encodeURIComponent(pincodeQuery);
-    const pincodeUrl = `https://nominatim.openstreetmap.org/search?q=${pincodeEncoded}&format=json&limit=1`;
-
-    console.log("Attempting pincode-based geocoding:", pincodeQuery);
-
-    const pincodeRes = await fetch(pincodeUrl, {
-      headers: {
-        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
-      },
-    });
-
-    if (pincodeRes.ok) {
-      const pincodeData = await pincodeRes.json();
-
-      if (pincodeData && pincodeData.length > 0) {
-        const { lat, lon } = pincodeData[0];
-        const coordinates = { lat: parseFloat(lat), lon: parseFloat(lon) };
-
-        console.log("Pincode-based geocoding successful:", coordinates);
-        return coordinates;
-      }
-    }
-  } catch (error) {
-    console.log("Pincode-based geocoding failed, trying full address:", error);
-  }
-
-  // Second try: Full address geocoding (fallback)
-  try {
-    const fullAddressQuery = `${street}, ${district}, ${state}, ${pincode}, ${country}`;
-    const fullAddressEncoded = encodeURIComponent(fullAddressQuery);
-    const fullAddressUrl = `https://nominatim.openstreetmap.org/search?q=${fullAddressEncoded}&format=json&limit=1`;
-
-    console.log("Attempting full address geocoding:", fullAddressQuery);
-
-    const fullAddressRes = await fetch(fullAddressUrl, {
-      headers: {
-        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
-      },
-    });
-
-    if (!fullAddressRes.ok) {
-      throw new Error(
-        `Nominatim request failed: ${fullAddressRes.status} ${fullAddressRes.statusText}`
-      );
-    }
-
-    const fullAddressData = await fullAddressRes.json();
-
-    if (!fullAddressData || fullAddressData.length === 0) {
-      throw new Error("No coordinates found for the given address.");
-    }
-
-    const { lat, lon } = fullAddressData[0];
-    const coordinates = { lat: parseFloat(lat), lon: parseFloat(lon) };
-
-    console.log("Full address geocoding successful:", coordinates);
-    return coordinates;
-  } catch (error) {
-    console.error("Both pincode and full address geocoding failed:", error);
-    throw new Error(
-      "Address to coordinates failed: " + (error as Error).message
-    );
-  }
-}
-
-/**
- * Calculate road distance using OSRM
- * @param lat1 Starting latitude
- * @param lon1 Starting longitude
- * @param lat2 Destination latitude
- * @param lon2 Destination longitude
- * @returns Road distance in kilometers
- */
-export async function getRoadDistanceInKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): Promise<number> {
-  // Validate input coordinates
-  if (!isValidLatitude(lat1) || !isValidLatitude(lat2)) {
-    throw new Error("Invalid latitude values. Must be between -90 and 90.");
-  }
-
-  if (!isValidLongitude(lon1) || !isValidLongitude(lon2)) {
-    throw new Error("Invalid longitude values. Must be between -180 and 180.");
-  }
-
-  const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
-
-  console.log("Requesting road distance from OSRM API:", url);
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `OSRM API request failed: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-
-    if (data.code !== "Ok") {
-      throw new Error(`OSRM API error: ${data.code}`);
-    }
-
-    if (!data.routes || data.routes.length === 0) {
-      throw new Error("No route found between the given coordinates.");
-    }
-
-    const distanceInMeters = data.routes[0].distance;
-
-    if (distanceInMeters === undefined || distanceInMeters < 0) {
-      throw new Error("Invalid distance returned from OSRM API");
-    }
-
-    const distanceInKm = distanceInMeters / 1000;
-
-    console.log(
-      `OSRM road distance: ${distanceInKm.toFixed(2)}km (${distanceInMeters}m)`
-    );
-    return distanceInKm;
-  } catch (error) {
-    console.error("OSRM API failed:", error);
-    throw new Error(
-      "Failed to calculate distance: " + (error as Error).message
-    );
-  }
-}
-
-/**
- * Calculate road distance and duration using OSRM
+ * Calculate road distance and duration using Google Maps API
  * @param lat1 Starting latitude
  * @param lon1 Starting longitude
  * @param lat2 Destination latitude
@@ -207,9 +47,24 @@ export async function getRoadDistanceAndDuration(
     throw new Error("Invalid longitude values. Must be between -180 and 180.");
   }
 
-  const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error("Google Maps API key not configured");
+  }
 
-  console.log("Requesting road distance and duration from OSRM API:", url);
+  const origin = `${lat1},${lon1}`;
+  const destination = `${lat2},${lon2}`;
+
+  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
+    origin
+  )}&destinations=${encodeURIComponent(
+    destination
+  )}&units=metric&mode=driving&traffic_model=best_guess&departure_time=now&key=${apiKey}`;
+
+  console.log(
+    "Requesting road distance and duration from Google Maps API:",
+    url
+  );
 
   try {
     const response = await fetch(url, {
@@ -221,36 +76,42 @@ export async function getRoadDistanceAndDuration(
 
     if (!response.ok) {
       throw new Error(
-        `OSRM API request failed: ${response.status} ${response.statusText}`
+        `Google Maps API request failed: ${response.status} ${response.statusText}`
       );
     }
 
-    const data = await response.json();
+    const data: GoogleMapsDistanceResponse = await response.json();
 
-    if (data.code !== "Ok") {
-      throw new Error(`OSRM API error: ${data.code}`);
+    if (data.status !== "OK") {
+      throw new Error(`Google Maps API error: ${data.status}`);
     }
 
-    if (!data.routes || data.routes.length === 0) {
+    if (!data.rows || data.rows.length === 0) {
       throw new Error("No route found between the given coordinates.");
     }
 
-    const distanceInMeters = data.routes[0].distance;
-    const durationInSeconds = data.routes[0].duration;
+    const element = data.rows[0].elements[0];
+
+    if (element.status !== "OK") {
+      throw new Error(`Route status: ${element.status}`);
+    }
+
+    const distanceInMeters = element.distance.value;
+    const durationInSeconds = element.duration.value;
 
     if (distanceInMeters === undefined || distanceInMeters < 0) {
-      throw new Error("Invalid distance returned from OSRM API");
+      throw new Error("Invalid distance returned from Google Maps API");
     }
 
     if (durationInSeconds === undefined || durationInSeconds < 0) {
-      throw new Error("Invalid duration returned from OSRM API");
+      throw new Error("Invalid duration returned from Google Maps API");
     }
 
     const distanceInKm = distanceInMeters / 1000;
     const durationInMinutes = Math.round(durationInSeconds / 60);
 
     console.log(
-      `OSRM road distance: ${distanceInKm.toFixed(
+      `Google Maps road distance: ${distanceInKm.toFixed(
         2
       )}km, duration: ${durationInMinutes}min`
     );
@@ -260,9 +121,304 @@ export async function getRoadDistanceAndDuration(
       duration: durationInMinutes,
     };
   } catch (error) {
-    console.error("OSRM API failed:", error);
+    console.error("Google Maps API failed:", error);
     throw new Error(
       "Failed to calculate distance and duration: " + (error as Error).message
+    );
+  }
+}
+
+/**
+ * Calculate road distance and duration using Google Maps API
+ * @param lat1 Starting latitude
+ * @param lon1 Starting longitude
+ * @param lat2 Destination latitude
+ * @param lon2 Destination longitude
+ * @returns Object containing distance in km and duration in minutes
+ */
+export async function getRoadDistanceAndDuration(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): Promise<{ distance: number; duration: number }> {
+  // Validate input coordinates
+  if (!isValidLatitude(lat1) || !isValidLatitude(lat2)) {
+    throw new Error("Invalid latitude values. Must be between -90 and 90.");
+  }
+
+  if (!isValidLongitude(lon1) || !isValidLongitude(lon2)) {
+    throw new Error("Invalid longitude values. Must be between -180 and 180.");
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error("Google Maps API key not configured");
+  }
+
+  const origin = `${lat1},${lon1}`;
+  const destination = `${lat2},${lon2}`;
+
+  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
+    origin
+  )}&destinations=${encodeURIComponent(
+    destination
+  )}&units=metric&mode=driving&traffic_model=best_guess&departure_time=now&key=${apiKey}`;
+
+  console.log(
+    "Requesting road distance and duration from Google Maps API:",
+    url
+  );
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Maps API request failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: GoogleMapsDistanceResponse = await response.json();
+
+    if (data.status !== "OK") {
+      throw new Error(`Google Maps API error: ${data.status}`);
+    }
+
+    if (!data.rows || data.rows.length === 0) {
+      throw new Error("No route found between the given coordinates.");
+    }
+
+    const element = data.rows[0].elements[0];
+
+    if (element.status !== "OK") {
+      throw new Error(`Route status: ${element.status}`);
+    }
+
+    const distanceInMeters = element.distance.value;
+    const durationInSeconds = element.duration.value;
+
+    if (distanceInMeters === undefined || distanceInMeters < 0) {
+      throw new Error("Invalid distance returned from Google Maps API");
+    }
+
+    if (durationInSeconds === undefined || durationInSeconds < 0) {
+      throw new Error("Invalid duration returned from Google Maps API");
+    }
+
+    const distanceInKm = distanceInMeters / 1000;
+    const durationInMinutes = Math.round(durationInSeconds / 60);
+
+    console.log(
+      `Google Maps road distance: ${distanceInKm.toFixed(
+        2
+      )}km, duration: ${durationInMinutes}min`
+    );
+
+    return {
+      distance: distanceInKm,
+      duration: durationInMinutes,
+    };
+  } catch (error) {
+    console.error("Google Maps API failed:", error);
+    throw new Error(
+      "Failed to calculate distance and duration: " + (error as Error).message
+    );
+  }
+}
+
+/**
+ * Calculate road distance using Google Maps API
+ * @param lat1 Starting latitude
+ * @param lon1 Starting longitude
+ * @param lat2 Destination latitude
+ * @param lon2 Destination longitude
+ * @returns Road distance in kilometers
+ */
+export async function getRoadDistanceInKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): Promise<number> {
+  const result = await getRoadDistanceAndDuration(lat1, lon1, lat2, lon2);
+  return result.distance;
+}
+
+/**
+ * Get coordinates from address using Google Maps Geocoding API
+ * @param addressParts Address components
+ * @returns Coordinates { lat: number; lon: number }
+ */
+export async function getCoordinatesFromAddressParts({
+  street,
+  district,
+  pincode,
+  state = "Tamil Nadu",
+  country = "India",
+}: {
+  street: string;
+  district: string;
+  pincode: string;
+  state?: string;
+  country?: string;
+}): Promise<{ lat: number; lon: number }> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error("Google Maps API key not configured");
+  }
+
+  console.log("Geocoding address with Google Maps:", {
+    street,
+    district,
+    pincode,
+    state,
+    country,
+  });
+
+  // Try pincode-based geocoding first (most reliable for Indian addresses)
+  try {
+    const pincodeQuery = `${pincode}, ${district}, ${state}, ${country}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      pincodeQuery
+    )}&key=${apiKey}`;
+
+    console.log("Attempting pincode-based geocoding:", pincodeQuery);
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Maps Geocoding API request failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.status === "OK" && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      const coordinates = { lat: location.lat, lon: location.lng };
+
+      console.log("Pincode-based geocoding successful:", coordinates);
+      return coordinates;
+    }
+  } catch (error) {
+    console.log("Pincode-based geocoding failed, trying full address:", error);
+  }
+
+  // Fallback to full address geocoding
+  try {
+    const fullAddressQuery = `${street}, ${district}, ${state}, ${pincode}, ${country}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      fullAddressQuery
+    )}&key=${apiKey}`;
+
+    console.log("Attempting full address geocoding:", fullAddressQuery);
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Maps Geocoding API request failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "OK" || !data.results || data.results.length === 0) {
+      throw new Error("No coordinates found for the given address.");
+    }
+
+    const location = data.results[0].geometry.location;
+    const coordinates = { lat: location.lat, lon: location.lng };
+
+    console.log("Full address geocoding successful:", coordinates);
+    return coordinates;
+  } catch (error) {
+    console.error("Both pincode and full address geocoding failed:", error);
+    throw new Error(
+      "Address to coordinates failed: " + (error as Error).message
+    );
+  }
+}
+
+/**
+ * Get coordinates from pincode using Google Maps Geocoding API
+ * @param pincode Pincode to geocode
+ * @param district Optional district name
+ * @param state State name (default: Tamil Nadu)
+ * @returns Coordinates { lat: number; lon: number }
+ */
+export async function getCoordinatesFromPincode(
+  pincode: string,
+  district?: string,
+  state: string = "Tamil Nadu"
+): Promise<{ lat: number; lon: number }> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error("Google Maps API key not configured");
+  }
+
+  console.log("Geocoding pincode with Google Maps:", {
+    pincode,
+    district,
+    state,
+  });
+
+  // Construct address query
+  const addressParts = [pincode];
+  if (district) addressParts.push(district);
+  addressParts.push(state, "India");
+
+  const addressQuery = addressParts.join(", ");
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+    addressQuery
+  )}&key=${apiKey}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Maps Geocoding API request failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "OK" || !data.results || data.results.length === 0) {
+      throw new Error(`No coordinates found for pincode ${pincode}`);
+    }
+
+    const location = data.results[0].geometry.location;
+    const coordinates = { lat: location.lat, lon: location.lng };
+
+    console.log("Pincode geocoding successful:", coordinates);
+    return coordinates;
+  } catch (error) {
+    console.error("Pincode geocoding failed:", error);
+    throw new Error(
+      "Pincode to coordinates failed: " + (error as Error).message
     );
   }
 }
@@ -346,16 +502,13 @@ export async function calculateDeliveryDistance(addressParts: {
     // Get coordinates from address
     const userCoords = await getCoordinatesFromAddressParts(addressParts);
 
-    // Calculate road distance from shop
-    const distance = await getRoadDistanceInKm(
+    // Calculate road distance from shop using Google Maps
+    const { distance, duration } = await getRoadDistanceAndDuration(
       SHOP_LOCATION.coordinates.lat,
       SHOP_LOCATION.coordinates.lon,
       userCoords.lat,
       userCoords.lon
     );
-
-    // Calculate realistic travel time
-    const duration = calculateRealisticTravelTime(distance, true);
 
     // Check if within delivery radius
     const isDeliverable = distance <= DELIVERY_RADIUS_KM;
@@ -416,6 +569,110 @@ export async function calculateDeliveryFromAddress(customerAddress: {
   } catch (error) {
     console.error("Error calculating delivery from address:", error);
     return null;
+  }
+}
+
+/**
+ * Calculate delivery distance from pincode with Google Maps
+ * @param pincode Customer pincode
+ * @param district Optional district name
+ * @param state State name (default: Tamil Nadu)
+ * @returns Delivery result
+ */
+export async function calculateDeliveryDistanceByPincode(
+  pincode: string,
+  district?: string,
+  state: string = "Tamil Nadu"
+): Promise<DeliveryResult> {
+  try {
+    console.log("Starting delivery distance calculation by pincode:", {
+      pincode,
+      district,
+      state,
+    });
+
+    // Get coordinates from pincode
+    const userCoords = await getCoordinatesFromPincode(
+      pincode,
+      district,
+      state
+    );
+
+    // Calculate road distance from shop using Google Maps
+    const { distance, duration } = await getRoadDistanceAndDuration(
+      SHOP_LOCATION.coordinates.lat,
+      SHOP_LOCATION.coordinates.lon,
+      userCoords.lat,
+      userCoords.lon
+    );
+
+    // Check if within delivery radius
+    const isDeliverable = distance <= DELIVERY_RADIUS_KM;
+    let deliveryMessage: string | undefined;
+
+    if (!isDeliverable) {
+      if (distance <= DELIVERY_RADIUS_KM + 5) {
+        deliveryMessage =
+          "Address is slightly outside our current delivery range. We're working on expanding our service area!";
+      } else if (distance <= DELIVERY_RADIUS_KM + 20) {
+        deliveryMessage =
+          "Address is outside our delivery range. We're planning to expand our service area soon!";
+      } else {
+        deliveryMessage = `Address is outside our delivery range. We currently deliver within ${DELIVERY_RADIUS_KM}km of Coimbatore.`;
+      }
+    }
+
+    const result: DeliveryResult = {
+      distance,
+      distanceMiles: kmToMiles(distance),
+      duration,
+      formattedDistance: formatDistance(distance),
+      formattedDuration: formatDuration(duration),
+      isDeliverable,
+      deliveryMessage,
+      coordinates: userCoords,
+    };
+
+    console.log("Delivery calculation by pincode result:", result);
+    return result;
+  } catch (error) {
+    console.error("Delivery distance calculation by pincode failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Test function for pincode-based delivery calculation
+ * @param pincode Test pincode
+ * @param district Optional district
+ * @param state State name
+ */
+export async function testPincodeDeliveryCalculation(
+  pincode: string,
+  district?: string,
+  state: string = "Tamil Nadu"
+): Promise<void> {
+  try {
+    console.log("=== Pincode Delivery Distance Calculation Test ===");
+    console.log("Shop location:", SHOP_LOCATION);
+    console.log("Pincode:", pincode, "District:", district, "State:", state);
+
+    const result = await calculateDeliveryDistanceByPincode(
+      pincode,
+      district,
+      state
+    );
+
+    console.log("Distance:", result.formattedDistance);
+    console.log("Duration:", result.formattedDuration);
+    console.log("Is Deliverable:", result.isDeliverable);
+    console.log("Coordinates:", result.coordinates);
+    if (result.deliveryMessage) {
+      console.log("Message:", result.deliveryMessage);
+    }
+    console.log("=== Test Complete ===");
+  } catch (error) {
+    console.error("Test failed:", error);
   }
 }
 
@@ -500,7 +757,7 @@ export function formatDuration(minutes: number): string {
     if (remainingMinutes === 0) {
       return `${hours}h`;
     } else {
-      return `${hours}h ${remainingMinutes}min`;
+      return `${hours}h ${Math.round(remainingMinutes)}min`;
     }
   }
 }
@@ -520,162 +777,59 @@ export interface DeliveryResult {
 }
 
 /**
- * Convert pincode to coordinates using Nominatim
- * Most reliable method for Indian addresses
- * @param pincode Indian pincode
- * @param district District name (optional, for better accuracy)
- * @param state State name (defaults to Tamil Nadu)
- * @returns Coordinates { lat: number; lon: number }
+ * Route result interface for API compatibility
  */
-export async function getCoordinatesFromPincode(
-  pincode: string,
-  district?: string,
-  state: string = "Tamil Nadu"
-): Promise<{ lat: number; lon: number }> {
-  const query = district
-    ? `${pincode}, ${district}, ${state}, India`
-    : `${pincode}, ${state}, India`;
+export interface RouteResult {
+  distance: number; // in kilometers
+  duration: number; // in minutes
+  success: boolean;
+  error?: string;
+}
 
-  const encoded = encodeURIComponent(query);
-  const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`;
-
-  console.log("Geocoding pincode:", query);
-
+/**
+ * Calculate distance and time using Google Maps API (via server)
+ * This function calls our API route which handles Google Maps API calls
+ * @param area Area name (can be empty)
+ * @param pincode Pincode for destination
+ * @returns Route result with distance and duration
+ */
+export async function calculateDistanceAndTime(
+  area: string,
+  pincode: string
+): Promise<RouteResult> {
   try {
-    const res = await fetch(url, {
+    console.log("Calculating distance and time via API route:", {
+      area,
+      pincode,
+    });
+
+    const response = await fetch("/api/distance", {
+      method: "POST",
       headers: {
-        "User-Agent": "DuchessPastries/1.0 (https://duchesspastries.com)",
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({ area, pincode }),
     });
 
-    if (!res.ok) {
-      throw new Error(
-        `Nominatim request failed: ${res.status} ${res.statusText}`
-      );
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
     }
 
-    const data = await res.json();
+    const data = await response.json();
 
-    if (!data || data.length === 0) {
-      throw new Error(`No coordinates found for pincode: ${pincode}`);
-    }
-
-    const { lat, lon } = data[0];
-    const coordinates = { lat: parseFloat(lat), lon: parseFloat(lon) };
-
-    console.log("Pincode geocoding successful:", coordinates);
-    return coordinates;
-  } catch (error) {
-    console.error("Pincode geocoding failed:", error);
-    throw new Error(
-      "Pincode to coordinates failed: " + (error as Error).message
-    );
-  }
-}
-
-/**
- * Calculate delivery distance using only pincode (most reliable for Indian addresses)
- * @param pincode Customer pincode
- * @param district District name (optional, for better accuracy)
- * @param state State name (defaults to Tamil Nadu)
- * @returns Delivery result with realistic travel time and delivery status
- */
-export async function calculateDeliveryDistanceByPincode(
-  pincode: string,
-  district?: string,
-  state: string = "Tamil Nadu"
-): Promise<DeliveryResult> {
-  try {
-    console.log("Starting pincode-based delivery distance calculation for:", {
-      pincode,
-      district,
-      state,
-    });
-
-    // Get coordinates from pincode
-    const userCoords = await getCoordinatesFromPincode(
-      pincode,
-      district,
-      state
-    );
-
-    // Calculate road distance from shop
-    const distance = await getRoadDistanceInKm(
-      SHOP_LOCATION.coordinates.lat,
-      SHOP_LOCATION.coordinates.lon,
-      userCoords.lat,
-      userCoords.lon
-    );
-
-    // Calculate realistic travel time
-    const duration = calculateRealisticTravelTime(distance, true);
-
-    // Check if within delivery radius
-    const isDeliverable = distance <= DELIVERY_RADIUS_KM;
-    let deliveryMessage: string | undefined;
-
-    if (!isDeliverable) {
-      if (distance <= DELIVERY_RADIUS_KM + 5) {
-        deliveryMessage =
-          "Address is slightly outside our current delivery range. We're working on expanding our service area!";
-      } else if (distance <= DELIVERY_RADIUS_KM + 20) {
-        deliveryMessage =
-          "Address is outside our delivery range. We're planning to expand our service area soon!";
-      } else {
-        deliveryMessage = `Address is outside our delivery range. We currently deliver within ${DELIVERY_RADIUS_KM}km of Coimbatore.`;
-      }
-    }
-
-    const result: DeliveryResult = {
-      distance,
-      distanceMiles: kmToMiles(distance),
-      duration,
-      formattedDistance: formatDistance(distance),
-      formattedDuration: formatDuration(duration),
-      isDeliverable,
-      deliveryMessage,
-      coordinates: userCoords,
+    return {
+      distance: data.distance || 15, // Default fallback
+      duration: data.duration || 30, // Default fallback
+      success: data.success || false,
+      error: data.error,
     };
-
-    console.log("Pincode-based delivery calculation result:", result);
-    return result;
   } catch (error) {
-    console.error("Pincode-based delivery distance calculation failed:", error);
-    throw error;
-  }
-}
-
-/**
- * Test function for pincode-based delivery calculation
- * @param pincode Test pincode
- * @param district District name (optional)
- * @param state State name (defaults to Tamil Nadu)
- */
-export async function testPincodeDeliveryCalculation(
-  pincode: string,
-  district?: string,
-  state: string = "Tamil Nadu"
-): Promise<void> {
-  try {
-    console.log("=== Pincode-based Delivery Distance Calculation Test ===");
-    console.log("Shop location:", SHOP_LOCATION);
-    console.log("Test pincode:", { pincode, district, state });
-
-    const result = await calculateDeliveryDistanceByPincode(
-      pincode,
-      district,
-      state
-    );
-
-    console.log("Distance:", result.formattedDistance);
-    console.log("Duration:", result.formattedDuration);
-    console.log("Is Deliverable:", result.isDeliverable);
-    console.log("Coordinates:", result.coordinates);
-    if (result.deliveryMessage) {
-      console.log("Message:", result.deliveryMessage);
-    }
-    console.log("=== Pincode Test Complete ===");
-  } catch (error) {
-    console.error("Pincode test failed:", error);
+    console.error("Distance calculation API call failed:", error);
+    return {
+      distance: 15, // Default fallback
+      duration: 30, // Default fallback
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }

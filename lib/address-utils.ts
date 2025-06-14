@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import type { Address } from "./supabase";
-import { validateAddressForCoimbatoreDelivery } from "./coimbatore-validation";
+import { validateAddressForCoimbatoreDelivery } from "./address-validation";
 
 export interface CreateAddressData {
   address_name: string;

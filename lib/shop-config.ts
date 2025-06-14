@@ -8,14 +8,12 @@ export interface ShopLocation {
   address: string;
 }
 
-// Main shop location in Coimbatore
-// IMPORTANT: Update these coordinates to your actual shop location
+// Exact shop location coordinates
 export const SHOP_LOCATION: ShopLocation = {
-  // Keeranatham area coordinates (Pincode: 641035) - More precise location
-  latitude: 11.0311,
-  longitude: 77.0469,
+  latitude: 11.1062, // 11°06'22.3"N
+  longitude: 77.0015, // 77°00'05.4"E
   name: "Duchess Pastries",
-  address: "Keeranatham, Coimbatore, Tamil Nadu 641035, India",
+  address: "Coimbatore, Tamil Nadu, India",
 };
 
 // How to get your shop's exact coordinates:
