@@ -28,6 +28,12 @@ export async function POST(request: NextRequest) {
   try {
     const { area, pincode } = await request.json();
 
+    console.log("📥 Received request:", {
+      area,
+      pincode,
+      pincodeType: typeof pincode,
+    });
+
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
@@ -37,9 +43,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate inputs
+    const cleanPincode = pincode ? pincode.toString().trim() : "";
+    console.log("🔍 Pincode validation:", {
+      pincode,
+      cleanPincode,
+      isValid: /^\d{6}$/.test(cleanPincode),
+    });
+
+    if (!cleanPincode || !/^\d{6}$/.test(cleanPincode)) {
+      return NextResponse.json({
+        distance: 15,
+        duration: 30,
+        success: false,
+        error: "Invalid pincode",
+      });
+    }
+
     // Construct origin and destination
     const origin = `${SHOP_LOCATION.latitude},${SHOP_LOCATION.longitude}`;
-    const destination = `${area}, ${pincode}, Coimbatore, Tamil Nadu, India`;
+    // Handle empty area gracefully
+    const destinationParts = [
+      cleanPincode,
+      "Coimbatore",
+      "Tamil Nadu",
+      "India",
+    ];
+    if (area && area.trim()) {
+      destinationParts.unshift(area.trim());
+    }
+    const destination = destinationParts.join(", ");
 
     console.log(`🗺️ Server-side Google Maps API call`);
     console.log(`📍 Origin: ${origin}`);
