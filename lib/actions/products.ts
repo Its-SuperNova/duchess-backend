@@ -1,12 +1,12 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 // Get all products with category information
 export async function getProducts() {
   try {
-    const { data: products, error } = await supabase
+    const { data: products, error } = await supabaseAdmin
       .from("products")
       .select(
         `
@@ -35,7 +35,7 @@ export async function getProducts() {
 // Get a single product by ID
 export async function getProductById(id: string) {
   try {
-    const { data: product, error } = await supabase
+    const { data: product, error } = await supabaseAdmin
       .from("products")
       .select(
         `
@@ -65,7 +65,7 @@ export async function getProductById(id: string) {
 // Create a new product
 export async function createProduct(productData: any) {
   try {
-    const { data: product, error } = await supabase
+    const { data: product, error } = await supabaseAdmin
       .from("products")
       .insert([productData])
       .select()
@@ -87,7 +87,7 @@ export async function createProduct(productData: any) {
 // Update a product
 export async function updateProduct(id: string, productData: any) {
   try {
-    const { data: product, error } = await supabase
+    const { data: product, error } = await supabaseAdmin
       .from("products")
       .update(productData)
       .eq("id", id)
@@ -111,7 +111,10 @@ export async function updateProduct(id: string, productData: any) {
 // Delete a product
 export async function deleteProduct(id: string) {
   try {
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("products")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       console.error("Error deleting product:", error);
@@ -129,7 +132,7 @@ export async function deleteProduct(id: string) {
 // Toggle product visibility
 export async function toggleProductVisibility(id: string, isActive: boolean) {
   try {
-    const { data: product, error } = await supabase
+    const { data: product, error } = await supabaseAdmin
       .from("products")
       .update({ is_active: isActive })
       .eq("id", id)
@@ -152,7 +155,7 @@ export async function toggleProductVisibility(id: string, isActive: boolean) {
 // Get products by category
 export async function getProductsByCategory(categoryId: string) {
   try {
-    const { data: products, error } = await supabase
+    const { data: products, error } = await supabaseAdmin
       .from("products")
       .select(
         `
@@ -183,7 +186,7 @@ export async function getProductsByCategory(categoryId: string) {
 // Search products
 export async function searchProducts(query: string) {
   try {
-    const { data: products, error } = await supabase
+    const { data: products, error } = await supabaseAdmin
       .from("products")
       .select(
         `

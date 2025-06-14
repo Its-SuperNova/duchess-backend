@@ -21,6 +21,9 @@ const nextConfig = {
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },
+  serverActions: {
+    bodySizeLimit: '10mb',
+  },
 };
 
 export default nextConfig;

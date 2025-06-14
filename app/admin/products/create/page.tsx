@@ -89,6 +89,85 @@ export default function CreateProductPage() {
     loadCategories();
   }, []);
 
+  // Pre-fill form with dummy data for development
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development" && categories.length > 0) {
+      const cakesCategory = categories.find((c: any) => c.name === "Cakes");
+
+      setFormData({
+        name: "Chocolate Truffle Cake",
+        shortDescription:
+          "Rich and gooey chocolate cake layered with truffle ganache.",
+        longDescription:
+          "Our Chocolate Truffle Cake is a crowd favorite, featuring rich layers of moist chocolate sponge and smooth truffle ganache. Perfect for birthdays, celebrations, or pure indulgence.",
+        category: cakesCategory?.id || categories?.[0]?.id || "",
+        isVeg: true,
+        hasOffer: true,
+        offerPercentage: "20",
+        offerUpToPrice: "",
+        price: "",
+        weightOptions: [
+          {
+            weight: "500g",
+            price: "480",
+            stock: "12",
+            isActive: true,
+          },
+          { weight: "1kg", price: "880", stock: "8", isActive: true },
+          { weight: "2kg", price: "1650", stock: "4", isActive: true },
+        ],
+        pieceOptions: [
+          {
+            quantity: "1 piece",
+            price: "130",
+            stock: "25",
+            isActive: true,
+          },
+        ],
+        stock: "",
+        sellingType: "both",
+        calories: "320",
+        netWeight: "100",
+        protein: "4",
+        fats: "18",
+        carbs: "35",
+        sugars: "22",
+        fiber: "2",
+        sodium: "90",
+        deliveryOption: "both",
+        addTextOnCake: false,
+        addCandles: false,
+        addKnife: false,
+        addMessageCard: false,
+        highlights: [
+          "100% Eggless",
+          "Freshly Baked",
+          "Premium Ingredients",
+          "Available in Multiple Sizes",
+        ],
+        ingredients: [
+          "Dark Chocolate",
+          "Whipping Cream",
+          "Flour",
+          "Sugar",
+          "Butter",
+        ],
+      });
+
+      setBannerImage("/chocolate-cake-main.jpg");
+      setAdditionalImages([
+        "/decadent-chocolate-slice.png",
+        "/classic-strawberry-cake.png",
+        "/vibrant-macarons.png",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]);
+    }
+  }, [categories]);
+
   // Handle form input changes
   const handleChange = (
     e: React.ChangeEvent<
