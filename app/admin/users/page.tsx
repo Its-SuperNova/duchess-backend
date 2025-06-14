@@ -160,7 +160,7 @@ export default function UsersPage() {
 
         return {
           ...user,
-          address: address ? `${address.city}, ${address.state}` : null,
+          address: address ? address.city : null,
           totalOrders,
           totalAmountPaid,
         };
@@ -417,7 +417,7 @@ export default function UsersPage() {
     ...Array.from(
       new Set(
         users
-          .map((u) => u.address?.split(",")[0].trim())
+          .map((u) => u.address)
           .filter((address): address is string => Boolean(address))
       )
     ),

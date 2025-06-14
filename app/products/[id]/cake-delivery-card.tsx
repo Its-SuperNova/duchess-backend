@@ -120,8 +120,7 @@ function AddressDrawer({
   const [addressFormData, setAddressFormData] = useState({
     label: "Home",
     street: "",
-    city: "",
-    state: "",
+    area: "",
     pincode: "",
     alternatePhone: "",
   });
@@ -139,8 +138,7 @@ function AddressDrawer({
         setAddressFormData({
           label: "Home",
           street: "", // Leave street address empty for manual entry
-          city: result.address.city,
-          state: result.address.state,
+          area: result.address.city,
           pincode: result.address.zipCode,
           alternatePhone: "",
         });
@@ -160,13 +158,53 @@ function AddressDrawer({
     }
   };
 
+  // Auto-populate area when ZIP code changes
+  useEffect(() => {
+    const getAreaFromPincode = async () => {
+      if (addressFormData.pincode && addressFormData.pincode.length === 6) {
+        try {
+          const response = await fetch("/api/coimbatore-validation", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "pincode",
+              pincode: addressFormData.pincode,
+            }),
+          });
+
+          const data = await response.json();
+          if (data.success && data.result.locationDetails) {
+            const locationDetails = data.result.locationDetails;
+            // Use specific locality if available, otherwise fallback to district or city
+            const area =
+              locationDetails.locality ||
+              locationDetails.district ||
+              locationDetails.city ||
+              "";
+            setAddressFormData((prev) => ({
+              ...prev,
+              area: area,
+            }));
+          }
+        } catch (error) {
+          console.error("Error getting area from pincode:", error);
+        }
+      }
+    };
+
+    // Debounce to avoid too many API calls
+    const timeoutId = setTimeout(getAreaFromPincode, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [addressFormData.pincode]);
+
   // Validation function for address form
   const isAddressFormValid = () => {
     return (
       addressFormData.label.trim() !== "" &&
       addressFormData.street.trim() !== "" &&
-      addressFormData.city.trim() !== "" &&
-      addressFormData.state.trim() !== "" &&
+      addressFormData.area.trim() !== "" &&
       addressFormData.pincode.trim() !== "" &&
       addressFormData.alternatePhone.trim() !== ""
     );
@@ -262,7 +300,7 @@ function AddressDrawer({
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Street, Area"
+                placeholder="Street Address"
                 className="bg-white text-sm pl-10"
                 value={addressFormData.street}
                 onChange={(e) =>
@@ -276,27 +314,13 @@ function AddressDrawer({
             <div className="relative">
               <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="City"
+                placeholder="Area (auto-fills from ZIP)"
                 className="bg-white text-sm pl-10"
-                value={addressFormData.city}
+                value={addressFormData.area}
                 onChange={(e) =>
                   setAddressFormData((prev) => ({
                     ...prev,
-                    city: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="relative">
-              <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="State"
-                className="bg-white text-sm pl-10"
-                value={addressFormData.state}
-                onChange={(e) =>
-                  setAddressFormData((prev) => ({
-                    ...prev,
-                    state: e.target.value,
+                    area: e.target.value,
                   }))
                 }
               />
@@ -304,7 +328,7 @@ function AddressDrawer({
             <div className="relative">
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Pincode"
+                placeholder="ZIP Code (6 digits)"
                 className="bg-white text-sm pl-10"
                 value={addressFormData.pincode}
                 onChange={(e) =>
@@ -313,6 +337,7 @@ function AddressDrawer({
                     pincode: e.target.value,
                   }))
                 }
+                maxLength={6}
               />
             </div>
             <div className="relative">
@@ -926,130 +951,15 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                     </DialogTrigger>
                     <DialogContent>
                       {!showAddAddress ? null : (
-                        <>
-                          <DialogHeader>
-                            <DialogTitle>Add New Address</DialogTitle>
-                            <DialogDescription>
-                              Enter your new address below.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form className="space-y-3 my-4">
-                            <div className="relative">
-                              <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="Label (e.g. Home, Work)"
-                                className="bg-white text-sm pl-10"
-                                value={addressFormData.label}
-                                onChange={(e) =>
-                                  setAddressFormData((prev) => ({
-                                    ...prev,
-                                    label: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="Street, Area"
-                                className="bg-white text-sm pl-10"
-                                value={addressFormData.street}
-                                onChange={(e) =>
-                                  setAddressFormData((prev) => ({
-                                    ...prev,
-                                    street: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="relative">
-                              <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="City"
-                                className="bg-white text-sm pl-10"
-                                value={addressFormData.city}
-                                onChange={(e) =>
-                                  setAddressFormData((prev) => ({
-                                    ...prev,
-                                    city: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="relative">
-                              <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="State"
-                                className="bg-white text-sm pl-10"
-                                value={addressFormData.state}
-                                onChange={(e) =>
-                                  setAddressFormData((prev) => ({
-                                    ...prev,
-                                    state: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="relative">
-                              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="Pincode"
-                                className="bg-white text-sm pl-10"
-                                value={addressFormData.pincode}
-                                onChange={(e) =>
-                                  setAddressFormData((prev) => ({
-                                    ...prev,
-                                    pincode: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="Alternate Phone*"
-                                className="bg-white text-sm pl-10"
-                                value={addressFormData.alternatePhone}
-                                onChange={(e) =>
-                                  setAddressFormData((prev) => ({
-                                    ...prev,
-                                    alternatePhone: e.target.value,
-                                  }))
-                                }
-                                required
-                              />
-                            </div>
-                          </form>
-                          <DialogFooter>
-                            <button
-                              className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              onClick={() => setShowAddAddress(false)}
-                            >
-                              Back
-                            </button>
-                            <DialogClose asChild>
-                              <button
-                                className={`flex-1 px-4 py-3 rounded-lg border font-semibold transition-colors ${
-                                  isAddressFormValid()
-                                    ? "!border-[#560000] bg-black text-white hover:bg-gray-900"
-                                    : "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
-                                }`}
-                                onClick={() => {
-                                  if (isAddressFormValid()) {
-                                    setAddressDialogOpen(false);
-                                  } else {
-                                    setLocationError(
-                                      "Please fill in all required fields including alternate phone number."
-                                    );
-                                  }
-                                }}
-                                disabled={!isAddressFormValid()}
-                              >
-                                Save
-                              </button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </>
+                        <AddressDrawer
+                          open={addressDialogOpen}
+                          setOpen={setAddressDialogOpen}
+                          addresses={addresses}
+                          selectedAddress={selectedAddress}
+                          setSelectedAddress={setSelectedAddress}
+                          showAddAddress={showAddAddress}
+                          setShowAddAddress={setShowAddAddress}
+                        />
                       )}
                     </DialogContent>
                   </Dialog>

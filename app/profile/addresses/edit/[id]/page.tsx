@@ -3,7 +3,15 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Search, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Search,
+  RotateCcw,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { updateAddress, getUserAddresses } from "@/lib/address-utils";
@@ -19,18 +27,32 @@ export default function EditAddressPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
   const [address, setAddress] = useState<Address | null>(null);
+  const [originalFormData, setOriginalFormData] = useState({
+    addressName: "",
+    fullAddress: "",
+    area: "",
+    zipCode: "",
+    additionalDetails: "",
+    alternatePhone: "",
+  });
   const [formData, setFormData] = useState({
     addressName: "",
     fullAddress: "",
-    city: "",
-    state: "",
+    area: "",
     zipCode: "",
     additionalDetails: "",
     alternatePhone: "",
   });
 
   const addressId = params.id as string;
+
+  // Check if form has been modified
+  const hasChanges =
+    JSON.stringify(formData) !== JSON.stringify(originalFormData);
 
   // Load address data
   useEffect(() => {
@@ -64,15 +86,16 @@ export default function EditAddressPage() {
         }
 
         setAddress(targetAddress);
-        setFormData({
+        const initialFormData = {
           addressName: targetAddress.address_name,
           fullAddress: targetAddress.full_address,
-          city: targetAddress.city,
-          state: targetAddress.state,
+          area: targetAddress.city,
           zipCode: targetAddress.zip_code,
           additionalDetails: targetAddress.additional_details || "",
           alternatePhone: targetAddress.alternate_phone,
-        });
+        };
+        setFormData(initialFormData);
+        setOriginalFormData(initialFormData);
       } catch (err) {
         console.error("Error loading address:", err);
         setError("Failed to load address. Please try again.");
@@ -92,19 +115,98 @@ export default function EditAddressPage() {
     }));
   };
 
-  const handleUseCurrentLocation = async () => {
-    // For edit page, we'll update city, state, and ZIP but keep the existing street address
-    try {
-      // This would need to be implemented similar to the new address page
-      // For now, we'll show a message that this feature is available
-      setError(
-        "Auto-detect feature will update city, state, and ZIP while preserving your street address."
-      );
-    } catch (error) {
-      console.error("Error getting location:", error);
-      setError("Failed to get your location. Please try again.");
-    }
+  // Reset form to original values
+  const handleReset = () => {
+    setFormData(originalFormData);
+    setValidationResult(null);
   };
+
+  // Auto-populate area when ZIP code changes
+  useEffect(() => {
+    const getAreaFromPincode = async () => {
+      if (formData.zipCode && formData.zipCode.length === 6) {
+        setPincodeLoading(true);
+        try {
+          const response = await fetch("/api/coimbatore-validation", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "pincode",
+              pincode: formData.zipCode,
+            }),
+          });
+
+          const data = await response.json();
+          if (data.success && data.result.locationDetails) {
+            const locationDetails = data.result.locationDetails;
+            // Use specific locality if available, otherwise fallback to district or city
+            const area =
+              locationDetails.locality ||
+              locationDetails.district ||
+              locationDetails.city ||
+              "";
+            setFormData((prev) => ({
+              ...prev,
+              area: area,
+            }));
+          }
+        } catch (error) {
+          console.error("Error getting area from pincode:", error);
+        } finally {
+          setPincodeLoading(false);
+        }
+      }
+    };
+
+    // Debounce to avoid too many API calls
+    const timeoutId = setTimeout(getAreaFromPincode, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [formData.zipCode]);
+
+  // Real-time validation when area or zipCode changes
+  useEffect(() => {
+    const validateAddress = async () => {
+      if (formData.area && formData.zipCode) {
+        setValidationLoading(true);
+        try {
+          const response = await fetch("/api/coimbatore-validation", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "address",
+              address: {
+                city: formData.area,
+                state: "Tamil Nadu", // Always Tamil Nadu for Coimbatore
+                zip_code: formData.zipCode,
+              },
+            }),
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            setValidationResult(data.result);
+          } else {
+            setValidationResult({ error: data.error || "Validation failed" });
+          }
+        } catch (error) {
+          console.error("Validation error:", error);
+          setValidationResult({ error: "Failed to validate address" });
+        } finally {
+          setValidationLoading(false);
+        }
+      } else {
+        setValidationResult(null);
+      }
+    };
+
+    // Debounce validation to avoid too many API calls
+    const timeoutId = setTimeout(validateAddress, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [formData.area, formData.zipCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,8 +218,7 @@ export default function EditAddressPage() {
 
     if (
       !formData.fullAddress ||
-      !formData.city ||
-      !formData.state ||
+      !formData.area ||
       !formData.zipCode ||
       !formData.alternatePhone
     ) {
@@ -125,34 +226,33 @@ export default function EditAddressPage() {
       return;
     }
 
+    // Check if address is validated for Coimbatore area
+    if (validationResult && !validationResult.isCoimbatoreArea) {
+      setError(
+        validationResult.error ||
+          "Address is outside our Coimbatore delivery area."
+      );
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
 
-      // Calculate distance
-      const distanceResult = await calculateDeliveryFromAddress({
-        full_address: formData.fullAddress,
-        city: formData.city,
-        state: formData.state,
-        zip_code: formData.zipCode,
-      });
-
-      const updatedAddress = await updateAddress(addressId, {
+      const result = await updateAddress(addressId, {
         address_name: formData.addressName,
         full_address: formData.fullAddress,
-        city: formData.city,
-        state: formData.state,
+        city: formData.area,
+        state: "Tamil Nadu", // Always Tamil Nadu for Coimbatore
         zip_code: formData.zipCode,
-        distance: distanceResult?.distance,
-        duration: distanceResult?.duration,
         alternate_phone: formData.alternatePhone,
         additional_details: formData.additionalDetails,
       });
 
-      if (updatedAddress) {
+      if (result.address) {
         router.push("/profile/addresses");
       } else {
-        setError("Failed to update address. Please try again.");
+        setError(result.error || "Failed to update address. Please try again.");
       }
     } catch (err) {
       console.error("Error updating address:", err);
@@ -160,6 +260,59 @@ export default function EditAddressPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Validation status component
+  const ValidationStatus = () => {
+    if (validationLoading) {
+      return (
+        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+          <span className="text-blue-700 dark:text-blue-300 text-sm">
+            Validating address...
+          </span>
+        </div>
+      );
+    }
+
+    if (!validationResult) return null;
+
+    if (validationResult.error) {
+      return (
+        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <XCircle className="h-4 w-4 text-red-600" />
+          <span className="text-red-700 dark:text-red-300 text-sm">
+            {validationResult.error}
+          </span>
+        </div>
+      );
+    }
+
+    if (validationResult.isCoimbatoreArea && validationResult.isDeliverable) {
+      return (
+        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <span className="text-green-700 dark:text-green-300 text-sm">
+            ✓ Address is within our Coimbatore delivery area (
+            {validationResult.distance.toFixed(1)}km away)
+          </span>
+        </div>
+      );
+    }
+
+    if (validationResult.isCoimbatoreArea && !validationResult.isDeliverable) {
+      return (
+        <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <span className="text-yellow-700 dark:text-yellow-300 text-sm">
+            Address is in Coimbatore area but outside our delivery range (
+            {validationResult.distance.toFixed(1)}km away)
+          </span>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -220,27 +373,30 @@ export default function EditAddressPage() {
                   Edit Address
                 </h1>
                 <p className="text-[#858585] dark:text-gray-400 text-sm">
-                  Update your delivery address details
+                  Update your delivery address details (Coimbatore area only)
                 </p>
               </div>
             </div>
 
             {/* Save Button in Header */}
             <div className="hidden lg:flex items-center gap-3">
-              {/* Auto-detect Button */}
+              {/* Reset Button */}
               <button
-                onClick={handleUseCurrentLocation}
-                disabled={saving}
-                className="px-4 py-3 rounded-xl border border-[#7a0000] bg-white text-[#7a0000] hover:bg-[#7a0000] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleReset}
+                disabled={!hasChanges}
+                className="px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
               >
-                <MapPin className="h-5 w-5" />
-                <span>Auto-detect</span>
+                <RotateCcw className="h-5 w-5" />
+                <span>Reset</span>
               </button>
 
               {/* Save Button */}
               <button
                 onClick={handleSubmit}
-                disabled={saving}
+                disabled={
+                  saving ||
+                  (validationResult && !validationResult.isCoimbatoreArea)
+                }
                 className="px-6 py-3 bg-[#7a0000] dark:bg-[#7a0000] text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-[#6a0000] transition-colors"
               >
                 {saving ? (
@@ -249,7 +405,7 @@ export default function EditAddressPage() {
                     <span>Saving...</span>
                   </>
                 ) : (
-                  "Update Address"
+                  "Save Changes"
                 )}
               </button>
             </div>
@@ -259,22 +415,6 @@ export default function EditAddressPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column - Form */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Mobile Auto-detect Button */}
-              <div className="lg:hidden bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 border border-gray-200 dark:border-transparent">
-                <button
-                  onClick={handleUseCurrentLocation}
-                  disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#7a0000] bg-white text-[#7a0000] hover:bg-[#7a0000] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <MapPin className="h-5 w-5" />
-                  <span>Auto-fill City, State & ZIP</span>
-                </button>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                  Automatically fills city, state, and ZIP code. Street address
-                  will be preserved.
-                </p>
-              </div>
-
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
@@ -283,6 +423,9 @@ export default function EditAddressPage() {
                   </p>
                 </div>
               )}
+
+              {/* Validation Status */}
+              <ValidationStatus />
 
               {/* Address Form */}
               <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent">
@@ -323,36 +466,28 @@ export default function EditAddressPage() {
                     />
                   </div>
 
-                  {/* City, State, ZIP Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Area and ZIP Code Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
-                        City*
+                        Area*
                       </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        placeholder="Enter your city"
-                        className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[#000000] dark:text-white mb-2">
-                        State*
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        placeholder="Enter your state"
-                        className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
-                        required
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="area"
+                          value={formData.area}
+                          onChange={handleInputChange}
+                          placeholder="Area will auto-fill from ZIP code"
+                          className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
+                          required
+                        />
+                        {pincodeLoading && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -364,7 +499,8 @@ export default function EditAddressPage() {
                         name="zipCode"
                         value={formData.zipCode}
                         onChange={handleInputChange}
-                        placeholder="Enter your ZIP code"
+                        placeholder="Enter 6-digit ZIP code"
+                        maxLength={6}
                         className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
                         required
                       />
@@ -403,11 +539,26 @@ export default function EditAddressPage() {
                     </div>
                   </div>
 
-                  {/* Mobile Save Button */}
-                  <div className="lg:hidden">
+                  {/* Mobile Buttons */}
+                  <div className="lg:hidden space-y-3">
+                    {/* Reset Button */}
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      disabled={!hasChanges}
+                      className="w-full py-3 rounded-xl border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <RotateCcw className="h-5 w-5" />
+                      <span>Reset Changes</span>
+                    </button>
+
+                    {/* Save Button */}
                     <button
                       onClick={handleSubmit}
-                      disabled={saving}
+                      disabled={
+                        saving ||
+                        (validationResult && !validationResult.isCoimbatoreArea)
+                      }
                       className="w-full py-3 bg-[#7a0000] dark:bg-[#7a0000] text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {saving ? (
@@ -416,7 +567,7 @@ export default function EditAddressPage() {
                           <span>Saving...</span>
                         </>
                       ) : (
-                        "Update Address"
+                        "Save Changes"
                       )}
                     </button>
                   </div>
@@ -436,6 +587,18 @@ export default function EditAddressPage() {
                     <div className="w-2 h-2 bg-[#7a0000] rounded-full mt-2 flex-shrink-0"></div>
                     <div>
                       <p className="text-sm font-medium text-[#000000] dark:text-white">
+                        Coimbatore Area Only
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        We only deliver within 30km of Coimbatore city
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-[#7a0000] rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <p className="text-sm font-medium text-[#000000] dark:text-white">
                         Accurate Street Address
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -448,11 +611,24 @@ export default function EditAddressPage() {
                     <div className="w-2 h-2 bg-[#7a0000] rounded-full mt-2 flex-shrink-0"></div>
                     <div>
                       <p className="text-sm font-medium text-[#000000] dark:text-white">
+                        Manual Entry Recommended
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Auto-detect may not be accurate. Enter ZIP code to
+                        auto-fill area, then verify manually
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-[#7a0000] rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <p className="text-sm font-medium text-[#000000] dark:text-white">
                         Contact Information
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Include a reliable phone number for delivery
-                        coordination
+                        This alternate number will be contacted if your
+                        registered number is not available
                       </p>
                     </div>
                   </div>
@@ -473,11 +649,10 @@ export default function EditAddressPage() {
                     <div className="w-2 h-2 bg-[#7a0000] rounded-full mt-2 flex-shrink-0"></div>
                     <div>
                       <p className="text-sm font-medium text-[#000000] dark:text-white">
-                        Delivery Area
+                        Real-time Validation
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        We'll recalculate delivery time and fees based on your
-                        updated location
+                        We'll validate your address and calculate delivery time
                       </p>
                     </div>
                   </div>
@@ -490,7 +665,7 @@ export default function EditAddressPage() {
                   <p className="text-xs text-blue-700 dark:text-blue-200">
                     Your existing address details are pre-filled. You can modify
                     any field and the delivery calculations will be updated
-                    automatically.
+                    automatically. Use the Reset button to revert changes.
                   </p>
                 </div>
               </div>

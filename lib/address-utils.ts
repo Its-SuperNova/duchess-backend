@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import type { Address } from "./supabase";
+import { validateAddressForCoimbatoreDelivery } from "./coimbatore-validation";
 
 export interface CreateAddressData {
   address_name: string;
@@ -11,6 +12,7 @@ export interface CreateAddressData {
   distance?: number;
   duration?: number;
   alternate_phone: string;
+  additional_details?: string;
 }
 
 export interface UpdateAddressData {
@@ -23,6 +25,7 @@ export interface UpdateAddressData {
   distance?: number;
   duration?: number;
   alternate_phone?: string;
+  additional_details?: string;
 }
 
 export interface LocationData {
@@ -181,14 +184,14 @@ export async function getUserAddresses(userId: string): Promise<Address[]> {
 export async function createAddress(
   userId: string,
   addressData: CreateAddressData
-): Promise<Address | null> {
+): Promise<{ address: Address | null; error?: string }> {
   try {
     console.log("Creating address with data:", { userId, addressData });
 
     // Validate that we have a valid user ID
     if (!userId || typeof userId !== "string") {
       console.error("Invalid user ID provided:", userId);
-      return null;
+      return { address: null, error: "Invalid user ID" };
     }
 
     // Validate address data
@@ -200,14 +203,73 @@ export async function createAddress(
       !addressData.zip_code
     ) {
       console.error("Missing required address fields:", addressData);
-      return null;
+      return { address: null, error: "Missing required address fields" };
+    }
+
+    // Validate Coimbatore area
+    const validationResult = await validateAddressForCoimbatoreDelivery({
+      city: addressData.city,
+      state: addressData.state,
+      zip_code: addressData.zip_code,
+    });
+
+    if (!validationResult.isCoimbatoreArea) {
+      console.error(
+        "Address is outside Coimbatore delivery area:",
+        validationResult
+      );
+      return {
+        address: null,
+        error:
+          validationResult.error ||
+          "Address is outside our Coimbatore delivery area. We currently deliver within 30km of Coimbatore city.",
+      };
+    }
+
+    // Check if this is the user's first address
+    const { data: existingAddresses, error: countError } = await supabase
+      .from("addresses")
+      .select("id")
+      .eq("user_id", userId);
+
+    if (countError) {
+      console.error("Error checking existing addresses:", countError);
+      return { address: null, error: "Failed to check existing addresses" };
+    }
+
+    // If this is the first address, make it default
+    const isFirstAddress = existingAddresses.length === 0;
+    const shouldBeDefault = isFirstAddress || addressData.is_default;
+
+    // Add distance and duration to address data
+    const addressDataWithDistance = {
+      ...addressData,
+      distance: validationResult.distance,
+      duration: validationResult.duration,
+      is_default: shouldBeDefault,
+    };
+
+    // If this should be default, first unset any existing default addresses
+    if (shouldBeDefault && !isFirstAddress) {
+      const { error: unsetError } = await supabase
+        .from("addresses")
+        .update({ is_default: false })
+        .eq("user_id", userId);
+
+      if (unsetError) {
+        console.error(
+          "Error unsetting existing default addresses:",
+          unsetError
+        );
+        return { address: null, error: "Failed to update default addresses" };
+      }
     }
 
     const { data, error } = await supabase
       .from("addresses")
       .insert({
         user_id: userId,
-        ...addressData,
+        ...addressDataWithDistance,
       })
       .select()
       .single();
@@ -220,14 +282,14 @@ export async function createAddress(
         details: error.details,
         hint: error.hint,
       });
-      return null;
+      return { address: null, error: "Failed to create address" };
     }
 
     console.log("Address created successfully:", data);
-    return data;
+    return { address: data };
   } catch (error) {
     console.error("Error in createAddress:", error);
-    return null;
+    return { address: null, error: "Failed to create address" };
   }
 }
 
@@ -235,8 +297,47 @@ export async function createAddress(
 export async function updateAddress(
   addressId: string,
   addressData: UpdateAddressData
-): Promise<Address | null> {
+): Promise<{ address: Address | null; error?: string }> {
   try {
+    // If address fields are being updated, validate Coimbatore area
+    if (addressData.city || addressData.state || addressData.zip_code) {
+      // Get current address data to fill in missing fields
+      const { data: currentAddress } = await supabase
+        .from("addresses")
+        .select("city, state, zip_code")
+        .eq("id", addressId)
+        .single();
+
+      if (currentAddress) {
+        const validationData = {
+          city: addressData.city || currentAddress.city,
+          state: addressData.state || currentAddress.state,
+          zip_code: addressData.zip_code || currentAddress.zip_code,
+        };
+
+        const validationResult = await validateAddressForCoimbatoreDelivery(
+          validationData
+        );
+
+        if (!validationResult.isCoimbatoreArea) {
+          console.error(
+            "Updated address is outside Coimbatore delivery area:",
+            validationResult
+          );
+          return {
+            address: null,
+            error:
+              validationResult.error ||
+              "Updated address is outside our Coimbatore delivery area. We currently deliver within 30km of Coimbatore city.",
+          };
+        }
+
+        // Add distance and duration to address data
+        addressData.distance = validationResult.distance;
+        addressData.duration = validationResult.duration;
+      }
+    }
+
     const { data, error } = await supabase
       .from("addresses")
       .update(addressData)
@@ -246,13 +347,13 @@ export async function updateAddress(
 
     if (error) {
       console.error("Error updating address:", error);
-      return null;
+      return { address: null, error: "Failed to update address" };
     }
 
-    return data;
+    return { address: data };
   } catch (error) {
     console.error("Error in updateAddress:", error);
-    return null;
+    return { address: null, error: "Failed to update address" };
   }
 }
 

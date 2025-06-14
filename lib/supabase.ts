@@ -59,6 +59,7 @@ export interface Address {
   distance: number | null;
   duration: number | null;
   alternate_phone: string;
+  additional_details?: string;
 }
 
 export interface Category {
