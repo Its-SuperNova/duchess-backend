@@ -20,9 +20,9 @@ const nextConfig = {
   // Disable static generation for pages that use client-side data
   experimental: {
     missingSuspenseWithCSRBailout: false,
-  },
-  serverActions: {
-    bodySizeLimit: '10mb',
+    serverActions: {
+      bodySizeLimit: '3mb',
+    },
   },
 };
 

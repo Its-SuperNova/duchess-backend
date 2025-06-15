@@ -3,21 +3,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 
-export default function CategoriesClient() {
-  // Categories array
-  const categories = [
-    { name: "Cup Cake", image: "/images/categories/cupcake.png" },
-    { name: "Cookies", image: "/images/categories/cookies.png" },
-    { name: "Donuts", image: "/images/categories/pink-donut.png" },
-    { name: "Breads", image: "/images/categories/bread.png" },
-    { name: "Pastry", image: "/images/categories/croissant.png" },
-    { name: "Sweets", image: "/images/categories/sweets-bowl.png" },
-    { name: "Chocolate", image: "/images/categories/chocolate-bar.png" },
-    { name: "Muffins", image: "/images/categories/muffin.png" },
-    { name: "Cake", image: "/images/categories/cake.png" },
-    { name: "Brownies", image: "/images/categories/brownie.png" },
-  ];
+interface Category {
+  name: string;
+  image: string;
+}
 
+interface CategoriesClientProps {
+  categories: Category[];
+}
+
+export default function CategoriesClient({
+  categories,
+}: CategoriesClientProps) {
   return (
     <div className="bg-white min-h-screen pb-32">
       {/* Page Header */}
@@ -43,8 +40,8 @@ export default function CategoriesClient() {
               key={index}
             >
               <div className="flex flex-col items-center">
-                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full overflow-hidden">
+                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-[24px] overflow-hidden">
                     <Image
                       src={
                         category.image ||
@@ -53,7 +50,7 @@ export default function CategoriesClient() {
                       alt={category.name}
                       width={80}
                       height={80}
-                      className="object-cover w-full h-full"
+                      className="object-cover w-full h-full rounded-[24px]"
                     />
                   </div>
                 </div>

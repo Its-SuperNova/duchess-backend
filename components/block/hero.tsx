@@ -10,20 +10,14 @@ import { Button } from "@/components/ui/button";
 import LogoutButton from "@/components/auth/logout-button";
 import { isUserAdmin } from "@/lib/auth-utils";
 
-const categories = [
-  { name: "Cup Cake", image: "/images/categories/cupcake.png" },
-  { name: "Cookies", image: "/images/categories/cookies.png" },
-  { name: "Cake", image: "/images/categories/cake.png" },
-  { name: "Breads", image: "/images/categories/bread.png" },
-  { name: "Tarts", image: "/images/categories/tart.png" },
-  { name: "Macarons", image: "/images/categories/macaron.png" },
-  { name: "Croissants", image: "/images/categories/croissant.png" },
-  { name: "Donuts", image: "/images/categories/donut.png" },
-  { name: "Pies", image: "/images/categories/pie.png" },
-  { name: "Muffins", image: "/images/categories/muffin.png" },
-  { name: "Brownies", image: "/images/categories/brownie.png" },
-  { name: "Pastries", image: "/images/categories/sweets-bowl.png" },
-];
+interface Category {
+  name: string;
+  image: string;
+}
+
+interface HeroProps {
+  categories: Category[];
+}
 
 // Mobile slider images (keeping existing ones)
 const mobileSlides = [
@@ -44,7 +38,7 @@ const mobileSlides = [
   },
 ];
 
-const Hero = () => {
+const Hero = ({ categories }: HeroProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -208,13 +202,13 @@ const Hero = () => {
 
         {/* 1536px and up: Show 12 categories */}
         <div className="hidden 2xl:grid grid-cols-12 gap-6">
-          {categories.map((category, index) => (
+          {categories.slice(0, 12).map((category, index) => (
             <Link
               href={`/products?category=${category.name.toLowerCase()}`}
               key={index}
             >
               <div className="flex flex-col items-center group cursor-pointer">
-                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
+                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                   <Image
                     src={
                       category.image ||
@@ -242,7 +236,7 @@ const Hero = () => {
               key={index}
             >
               <div className="flex flex-col items-center group cursor-pointer">
-                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
+                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                   <Image
                     src={
                       category.image ||
@@ -270,7 +264,7 @@ const Hero = () => {
               key={index}
             >
               <div className="flex flex-col items-center group cursor-pointer">
-                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-full shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
+                <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                   <Image
                     src={
                       category.image ||
@@ -342,7 +336,7 @@ const Hero = () => {
                       src={category.image || "/placeholder.svg"}
                       alt={category.name}
                       fill
-                      className="rounded-full object-cover"
+                      className="rounded-[24px] object-cover"
                     />
                   </div>
                   <p className="text-sm mt-2 text-center">{category.name}</p>
@@ -359,7 +353,7 @@ const Hero = () => {
                       src={category.image || "/placeholder.svg"}
                       alt={category.name}
                       fill
-                      className="rounded-full object-cover"
+                      className="rounded-[24px] object-cover"
                     />
                   </div>
                   <p className="text-sm mt-2 text-center">{category.name}</p>
@@ -376,7 +370,7 @@ const Hero = () => {
                       src={category.image || "/placeholder.svg"}
                       alt={category.name}
                       fill
-                      className="rounded-full object-cover"
+                      className="rounded-[20px] object-cover"
                     />
                   </div>
                   <p className="text-sm mt-2 text-center">{category.name}</p>

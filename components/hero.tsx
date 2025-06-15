@@ -1,16 +1,16 @@
-"use client"
-import { FiSearch } from "react-icons/fi"
-import { IoFilter } from "react-icons/io5"
-import Image from "next/image"
-import Link from "next/link"
-import ProductCard from "./productcard"
+"use client";
+import { FiSearch } from "react-icons/fi";
+import { IoFilter } from "react-icons/io5";
+import Image from "next/image";
+import Link from "next/link";
+import ProductCard from "./productcard";
 
 const categories = [
   { name: "Cup Cake", image: "/images/categories/cupcake.png" },
   { name: "Cookies", image: "/images/categories/cookies.png" },
   { name: "cake", image: "/images/categories/cake.png" },
   { name: "Breads", image: "/images/categories/bread.png" },
-]
+];
 
 const Hero = () => {
   return (
@@ -49,7 +49,7 @@ const Hero = () => {
                 src={category.image || "/placeholder.svg"}
                 alt={category.name}
                 fill
-                className="rounded-full object-cover"
+                className="rounded-lg object-cover"
               />
             </div>
             <p className="text-sm mt-2 text-center">{category.name}</p>
@@ -66,11 +66,8 @@ const Hero = () => {
         </div>
       </div>
 
-      <div className="w-full">
-        <ProductCard name="Red Velvet CheeseCake" rating={4.0} imageUrl="/images/red-velvet.png" />
-      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Hero
+export default Hero;
