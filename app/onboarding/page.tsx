@@ -120,7 +120,7 @@ export default function Page({ onOnboardingComplete }: OnboardingPageProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#ffffff] text-[#010101] font-sans overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-100px)] bg-[#ffffff] text-[#010101] font-sans overflow-hidden">
       {/* Hero Section with Image and Concave Bottom */}
       <div className="relative w-full flex-grow flex flex-col justify-end">
         <div
@@ -139,7 +139,7 @@ export default function Page({ onOnboardingComplete }: OnboardingPageProps) {
         </div>
         {/* SVG for the concave U-shaped curve */}
         <svg
-          className="absolute bottom-0 left-0 w-full h-auto mb-[-5px]"
+          className="absolute bottom-0 left-0 w-full h-auto mb-[-30px]"
           viewBox="0 0 100 20"
           preserveAspectRatio="none"
           fill="#ffffff"
@@ -154,15 +154,15 @@ export default function Page({ onOnboardingComplete }: OnboardingPageProps) {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.1 }} // Small delay after splash screen
-        className="flex flex-col items-center text-center px-6 pt-12 pb-8"
+        className="flex flex-col items-center justify-around text-center px-6 pt-16 pb-5"
         style={{ height: "300px" }}
       >
         <h1 className="text-3xl font-bold mb-2">{currentSlideData.title}</h1>
-        <p className="text-[#747577] text-lg max-w-sm mb-auto">
+        <p className="text-[#747577] text-lg max-w-sm mb-5">
           {currentSlideData.description}
         </p>
         {/* Navigation/Pagination */}
-        <div className="flex items-center justify-between w-full mt-auto">
+        <div className="flex items-center justify-between w-full ">
           {currentSlide === 0 ? (
             <Button
               variant="link"
