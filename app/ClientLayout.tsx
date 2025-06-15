@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import Header from "@/components/block/Header";
 import BottomNav from "@/components/block/BottomNav";
 import UserSidebar from "@/components/user-sidebar";
@@ -154,6 +155,7 @@ export default function ClientLayout({
                 !isAuthRoute &&
                 !isOnboardingPage && <BottomNav />}
               <Toaster />
+              <SonnerToaster />
             </>
           )}
         </CartProvider>

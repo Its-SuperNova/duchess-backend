@@ -15,22 +15,16 @@ interface Product {
   description: string;
 }
 
-interface Category {
-  name: string;
-  image: string;
-}
-
 interface HomeClientProps {
   products: Product[];
-  categories: Category[];
 }
 
-export default function HomeClient({ products, categories }: HomeClientProps) {
+export default function HomeClient({ products }: HomeClientProps) {
   return (
     <div className="w-full overflow-x-hidden bg-white dark:bg-gray-900">
       {/* Hero Section */}
       <div className="w-full">
-        <Hero categories={categories} />
+        <Hero />
       </div>
 
       {/* Products Section */}

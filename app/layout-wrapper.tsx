@@ -4,6 +4,7 @@ import type React from "react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
@@ -36,6 +37,7 @@ export default function LayoutWrapper({
             <AuthNotification />
             <main className="flex-1">{children}</main>
             <Toaster />
+            <SonnerToaster />
           </CartProvider>
         </FavoritesProvider>
       </ThemeProvider>

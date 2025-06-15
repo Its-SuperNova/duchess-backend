@@ -1,5 +1,4 @@
 import HomeClient from "./home-client";
-import { getCategories } from "@/lib/actions/categories";
 
 export default async function Home() {
   // Product data for the home page
@@ -126,31 +125,9 @@ export default async function Home() {
     },
   ];
 
-  // Fetch categories from database
-  let categories = [];
-  try {
-    const dbCategories = await getCategories();
-    // Filter only active categories and transform the data structure
-    categories = dbCategories
-      .filter((category) => category.is_active)
-      .map((category) => ({
-        name: category.name,
-        image: category.image || "/images/categories/sweets-bowl.png", // fallback image
-      }));
-  } catch (error) {
-    console.error("Failed to fetch categories:", error);
-    // Fallback to a default set if database fetch fails
-    categories = [
-      { name: "Cup Cake", image: "/images/categories/cupcake.png" },
-      { name: "Cookies", image: "/images/categories/cookies.png" },
-      { name: "Cake", image: "/images/categories/cake.png" },
-      { name: "Breads", image: "/images/categories/bread.png" },
-    ];
-  }
-
   return (
     <div>
-      <HomeClient products={products} categories={categories} />
+      <HomeClient products={products} />
     </div>
   );
 }
