@@ -215,3 +215,34 @@ export async function searchProducts(query: string) {
     throw new Error("Failed to search products");
   }
 }
+
+// Get active products for homepage display
+export async function getActiveProducts() {
+  try {
+    const { data: products, error } = await supabaseAdmin
+      .from("products")
+      .select(
+        `
+        *,
+        categories (
+          id,
+          name,
+          description
+        )
+      `
+      )
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(12); // Limit to 12 products for homepage
+
+    if (error) {
+      console.error("Error fetching active products:", error);
+      throw new Error("Failed to fetch active products");
+    }
+
+    return products;
+  } catch (error) {
+    console.error("Error in getActiveProducts:", error);
+    throw new Error("Failed to fetch active products");
+  }
+}
