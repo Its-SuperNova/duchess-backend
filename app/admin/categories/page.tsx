@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import Image from "next/image";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,9 @@ import {
   toggleCategoryVisibility,
 } from "@/lib/actions/categories";
 
+// Import the category image upload component
+import { CategoryImageUpload } from "./components/category-image-upload";
+
 export default function CategoriesPage() {
   const [showEmptyState, setShowEmptyState] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
@@ -76,8 +80,12 @@ export default function CategoriesPage() {
     id: "",
     name: "",
     description: "",
+    image: "",
     isActive: true,
   });
+
+  // Category image state
+  const [categoryImage, setCategoryImage] = useState<string | null>(null);
 
   // Load categories on component mount
   useEffect(() => {
@@ -103,9 +111,33 @@ export default function CategoriesPage() {
       id: category.id,
       name: category.name,
       description: category.description || "",
+      image: category.image || "",
       isActive: category.is_active,
     });
+    setCategoryImage(category.image || null);
     setIsEditDialogOpen(true);
+  };
+
+  // Handle category image upload
+  const handleCategoryImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("File size must be less than 2MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setCategoryImage(result);
+        setFormData((prev) => ({ ...prev, image: result }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Handle form input changes
@@ -145,6 +177,7 @@ export default function CategoriesPage() {
       const categoryData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
+        image: categoryImage || null,
         is_active: formData.isActive,
       };
 
@@ -184,6 +217,7 @@ export default function CategoriesPage() {
       const categoryData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
+        image: categoryImage || null,
         is_active: formData.isActive,
       };
 
@@ -268,8 +302,10 @@ export default function CategoriesPage() {
       id: "",
       name: "",
       description: "",
+      image: "",
       isActive: true,
     });
+    setCategoryImage(null);
   };
 
   // Filter categories based on search term
@@ -405,9 +441,21 @@ export default function CategoriesPage() {
                   <TableRow key={category.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
-                          <Tag className="h-5 w-5" />
-                        </div>
+                        {category.image ? (
+                          <div className="h-10 w-10 rounded-lg overflow-hidden">
+                            <Image
+                              src={category.image}
+                              alt={category.name}
+                              width={40}
+                              height={40}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
+                            <Tag className="h-5 w-5" />
+                          </div>
+                        )}
                         <div>
                           <div className="font-medium">{category.name}</div>
                         </div>
@@ -506,9 +554,21 @@ export default function CategoriesPage() {
             <Card key={category.id} className="overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
-                    <Tag className="h-6 w-6" />
-                  </div>
+                  {category.image ? (
+                    <div className="h-12 w-12 rounded-lg overflow-hidden">
+                      <Image
+                        src={category.image}
+                        alt={category.name}
+                        width={48}
+                        height={48}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
+                      <Tag className="h-6 w-6" />
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-semibold">{category.name}</h3>
                     <Badge variant="outline" className="text-xs">
@@ -587,7 +647,7 @@ export default function CategoriesPage() {
 
       {/* Add Category Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Add New Category</DialogTitle>
             <DialogDescription>
@@ -596,36 +656,47 @@ export default function CategoriesPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddCategory} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Category Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="E.g., Cakes, Cookies, Pastries"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Brief description of this category"
-                rows={3}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={handleStatusChange}
-                className="data-[state=checked]:bg-blue-600"
-              />
-              <Label htmlFor="isActive">Active</Label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Category Name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="E.g., Cakes, Cookies, Pastries"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Brief description of this category"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isActive"
+                    checked={formData.isActive}
+                    onCheckedChange={handleStatusChange}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                  <Label htmlFor="isActive">Active</Label>
+                </div>
+              </div>
+              <div>
+                <CategoryImageUpload
+                  categoryImage={categoryImage}
+                  setCategoryImage={setCategoryImage}
+                  handleImageUpload={handleCategoryImageUpload}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -646,7 +717,7 @@ export default function CategoriesPage() {
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
             <DialogDescription>
@@ -655,36 +726,47 @@ export default function CategoriesPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateCategory} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Category Name</Label>
-              <Input
-                id="edit-name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="E.g., Cakes, Cookies, Pastries"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Brief description of this category"
-                rows={3}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-isActive"
-                checked={formData.isActive}
-                onCheckedChange={handleStatusChange}
-                className="data-[state=checked]:bg-blue-600"
-              />
-              <Label htmlFor="edit-isActive">Active</Label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Category Name</Label>
+                  <Input
+                    id="edit-name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="E.g., Cakes, Cookies, Pastries"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Brief description of this category"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="edit-isActive"
+                    checked={formData.isActive}
+                    onCheckedChange={handleStatusChange}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                  <Label htmlFor="edit-isActive">Active</Label>
+                </div>
+              </div>
+              <div>
+                <CategoryImageUpload
+                  categoryImage={categoryImage}
+                  setCategoryImage={setCategoryImage}
+                  handleImageUpload={handleCategoryImageUpload}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button

@@ -7,6 +7,8 @@ CREATE TABLE categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
+    image TEXT,
+    -- Category image URL or path
     is_active BOOLEAN DEFAULT true,
     products_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
