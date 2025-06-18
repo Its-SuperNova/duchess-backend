@@ -9,12 +9,42 @@ import { Button } from "@/components/ui/button";
 import LogoutButton from "@/components/auth/logout-button";
 import { useTheme } from "@/context/theme-context";
 import { isUserAdmin } from "@/lib/auth-utils";
+import { useCart } from "@/context/cart-context";
+import { useLayout } from "@/context/layout-context";
 
 const DesktopHeader = () => {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const isAuthenticated = status === "authenticated" && session?.user;
+  const { openCart, cart, isCartOpen } = useCart();
+
+  // Try to get layout context, with fallback
+  let getLayoutClasses = () => ({
+    isCompact: false,
+    isVeryCompact: false,
+    mainContentClasses: "flex-1 transition-all duration-300",
+  });
+  try {
+    const layoutContext = useLayout();
+    getLayoutClasses = layoutContext.getLayoutClasses;
+  } catch (error) {
+    // Layout context not available, use default values
+  }
+
+  // Get layout state for header positioning
+  let isUserSidebarCollapsed = true;
+  try {
+    const layoutContext = useLayout();
+    isUserSidebarCollapsed = layoutContext.isUserSidebarCollapsed;
+  } catch (error) {
+    // Layout context not available, use default values
+  }
+
+  // Calculate header positioning based on sidebar states
+  const leftPosition = isUserSidebarCollapsed ? "left-16" : "left-64";
+  const rightPosition = isCartOpen ? "right-96" : "right-0";
+  const headerPositionClasses = `${leftPosition} ${rightPosition} transition-all duration-300`;
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -39,7 +69,9 @@ const DesktopHeader = () => {
   }
 
   return (
-    <div className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#202028] border-b border-gray-200 dark:border-gray-700 h-16 items-center justify-end px-6 gap-4">
+    <div
+      className={`hidden lg:flex fixed top-0 z-50 bg-white dark:bg-[#202028] border-b border-gray-200 dark:border-gray-700 h-16 items-center justify-end px-6 gap-4 ${headerPositionClasses}`}
+    >
       {/* Small Search Bar */}
       <div className="relative w-80">
         <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 text-lg" />
@@ -62,15 +94,17 @@ const DesktopHeader = () => {
       </Link>
 
       {/* Cart Icon */}
-      <Link
-        href="/cart"
+      <button
+        onClick={openCart}
         className="relative hover:opacity-80 transition-opacity"
       >
         <ShoppingCart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-        <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
-          2
-        </span>
-      </Link>
+        {cart.length > 0 && (
+          <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
+            {cart.length}
+          </span>
+        )}
+      </button>
 
       {/* Admin Button */}
       {isAdmin && (

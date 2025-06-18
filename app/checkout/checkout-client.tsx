@@ -29,7 +29,8 @@ import { useCart } from "@/context/cart-context";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
-  const { cart, updateQuantity, removeFromCart, getSubtotal } = useCart();
+  const { cart, updateQuantity, removeFromCart, getSubtotal, openCart } =
+    useCart();
   const [note, setNote] = useState("");
 
   // Calculate totals based on actual cart items
@@ -46,7 +47,7 @@ export default function CheckoutClient() {
     >
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white p-4 flex items-center border-b shadow-sm">
-        <Link href="/cart" className="mr-4">
+        <Link href="/" className="mr-4" onClick={openCart}>
           <div className="bg-gray-100 p-2 rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </div>

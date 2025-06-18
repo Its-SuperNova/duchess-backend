@@ -10,18 +10,25 @@ import Header from "@/components/block/Header";
 import DesktopHeader from "@/components/block/DesktopHeader";
 import BottomNav from "@/components/block/BottomNav";
 import UserSidebar from "@/components/user-sidebar";
-import { CartProvider } from "@/context/cart-context";
+import CartSidebar from "@/components/cart-sidebar";
+import { CartProvider, useCart } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
+import { LayoutProvider, useLayout } from "@/context/layout-context";
 import AuthNotification from "@/components/auth/auth-notification";
 import SplashScreen from "@/components/splashscreen";
 import OnboardingPage from "@/app/onboarding/page";
 
-export default function ClientLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Inner component that can use cart and layout context
+function ClientLayoutInner({ children }: { children: React.ReactNode }) {
+  const { isCartOpen, closeCart } = useCart();
+  const {
+    isUserSidebarCollapsed,
+    setIsUserSidebarCollapsed,
+    setIsCartSidebarOpen,
+    getLayoutClasses,
+  } = useLayout();
+
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const isAdminRoute = pathname?.startsWith("/admin") ?? false;
@@ -31,10 +38,17 @@ export default function ClientLayout({
   const isFAQPage = pathname === "/faq";
   const isOnboardingPage = pathname === "/onboarding";
   const isProductPage = pathname.startsWith("/products/");
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const previousStatus = useRef<string | null>(null);
+
+  // Sync cart sidebar state with layout context
+  useEffect(() => {
+    setIsCartSidebarOpen(isCartOpen);
+  }, [isCartOpen, setIsCartSidebarOpen]);
+
+  // Get layout classes
+  const { mainContentClasses, isCompact, isVeryCompact } = getLayoutClasses();
 
   // Check if user has seen onboarding before
   const hasSeenOnboarding = () => {
@@ -100,74 +114,87 @@ export default function ClientLayout({
   }, [status]);
 
   return (
+    <>
+      {/* Always show splash screen first on every reload */}
+      {showSplash && (
+        <SplashScreen onAnimationComplete={handleSplashComplete} />
+      )}
+
+      {/* Show onboarding for unauthenticated users after splash */}
+      {!showSplash && showOnboarding && status === "unauthenticated" && (
+        <OnboardingPage onOnboardingComplete={handleOnboardingComplete} />
+      )}
+
+      {/* Only render main UI when splash screen and onboarding are not showing */}
+      {!showSplash && !showOnboarding && (
+        <>
+          <AuthNotification />
+          {!isAdminRoute &&
+            !isHomePage &&
+            !isProfileRoute &&
+            !isFAQPage &&
+            !isAuthRoute &&
+            !isOnboardingPage && (
+              <>
+                {isProductPage ? (
+                  <DesktopHeader />
+                ) : (
+                  <Header
+                    isCollapsed={
+                      !isAdminRoute && !isAuthRoute
+                        ? isUserSidebarCollapsed
+                        : undefined
+                    }
+                  />
+                )}
+              </>
+            )}
+          <div className="flex w-full">
+            {!isAdminRoute && !isAuthRoute && !isOnboardingPage && (
+              <UserSidebar
+                isCollapsed={isUserSidebarCollapsed}
+                setIsCollapsed={setIsUserSidebarCollapsed}
+              />
+            )}
+            <main
+              className={`${
+                !isAdminRoute && !isAuthRoute && !isOnboardingPage
+                  ? mainContentClasses
+                  : "flex-1"
+              }`}
+            >
+              {children}
+            </main>
+
+            {/* Cart Sidebar */}
+            <CartSidebar isOpen={isCartOpen} onClose={closeCart} />
+          </div>
+          {!isAdminRoute &&
+            !isProfileRoute &&
+            !isFAQPage &&
+            !isAuthRoute &&
+            !isOnboardingPage && <BottomNav />}
+
+          <Toaster />
+          <SonnerToaster />
+        </>
+      )}
+    </>
+  );
+}
+
+export default function ClientLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
     <ThemeProvider>
       <FavoritesProvider>
         <CartProvider>
-          {/* Always show splash screen first on every reload */}
-          {showSplash && (
-            <SplashScreen onAnimationComplete={handleSplashComplete} />
-          )}
-
-          {/* Show onboarding for unauthenticated users after splash */}
-          {!showSplash && showOnboarding && status === "unauthenticated" && (
-            <OnboardingPage onOnboardingComplete={handleOnboardingComplete} />
-          )}
-
-          {/* Only render main UI when splash screen and onboarding are not showing */}
-          {!showSplash && !showOnboarding && (
-            <>
-              <AuthNotification />
-              {!isAdminRoute &&
-                !isHomePage &&
-                !isProfileRoute &&
-                !isFAQPage &&
-                !isAuthRoute &&
-                !isOnboardingPage && (
-                  <>
-                    {isProductPage ? (
-                      <DesktopHeader />
-                    ) : (
-                      <Header
-                        isCollapsed={
-                          !isAdminRoute && !isAuthRoute
-                            ? isCollapsed
-                            : undefined
-                        }
-                      />
-                    )}
-                  </>
-                )}
-              <div className="flex w-full">
-                {!isAdminRoute && !isAuthRoute && !isOnboardingPage && (
-                  <UserSidebar
-                    isCollapsed={isCollapsed}
-                    setIsCollapsed={setIsCollapsed}
-                  />
-                )}
-                <main
-                  className={`flex-1 transition-all duration-300 ${
-                    !isAdminRoute &&
-                    !isAuthRoute &&
-                    !isOnboardingPage &&
-                    !isCollapsed
-                      ? "lg:ml-64"
-                      : !isAdminRoute && !isAuthRoute && !isOnboardingPage
-                      ? "lg:ml-16"
-                      : ""
-                  }`}
-                >
-                  {children}
-                </main>
-              </div>
-              {!isAdminRoute &&
-                !isProfileRoute &&
-                !isFAQPage &&
-                !isAuthRoute &&
-                !isOnboardingPage && <BottomNav />}
-              <Toaster />
-              <SonnerToaster />
-            </>
-          )}
+          <LayoutProvider>
+            <ClientLayoutInner>{children}</ClientLayoutInner>
+          </LayoutProvider>
         </CartProvider>
       </FavoritesProvider>
     </ThemeProvider>

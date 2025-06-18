@@ -9,6 +9,8 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import LogoutButton from "@/components/auth/logout-button";
+import { useCart } from "@/context/cart-context";
+import { useLayout } from "@/context/layout-context";
 
 interface HeaderProps {
   title?: string;
@@ -19,23 +21,43 @@ const Header: FC<HeaderProps> = ({ title, isCollapsed }) => {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
+  const { openCart, isCartOpen } = useCart();
 
   const isAuthenticated = status === "authenticated" && session?.user;
 
-  // Sidebar margin for desktop
-  const sidebarMargin =
-    typeof isCollapsed === "boolean"
+  // Try to get layout context for responsive header positioning
+  let getLayoutClasses = () => ({
+    isCompact: false,
+    isVeryCompact: false,
+    mainContentClasses: "flex-1 transition-all duration-300",
+  });
+  try {
+    const layoutContext = useLayout();
+    getLayoutClasses = layoutContext.getLayoutClasses;
+  } catch (error) {
+    // Layout context not available, use fallback
+  }
+
+  // Calculate header margin based on sidebar states
+  const { mainContentClasses } = getLayoutClasses();
+  const headerMargin =
+    mainContentClasses
+      .replace("flex-1", "")
+      .replace("transition-all duration-300", "transition-all duration-300")
+      .trim() ||
+    // Fallback to old logic if layout context is not available
+    (typeof isCollapsed === "boolean"
       ? isCollapsed
         ? "lg:ml-16"
         : "lg:ml-64"
-      : "";
+      : "");
 
   // Show icons only if not on home page
   const showIcons = pathname !== "/";
 
   return (
     <header
-      className={`w-full h-16 min-h-16 max-h-16 py-0 px-4 flex items-center justify-between dark:bg-gray-900 ${sidebarMargin}`}
+      className={`w-full h-16 min-h-16 max-h-16 py-0 px-4 flex items-center justify-between dark:bg-gray-900 ${headerMargin}`}
       style={{ height: 64 }}
     >
       {/* Logo on the left */}
@@ -77,8 +99,8 @@ const Header: FC<HeaderProps> = ({ title, isCollapsed }) => {
             </svg>
           </Link>
           {/* Cart Icon */}
-          <Link
-            href="/cart"
+          <button
+            onClick={openCart}
             className="relative flex items-center justify-center"
           >
             <svg
@@ -95,7 +117,7 @@ const Header: FC<HeaderProps> = ({ title, isCollapsed }) => {
               <circle cx="19" cy="21" r="1" />
               <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
             </svg>
-          </Link>
+          </button>
           {/* Profile image and dropdown */}
           <div className="relative flex items-center justify-center">
             {!isAuthenticated ? (

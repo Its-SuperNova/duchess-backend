@@ -18,6 +18,8 @@ import LogoutButton from "@/components/auth/logout-button";
 import { isUserAdmin } from "@/lib/auth-utils";
 import { getCategories } from "@/lib/actions/categories";
 import { toast } from "sonner";
+import { useCart } from "@/context/cart-context";
+import { useLayout } from "@/context/layout-context";
 
 interface Category {
   id: string;
@@ -51,11 +53,28 @@ const Hero = () => {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { openCart, cart } = useCart();
+
+  // Try to get layout context, with fallback
+  let getCategoryGridConfig = () => ({
+    columns: 8,
+    maxCategories: 8,
+    gridClasses: "hidden lg:flex flex-nowrap gap-6 justify-start",
+  });
+  try {
+    const layoutContext = useLayout();
+    getCategoryGridConfig = layoutContext.getCategoryGridConfig;
+  } catch (error) {
+    // Layout context not available, use default values
+  }
 
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  // Get category grid configuration
+  const { columns, maxCategories, gridClasses } = getCategoryGridConfig();
 
   // Auto-slide functionality for mobile
   useEffect(() => {
@@ -278,15 +297,17 @@ const Hero = () => {
         </Link>
 
         {/* Cart Icon */}
-        <Link
-          href="/cart"
+        <button
+          onClick={openCart}
           className="relative hover:opacity-80 transition-opacity"
         >
           <ShoppingCart className="h-5 w-5 text-gray-600" />
-          <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
-            2
-          </span>
-        </Link>
+          {cart.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
+              {cart.length}
+            </span>
+          )}
+        </button>
 
         {/* Admin Button */}
         {isAdmin && (
@@ -384,17 +405,9 @@ const Hero = () => {
         {/* Categories content based on loading/error/empty states */}
         {isLoadingCategories ? (
           <>
-            {/* 1536px and up: Show skeleton loaders */}
-            <div className="hidden 2xl:grid grid-cols-12 gap-6">
-              <CategorySkeleton count={12} />
-            </div>
-            {/* 1285px to 1535px: Show skeleton loaders */}
-            <div className="hidden xl:grid 2xl:hidden grid-cols-10 gap-6">
-              <CategorySkeleton count={10} />
-            </div>
-            {/* 800px to 1284px: Show skeleton loaders */}
-            <div className="hidden lg:grid xl:hidden grid-cols-8 gap-6">
-              <CategorySkeleton count={8} />
+            {/* Dynamic grid based on available space */}
+            <div className={gridClasses}>
+              <CategorySkeleton count={maxCategories} />
             </div>
           </>
         ) : categoriesError ? (
@@ -403,64 +416,14 @@ const Hero = () => {
           <CategoriesEmpty />
         ) : (
           <>
-            {/* 1536px and up: Show all categories */}
-            <div className="hidden 2xl:grid grid-cols-12 gap-6">
-              {categories.slice(0, 12).map((category) => (
+            {/* Dynamic grid based on available space */}
+            <div className={gridClasses}>
+              {categories.slice(0, maxCategories).map((category) => (
                 <Link
                   href={`/products?category=${category.name.toLowerCase()}`}
                   key={category.id}
                 >
-                  <div className="flex flex-col items-center group cursor-pointer">
-                    <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
-                      <Image
-                        src={getCategoryImage(category)}
-                        alt={category.name}
-                        width={80}
-                        height={80}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <p className="text-sm font-medium mt-3 text-center group-hover:text-[#d48926de] transition-colors">
-                      {category.name}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* 1285px to 1535px: Show all categories */}
-            <div className="hidden xl:grid 2xl:hidden grid-cols-10 gap-6">
-              {categories.slice(0, 10).map((category) => (
-                <Link
-                  href={`/products?category=${category.name.toLowerCase()}`}
-                  key={category.id}
-                >
-                  <div className="flex flex-col items-center group cursor-pointer">
-                    <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
-                      <Image
-                        src={getCategoryImage(category)}
-                        alt={category.name}
-                        width={80}
-                        height={80}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <p className="text-sm font-medium mt-3 text-center group-hover:text-[#d48926de] transition-colors">
-                      {category.name}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* 800px to 1284px: Show all categories */}
-            <div className="hidden lg:grid xl:hidden grid-cols-8 gap-6">
-              {categories.slice(0, 8).map((category) => (
-                <Link
-                  href={`/products?category=${category.name.toLowerCase()}`}
-                  key={category.id}
-                >
-                  <div className="flex flex-col items-center group cursor-pointer">
+                  <div className="flex flex-col items-center group cursor-pointer flex-shrink-0 w-24">
                     <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
                       <Image
                         src={getCategoryImage(category)}

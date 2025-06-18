@@ -15,6 +15,7 @@ import {
   type ProcessedProduct,
 } from "@/lib/utils";
 import { toast } from "sonner";
+import { useLayout } from "@/context/layout-context";
 
 interface HomeClientProps {
   // Remove products prop since we'll fetch them dynamically
@@ -24,6 +25,24 @@ export default function HomeClient(props: HomeClientProps) {
   const [products, setProducts] = useState<ProcessedProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+
+  // Get layout information for responsive padding
+  let getLayoutClasses = () => ({
+    isCompact: false,
+    isVeryCompact: false,
+    mainContentClasses: "",
+  });
+  try {
+    const layoutContext = useLayout();
+    getLayoutClasses = layoutContext.getLayoutClasses;
+  } catch (error) {
+    // Layout context not available, use default values
+  }
+
+  const { isCompact, isVeryCompact } = getLayoutClasses();
+
+  // Calculate responsive padding for home page
+  const homePadding = isVeryCompact ? "px-2" : isCompact ? "px-4" : "px-6";
 
   // Fetch products on component mount
   useEffect(() => {
@@ -161,7 +180,9 @@ export default function HomeClient(props: HomeClientProps) {
   );
 
   return (
-    <div className="w-full overflow-x-hidden bg-white dark:bg-gray-900">
+    <div
+      className={`w-full overflow-x-hidden bg-white dark:bg-gray-900 ${homePadding}`}
+    >
       {/* Hero Section */}
       <div className="w-full">
         <Hero />

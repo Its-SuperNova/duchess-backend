@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useTheme } from "@/context/theme-context";
+import { useCart } from "@/context/cart-context";
 
 interface UserSidebarProps {
   isCollapsed: boolean;
@@ -29,6 +30,7 @@ export default function UserSidebar({
 }: UserSidebarProps) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const { openCart } = useCart();
 
   // Try to get theme context, with fallback
   let theme = "light";
@@ -132,9 +134,9 @@ export default function UserSidebar({
             {!isCollapsed && "Categories"}
           </Link>
 
-          <Link
-            href="/cart"
-            className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
+          <button
+            onClick={() => openCart()}
+            className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl w-full text-left ${
               pathname === "/cart"
                 ? "bg-[#560000] text-white font-semibold"
                 : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
@@ -147,7 +149,7 @@ export default function UserSidebar({
               } ${isCollapsed ? "" : "mr-3"}`}
             />
             {!isCollapsed && "Cart"}
-          </Link>
+          </button>
 
           <Link
             href="/favorites"
