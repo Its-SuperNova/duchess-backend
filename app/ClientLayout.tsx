@@ -161,7 +161,16 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                 !isAdminRoute && !isAuthRoute && !isOnboardingPage
                   ? mainContentClasses
                   : "flex-1"
-              }`}
+              } transition-all duration-300`}
+              style={{
+                marginRight:
+                  !isAdminRoute &&
+                  !isAuthRoute &&
+                  !isOnboardingPage &&
+                  isCartOpen
+                    ? "24rem" // 384px = w-96
+                    : undefined,
+              }}
             >
               {children}
             </main>
