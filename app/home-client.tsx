@@ -230,11 +230,15 @@ export default function HomeClient(props: HomeClientProps) {
           <h2 className="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-white">
             Why We Are Best?
           </h2>
-          <img
-            src="/why-we-are-best-mobile.png"
-            alt="Why we are the best"
-            className="w-full rounded-3xl shadow-md"
-          />
+          <div className="rounded-3xl overflow-hidden shadow-md w-full">
+            <Image
+              src="/images/duchess-pastries-banner.png"
+              alt="Why we are the best - Handcrafted fresh daily, delivered with care, affordable prices, and loved by thousands"
+              width={800}
+              height={200}
+              className="w-full h-auto object-cover"
+            />
+          </div>
         </div>
 
         {/* Why We Are Best Banner - Desktop Version */}

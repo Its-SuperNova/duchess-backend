@@ -352,3 +352,22 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
+
+/* Hide scrollbar utilities for product pages */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Z-index stacking for fixed elements */
+.bottom-nav {
+  z-index: 50;
+}
+
+.sticky-cart {
+  z-index: 40;
+}

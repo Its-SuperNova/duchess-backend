@@ -99,7 +99,7 @@ export default function Loading() {
             {/* Card 1: Order Type, Select Weight/Quantity, Price, Add to Cart */}
             <div className="w-full bg-white rounded-3xl p-7 flex flex-col gap-5 h-fit shadow-sm">
               {/* Price display */}
-              <div className="flex items-baseline gap-3 md:flex hidden">
+              <div className="flex items-baseline gap-3 md:flex">
                 <Skeleton className="h-8 w-24 md:block hidden" />
                 <Skeleton className="h-6 w-20 md:block hidden" />
               </div>

@@ -33,6 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getProductById } from "@/lib/actions/products";
 import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
+import ProductSkeleton from "./product-skeleton";
 
 // Types for database product
 interface DatabaseProduct {
@@ -132,14 +133,14 @@ export default function ProductPage() {
         // Set initial selected options
         if (productData.weight_options?.length > 0) {
           const firstActiveWeight = productData.weight_options.findIndex(
-            (opt) => opt.isActive
+            (opt: any) => opt.isActive
           );
           setSelectedWeightOption(Math.max(0, firstActiveWeight));
         }
 
         if (productData.piece_options?.length > 0) {
           const firstActivePiece = productData.piece_options.findIndex(
-            (opt) => opt.isActive
+            (opt: any) => opt.isActive
           );
           setSelectedPieceOption(Math.max(0, firstActivePiece));
         }
@@ -348,42 +349,7 @@ export default function ProductPage() {
 
   // Loading skeleton
   if (isLoading) {
-    return (
-      <div className="bg-[#f5f5f5] flex flex-col items-center">
-        <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
-          <div className="flex flex-col md:flex-row md:gap-8 md:p-8 flex-1">
-            {/* Left column skeleton */}
-            <div className="md:w-2/3 flex flex-col gap-6">
-              <div className="relative mt-4 rounded-2xl overflow-hidden">
-                <Skeleton className="h-[350px] lg:h-[450px] w-full rounded-2xl" />
-              </div>
-              <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-50">
-                <div className="flex justify-between items-center mb-3">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                </div>
-                <Skeleton className="h-8 w-3/4 mb-4" />
-                <Skeleton className="h-4 w-1/2 mb-4" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              </div>
-            </div>
-            {/* Right column skeleton */}
-            <div className="w-full md:w-1/3 flex flex-col gap-5 mt-4">
-              <div className="w-full bg-white rounded-3xl p-7 flex flex-col gap-5 h-fit shadow-sm">
-                <Skeleton className="h-8 w-32" />
-                <Skeleton className="h-px w-full" />
-                <Skeleton className="h-12 w-full rounded-xl" />
-                <Skeleton className="h-20 w-full rounded-xl" />
-                <Skeleton className="h-12 w-full rounded-xl" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ProductSkeleton />;
   }
 
   // Error state
@@ -430,12 +396,22 @@ export default function ProductPage() {
 
   return (
     <>
-      <div className="bg-[#f5f5f5] flex flex-col items-center">
+      <div className="bg-[#f5f5f5] flex flex-col items-center mt-10">
         <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
+          {/* Back Button */}
+          <div className="mt-2  md:p-8 md:pb-0">
+            <button
+              onClick={() => router.push("/")}
+              className="w-10 h-10 rounded-[14px] bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm border border-gray-200 transition-colors"
+            >
+              <BsArrowLeft className="text-gray-800" size={20} />
+            </button>
+          </div>
+
           {/* Main content: two columns on desktop, one column on mobile */}
-          <div className="flex flex-col md:flex-row md:gap-8 md:p-8 flex-1">
+          <div className="flex flex-col md:flex-row md:gap-8 md:px-8 md:pt-0 md:pb-8 flex-1">
             {/* Left column */}
-            <div className="md:w-2/3 flex flex-col gap-6">
+            <div className="md:w-2/3 flex flex-col gap-6 w-full max-w-full overflow-hidden">
               {/* Top navigation and Hero Image */}
               <div className="relative mt-4 rounded-2xl overflow-hidden">
                 {/* Hero Image */}
@@ -454,43 +430,18 @@ export default function ProductPage() {
                       {product.offer_percentage}% OFF
                     </div>
                   )}
-
-                  {/* Nav buttons */}
-                  <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
-                    <button
-                      onClick={() => router.back()}
-                      className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md"
-                    >
-                      <BsArrowLeft className="text-gray-800" size={20} />
-                    </button>
-
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleFavoriteToggle}
-                        className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md"
-                      >
-                        {isLiked ? (
-                          <FaHeart className="text-red-500" size={20} />
-                        ) : (
-                          <FaRegHeart className="text-gray-800" size={20} />
-                        )}
-                      </button>
-
-                      <button className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md">
-                        <FaShare className="text-gray-800" size={18} />
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Image thumbnails */}
                 {images.length > 1 && (
                   <div className="absolute bottom-3 left-0 right-0 px-3">
-                    <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1">
+                    <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1 justify-center">
                       {images.map((image, index) => (
                         <button
                           key={index}
-                          onClick={() => setMainImage(image)}
+                          onClick={() =>
+                            setMainImage(image || "/placeholder.svg")
+                          }
                           className={`w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 ${
                             mainImage === image
                               ? "border-[#560000]"
@@ -512,7 +463,7 @@ export default function ProductPage() {
               </div>
 
               {/* Product Info Section */}
-              <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-50">
+              <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-50 w-full max-w-full overflow-hidden">
                 {/* Category and Rating */}
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-gray-500 text-sm font-medium uppercase tracking-wide">
@@ -546,22 +497,22 @@ export default function ProductPage() {
                   <h2 className="font-semibold text-lg mb-3 text-gray-800">
                     Description
                   </h2>
-                  <div className="space-y-4">
+                  <div className="space-y-4 w-full overflow-hidden">
                     {isDescriptionExpanded ? (
                       <>
                         {product.short_description && (
-                          <p className="text-gray-700 leading-relaxed">
+                          <p className="text-gray-700 leading-relaxed break-words w-full">
                             {product.short_description}
                           </p>
                         )}
                         {product.long_description && (
-                          <p className="text-gray-700 leading-relaxed">
+                          <p className="text-gray-700 leading-relaxed break-words w-full">
                             {product.long_description}
                           </p>
                         )}
                       </>
                     ) : (
-                      <p className="text-gray-700 leading-relaxed line-clamp-2">
+                      <p className="text-gray-700 leading-relaxed line-clamp-2 break-words w-full">
                         {product.short_description ||
                           product.long_description ||
                           "No description available"}

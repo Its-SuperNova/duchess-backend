@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import Header from "@/components/block/Header";
+import DesktopHeader from "@/components/block/DesktopHeader";
 import BottomNav from "@/components/block/BottomNav";
 import UserSidebar from "@/components/user-sidebar";
 import { CartProvider } from "@/context/cart-context";
@@ -29,6 +30,7 @@ export default function ClientLayout({
   const isProfileRoute = pathname.startsWith("/profile");
   const isFAQPage = pathname === "/faq";
   const isOnboardingPage = pathname === "/onboarding";
+  const isProductPage = pathname.startsWith("/products/");
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -121,11 +123,19 @@ export default function ClientLayout({
                 !isFAQPage &&
                 !isAuthRoute &&
                 !isOnboardingPage && (
-                  <Header
-                    isCollapsed={
-                      !isAdminRoute && !isAuthRoute ? isCollapsed : undefined
-                    }
-                  />
+                  <>
+                    {isProductPage ? (
+                      <DesktopHeader />
+                    ) : (
+                      <Header
+                        isCollapsed={
+                          !isAdminRoute && !isAuthRoute
+                            ? isCollapsed
+                            : undefined
+                        }
+                      />
+                    )}
+                  </>
                 )}
               <div className="flex w-full">
                 {!isAdminRoute && !isAuthRoute && !isOnboardingPage && (
