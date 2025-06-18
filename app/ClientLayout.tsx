@@ -38,6 +38,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isFAQPage = pathname === "/faq";
   const isOnboardingPage = pathname === "/onboarding";
   const isProductPage = pathname.startsWith("/products/");
+  const isCheckoutRoute = pathname.startsWith("/checkout");
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const previousStatus = useRef<string | null>(null);
@@ -134,7 +135,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             !isProfileRoute &&
             !isFAQPage &&
             !isAuthRoute &&
-            !isOnboardingPage && (
+            !isOnboardingPage &&
+            !isCheckoutRoute && (
               <>
                 {isProductPage ? (
                   <DesktopHeader />
@@ -150,15 +152,21 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               </>
             )}
           <div className="flex w-full">
-            {!isAdminRoute && !isAuthRoute && !isOnboardingPage && (
-              <UserSidebar
-                isCollapsed={isUserSidebarCollapsed}
-                setIsCollapsed={setIsUserSidebarCollapsed}
-              />
-            )}
+            {!isAdminRoute &&
+              !isAuthRoute &&
+              !isOnboardingPage &&
+              !isCheckoutRoute && (
+                <UserSidebar
+                  isCollapsed={isUserSidebarCollapsed}
+                  setIsCollapsed={setIsUserSidebarCollapsed}
+                />
+              )}
             <main
               className={`${
-                !isAdminRoute && !isAuthRoute && !isOnboardingPage
+                !isAdminRoute &&
+                !isAuthRoute &&
+                !isOnboardingPage &&
+                !isCheckoutRoute
                   ? mainContentClasses
                   : "flex-1"
               } transition-all duration-300`}
@@ -167,6 +175,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                   !isAdminRoute &&
                   !isAuthRoute &&
                   !isOnboardingPage &&
+                  !isCheckoutRoute &&
                   isCartOpen
                     ? "24rem" // 384px = w-96
                     : undefined,
@@ -182,7 +191,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             !isProfileRoute &&
             !isFAQPage &&
             !isAuthRoute &&
-            !isOnboardingPage && <BottomNav />}
+            !isOnboardingPage &&
+            !isCheckoutRoute && <BottomNav />}
 
           <Toaster />
           <SonnerToaster />

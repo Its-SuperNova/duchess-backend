@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Search, Heart, ShoppingBag, User, UserPlus } from "lucide-react";
 import { RiHome6Fill } from "react-icons/ri";
 import { useSession } from "next-auth/react";
+import { useCart } from "@/context/cart-context";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const { openCart } = useCart();
 
   // Hide bottom nav on login, register, and admin pages
   if (
@@ -27,30 +29,35 @@ export default function BottomNav() {
       href: "/",
       icon: RiHome6Fill,
       isReactIcon: true,
+      isCartButton: false,
     },
     {
       name: "Search",
       href: "/search",
       icon: Search,
       isReactIcon: false,
+      isCartButton: false,
     },
     {
       name: "Favorites",
       href: "/favorites",
       icon: Heart,
       isReactIcon: false,
+      isCartButton: false,
     },
     {
       name: "Cart",
-      href: "/cart",
+      href: "/cart", // Not used for cart button
       icon: ShoppingBag,
       isReactIcon: false,
+      isCartButton: true,
     },
     {
       name: isAuthenticated ? "Profile" : "Sign Up",
       href: isAuthenticated ? "/profile" : "/register",
       icon: isAuthenticated ? User : UserPlus,
       isReactIcon: false,
+      isCartButton: false,
     },
   ];
 
@@ -63,41 +70,60 @@ export default function BottomNav() {
       <nav className="relative h-full max-w-md mx-auto px-4">
         <ul className="flex h-full items-center justify-between">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href && !item.isCartButton;
             const IconComponent = item.icon;
 
             return (
               <li key={item.name} className="relative flex-1">
-                <Link
-                  href={item.href}
-                  className="flex flex-col items-center justify-center h-full w-full"
-                >
-                  {item.isReactIcon ? (
-                    <IconComponent
-                      size={28}
-                      className={
-                        isActive
-                          ? "text-primary"
-                          : "text-gray-500 dark:text-gray-400"
-                      }
-                    />
-                  ) : (
-                    <IconComponent
-                      className={`w-7 h-7 ${
-                        isActive
-                          ? "text-primary"
-                          : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    />
-                  )}
-                  <span
-                    className={`text-sm mt-1 font-medium ${
-                      isActive ? "text-primary" : ""
-                    }`}
+                {item.isCartButton ? (
+                  <button
+                    onClick={openCart}
+                    className="flex flex-col items-center justify-center h-full w-full"
                   >
-                    {item.name}
-                  </span>
-                </Link>
+                    {item.isReactIcon ? (
+                      <IconComponent
+                        size={28}
+                        className="text-gray-500 dark:text-gray-400"
+                      />
+                    ) : (
+                      <IconComponent className="w-7 h-7 text-gray-500 dark:text-gray-400" />
+                    )}
+                    <span className="text-sm mt-1 font-medium">
+                      {item.name}
+                    </span>
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className="flex flex-col items-center justify-center h-full w-full"
+                  >
+                    {item.isReactIcon ? (
+                      <IconComponent
+                        size={28}
+                        className={
+                          isActive
+                            ? "text-primary"
+                            : "text-gray-500 dark:text-gray-400"
+                        }
+                      />
+                    ) : (
+                      <IconComponent
+                        className={`w-7 h-7 ${
+                          isActive
+                            ? "text-primary"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      />
+                    )}
+                    <span
+                      className={`text-sm mt-1 font-medium ${
+                        isActive ? "text-primary" : ""
+                      }`}
+                    >
+                      {item.name}
+                    </span>
+                  </Link>
+                )}
               </li>
             );
           })}

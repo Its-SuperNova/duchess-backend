@@ -22,6 +22,8 @@ interface CartContextType {
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
+  isCheckoutMode: boolean;
+  setCheckoutMode: (mode: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -30,6 +32,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutMode, setIsCheckoutMode] = useState(false);
 
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
@@ -96,6 +99,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const closeCart = () => {
     setIsCartOpen(false);
+    setIsCheckoutMode(false); // Reset checkout mode when closing cart
+  };
+
+  const setCheckoutModeHandler = (mode: boolean) => {
+    setIsCheckoutMode(mode);
   };
 
   return (
@@ -109,6 +117,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         isCartOpen,
         openCart,
         closeCart,
+        isCheckoutMode,
+        setCheckoutMode: setCheckoutModeHandler,
       }}
     >
       {children}
@@ -133,6 +143,8 @@ export function useCart() {
       isCartOpen: false,
       openCart: () => {},
       closeCart: () => {},
+      isCheckoutMode: false,
+      setCheckoutMode: () => {},
     };
   }
 

@@ -2,7 +2,6 @@
 
 import {
   ArrowLeft,
-  ChevronRight,
   Clock,
   Home,
   Ticket,
@@ -15,6 +14,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Drawer,
   DrawerClose,
@@ -26,12 +26,48 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useCart } from "@/context/cart-context";
+import DesktopHeader from "@/components/block/DesktopHeader";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
   const { cart, updateQuantity, removeFromCart, getSubtotal, openCart } =
     useCart();
   const [note, setNote] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
+
+  // Sample coupons data
+  const availableCoupons = [
+    {
+      id: 1,
+      code: "SAVE20",
+      title: "Save ₹20",
+      description: "Minimum order ₹200",
+      discount: 20,
+    },
+    {
+      id: 2,
+      code: "FIRST50",
+      title: "First Order",
+      description: "₹50 off on first order",
+      discount: 50,
+    },
+    {
+      id: 3,
+      code: "SWEET10",
+      title: "Sweet Deal",
+      description: "10% off on all items",
+      discount: 10,
+      isPercentage: true,
+    },
+    {
+      id: 4,
+      code: "BULK25",
+      title: "Bulk Order",
+      description: "₹25 off on orders above ₹500",
+      discount: 25,
+    },
+  ];
 
   // Calculate totals based on actual cart items
   const subtotal = getSubtotal();
@@ -45,15 +81,8 @@ export default function CheckoutClient() {
       className="min-h-screen pb-40 md:pb-24"
       style={{ backgroundColor: "#F5F6FB" }}
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white p-4 flex items-center border-b shadow-sm">
-        <Link href="/" className="mr-4" onClick={openCart}>
-          <div className="bg-gray-100 p-2 rounded-full">
-            <ArrowLeft className="h-5 w-5" />
-          </div>
-        </Link>
-        <h1 className="text-xl font-semibold">Checkout</h1>
-      </div>
+      {/* Desktop Header */}
+      <DesktopHeader />
 
       <div className="max-w-screen-md mx-auto pt-2">
         {/* Cart Items */}
@@ -138,16 +167,19 @@ export default function CheckoutClient() {
 
         {/* Note Section with Drawer */}
         <div className="mx-4 mt-4">
-          <Drawer>
+          <Drawer modal={false}>
             <DrawerTrigger asChild>
-              <button className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center text-gray-700">
-                <FileText className="h-5 w-5 mr-3" />
-                <span className="font-medium">
-                  Add a note for the restaurant
-                </span>
+              <button className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between text-gray-700">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 mr-3" />
+                  <span className="font-medium">
+                    {note ? note : "Add a note for the restaurant"}
+                  </span>
+                </div>
+                {note && <span className="text-xs text-gray-500">Edit</span>}
               </button>
             </DrawerTrigger>
-            <DrawerContent className="max-h-[85vh]">
+            <DrawerContent className="max-h-[85vh] lg:max-w-96 lg:fixed lg:right-0 lg:left-auto lg:rounded-t-2xl">
               <DrawerHeader>
                 <DrawerTitle>Add a note</DrawerTitle>
                 <DrawerDescription>
@@ -174,14 +206,106 @@ export default function CheckoutClient() {
           </Drawer>
         </div>
 
-        {/* Coupons */}
-        <button className="bg-white mx-4 my-4 p-4 rounded-2xl border border-gray-100 shadow-sm w-[calc(100%-2rem)] flex justify-between items-center">
-          <div className="flex items-center">
-            <Ticket className="h-5 w-5 mr-3" />
-            <span className="font-medium">View all coupons</span>
-          </div>
-          <ChevronRight className="h-5 w-5" />
-        </button>
+        {/* Coupons Section with Drawer */}
+        <div className="mx-4 mt-4">
+          <Drawer modal={false}>
+            <DrawerTrigger asChild>
+              <button className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between text-gray-700">
+                <div className="flex items-center">
+                  <Ticket className="h-5 w-5 mr-3" />
+                  <span className="font-medium">
+                    {selectedCoupon ? selectedCoupon : "View all coupons"}
+                  </span>
+                </div>
+                {selectedCoupon && (
+                  <span className="text-xs text-gray-500">Applied</span>
+                )}
+              </button>
+            </DrawerTrigger>
+            <DrawerContent className="max-h-[85vh] lg:max-w-96 lg:fixed lg:right-0 lg:left-auto lg:rounded-t-2xl">
+              <DrawerHeader>
+                <DrawerTitle>Apply Coupon</DrawerTitle>
+                <DrawerDescription>
+                  Choose from available coupons or enter a coupon code.
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 pb-0">
+                {/* Coupon Code Input */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    Enter Coupon Code
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter coupon code"
+                      value={couponCode}
+                      onChange={(e) =>
+                        setCouponCode(e.target.value.toUpperCase())
+                      }
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (couponCode) {
+                          setSelectedCoupon(couponCode);
+                          setCouponCode("");
+                        }
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Available Coupons */}
+                <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                  <h3 className="font-medium text-sm">Available Coupons</h3>
+                  {availableCoupons.map((coupon) => (
+                    <div
+                      key={coupon.id}
+                      className="border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-50"
+                      onClick={() => setSelectedCoupon(coupon.code)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                              {coupon.code}
+                            </span>
+                            <span className="text-green-600 font-semibold text-sm">
+                              {coupon.title}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {coupon.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <DrawerFooter className="pt-2 pb-6">
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedCoupon(null);
+                      setCouponCode("");
+                    }}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                  <DrawerClose asChild>
+                    <Button className="bg-primary flex-1">Done</Button>
+                  </DrawerClose>
+                </div>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        </div>
 
         {/* Delivery Info */}
         <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-100 shadow-sm">
