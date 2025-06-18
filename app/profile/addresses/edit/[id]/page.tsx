@@ -23,7 +23,6 @@ import {
   autofillAddressFromPincode,
   validateAddressForCoimbatoreDelivery,
 } from "@/lib/address-validation";
-import DesktopHeader from "@/components/block/DesktopHeader";
 import RouteInfoDisplay from "@/components/RouteInfoDisplay";
 
 export default function EditAddressPage() {
@@ -233,7 +232,6 @@ export default function EditAddressPage() {
         city: "Coimbatore", // Always Coimbatore for our delivery area
         state: "Tamil Nadu", // Always Tamil Nadu for Coimbatore
         zip_code: formData.zipCode,
-        area: formData.area,
         alternate_phone: formData.alternatePhone,
         additional_details: formData.additionalDetails,
       });
@@ -303,48 +301,40 @@ export default function EditAddressPage() {
 
   if (loading) {
     return (
-      <>
-        <DesktopHeader />
-        <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
-          <div className="max-w-7xl mx-auto space-y-6 pb-20">
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="flex items-center space-x-2">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Loading address...</span>
-              </div>
+      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+        <div className="max-w-7xl mx-auto space-y-6 pb-20">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center space-x-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Loading address...</span>
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   if (error && !address) {
     return (
-      <>
-        <DesktopHeader />
-        <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
-          <div className="max-w-7xl mx-auto space-y-6 pb-20">
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="text-center">
-                <p className="text-red-600 mb-4">{error}</p>
-                <Link href="/profile/addresses">
-                  <div className="px-4 py-2 bg-[#7a0000] text-white rounded-xl">
-                    Back to Addresses
-                  </div>
-                </Link>
-              </div>
+      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+        <div className="max-w-7xl mx-auto space-y-6 pb-20">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Link href="/profile/addresses">
+                <div className="px-4 py-2 bg-[#7a0000] text-white rounded-xl">
+                  Back to Addresses
+                </div>
+              </Link>
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <DesktopHeader />
-      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
         <div className="max-w-7xl mx-auto space-y-6 pb-20">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -659,6 +649,6 @@ export default function EditAddressPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

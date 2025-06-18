@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import Header from "@/components/block/Header";
 import DesktopHeader from "@/components/block/DesktopHeader";
 import BottomNav from "@/components/block/BottomNav";
 import UserSidebar from "@/components/user-sidebar";
@@ -31,6 +30,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
   const pathname = usePathname();
   const { data: session, status } = useSession();
+
+  // Route type checks
   const isAdminRoute = pathname?.startsWith("/admin") ?? false;
   const isAuthRoute = pathname === "/login" || pathname === "/register";
   const isHomePage = pathname === "/";
@@ -39,6 +40,26 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isOnboardingPage = pathname === "/onboarding";
   const isProductPage = pathname.startsWith("/products/");
   const isCheckoutRoute = pathname.startsWith("/checkout");
+
+  // Layout component visibility - cleaner boolean logic
+  const showHeader =
+    !isAdminRoute &&
+    !isFAQPage &&
+    !isAuthRoute &&
+    !isOnboardingPage &&
+    !isCheckoutRoute;
+  const showSidebar =
+    !isAdminRoute && !isAuthRoute && !isOnboardingPage && !isCheckoutRoute;
+  const showBottomNav =
+    !isAdminRoute &&
+    !isHomePage &&
+    !isProfileRoute &&
+    !isFAQPage &&
+    !isAuthRoute &&
+    !isOnboardingPage &&
+    !isCheckoutRoute;
+  const useSidebarLayout = showSidebar;
+
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const previousStatus = useRef<string | null>(null);
@@ -130,55 +151,31 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       {!showSplash && !showOnboarding && (
         <>
           <AuthNotification />
-          {!isAdminRoute &&
-            !isHomePage &&
-            !isProfileRoute &&
-            !isFAQPage &&
-            !isAuthRoute &&
-            !isOnboardingPage &&
-            !isCheckoutRoute && (
-              <>
-                {isProductPage ? (
-                  <DesktopHeader />
-                ) : (
-                  <Header
-                    isCollapsed={
-                      !isAdminRoute && !isAuthRoute
-                        ? isUserSidebarCollapsed
-                        : undefined
-                    }
-                  />
-                )}
-              </>
-            )}
+
+          {/* Desktop Header */}
+          {showHeader && <DesktopHeader />}
+
           <div className="flex w-full">
-            {!isAdminRoute &&
-              !isAuthRoute &&
-              !isOnboardingPage &&
-              !isCheckoutRoute && (
-                <UserSidebar
-                  isCollapsed={isUserSidebarCollapsed}
-                  setIsCollapsed={setIsUserSidebarCollapsed}
-                />
-              )}
+            {/* User Sidebar */}
+            {showSidebar && (
+              <UserSidebar
+                isCollapsed={isUserSidebarCollapsed}
+                setIsCollapsed={setIsUserSidebarCollapsed}
+              />
+            )}
+
+            {/* Main Content */}
             <main
               className={`${
-                !isAdminRoute &&
-                !isAuthRoute &&
-                !isOnboardingPage &&
-                !isCheckoutRoute
-                  ? mainContentClasses
-                  : "flex-1"
-              } transition-all duration-300`}
+                useSidebarLayout
+                  ? `flex-1 transition-all duration-300 pt-20 ${
+                      isUserSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
+                    }`
+                  : "flex-1 pt-20"
+              }`}
               style={{
                 marginRight:
-                  !isAdminRoute &&
-                  !isAuthRoute &&
-                  !isOnboardingPage &&
-                  !isCheckoutRoute &&
-                  isCartOpen
-                    ? "24rem" // 384px = w-96
-                    : undefined,
+                  useSidebarLayout && isCartOpen ? "24rem" : undefined,
               }}
             >
               {children}
@@ -187,12 +184,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             {/* Cart Sidebar */}
             <CartSidebar isOpen={isCartOpen} onClose={closeCart} />
           </div>
-          {!isAdminRoute &&
-            !isProfileRoute &&
-            !isFAQPage &&
-            !isAuthRoute &&
-            !isOnboardingPage &&
-            !isCheckoutRoute && <BottomNav />}
+
+          {/* Bottom Navigation */}
+          {showBottomNav && <BottomNav />}
 
           <Toaster />
           <SonnerToaster />

@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, User, Camera, Save } from "lucide-react";
-import DesktopHeader from "@/components/block/DesktopHeader";
 import { getUserByEmail, updateUserProfile } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -191,9 +190,7 @@ export default function ProfileEditPage() {
 
   if (loading || !mounted) {
     return (
-      <>
-        <DesktopHeader />
-        <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4">
+      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
           <div className="max-w-md mx-auto space-y-6">
             <div className="flex items-center gap-4">
               <Skeleton className="h-6 w-6" />
@@ -215,14 +212,12 @@ export default function ProfileEditPage() {
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <DesktopHeader />
-      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-4 px-4 pb-20">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-4 px-4 pb-20 lg:pt-24">
         <div className="max-w-md lg:max-w-2xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -394,6 +389,6 @@ export default function ProfileEditPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

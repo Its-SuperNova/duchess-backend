@@ -42,7 +42,7 @@ export default function HomeClient(props: HomeClientProps) {
   const { isCompact, isVeryCompact } = getLayoutClasses();
 
   // Calculate responsive padding for home page
-  const homePadding = isVeryCompact ? "px-2" : isCompact ? "px-4" : "px-6";
+  const homePadding = isVeryCompact ? "px-2" : isCompact ? "px-4" : "";
 
   // Fetch products on component mount
   useEffect(() => {

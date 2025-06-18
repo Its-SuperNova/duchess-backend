@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import DesktopHeader from "@/components/block/DesktopHeader";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, ArrowLeft, HelpCircle } from "lucide-react";
 
@@ -471,9 +470,7 @@ export default function FAQPage() {
   );
 
   return (
-    <>
-      <DesktopHeader />
-      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
         <div className="max-w-7xl mx-auto pb-20">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
@@ -615,6 +612,6 @@ export default function FAQPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

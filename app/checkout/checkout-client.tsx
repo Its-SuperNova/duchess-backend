@@ -26,7 +26,6 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useCart } from "@/context/cart-context";
-import DesktopHeader from "@/components/block/DesktopHeader";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
@@ -81,9 +80,6 @@ export default function CheckoutClient() {
       className="min-h-screen pb-40 md:pb-24"
       style={{ backgroundColor: "#F5F6FB" }}
     >
-      {/* Desktop Header */}
-      <DesktopHeader />
-
       <div className="max-w-screen-md mx-auto pt-2">
         {/* Cart Items */}
         <div className="bg-white mx-4 my-4 p-4 rounded-2xl border border-gray-100 shadow-sm">
