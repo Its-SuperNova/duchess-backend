@@ -212,7 +212,6 @@ export default function ProfileEditPage() {
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -389,6 +388,5 @@ export default function ProfileEditPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

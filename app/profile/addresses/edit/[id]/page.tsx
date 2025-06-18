@@ -649,6 +649,5 @@ export default function EditAddressPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
