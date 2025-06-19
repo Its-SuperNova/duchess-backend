@@ -483,14 +483,14 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[70] transition-opacity"
           onClick={handleClose}
         />
       )}
 
       {/* Mobile Cart Sidebar - Overlay */}
       <div
-        className={`lg:hidden fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-[#202028] z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-[#202028] z-[70] transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         } shadow-xl`}
       >
@@ -529,7 +529,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
           </div>
 
           {/* Cart/Checkout Content */}
-          <div className="flex flex-col flex-1 min-h-0 mb-24">
+          <div className="flex flex-col flex-1 min-h-0 mb-2">
             {!isCheckoutMode ? (
               /* Cart Items */
               <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">

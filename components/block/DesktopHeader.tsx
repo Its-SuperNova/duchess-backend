@@ -15,6 +15,7 @@ import { getDefaultAddress } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
 import { HiMapPin } from "react-icons/hi2";
+import { MdShoppingCart } from "react-icons/md";
 const DesktopHeader = () => {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -175,8 +176,23 @@ const DesktopHeader = () => {
         )}
       </div>
 
-      {/* Mobile Right side - Profile only */}
-      <div className="flex lg:hidden items-center">
+      {/* Mobile Right side - Cart and Profile */}
+      <div className="flex lg:hidden items-center gap-3">
+        {/* Cart Icon for Mobile */}
+        <button
+          onClick={openCart}
+          className="relative hover:opacity-80 transition-opacity"
+        >
+          <div className="flex items-center justify-center p-2.5 bg-[#E8EAED] lg:bg-gray-100 dark:bg-gray-800 rounded-full">
+            <MdShoppingCart className="h-5 w-5 text-black dark:text-white" />
+          </div>
+          {cart.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
+              {cart.length}
+            </span>
+          )}
+        </button>
+
         {!isAuthenticated ? (
           // Show Sign Up button if not authenticated
           <Link href="/register">

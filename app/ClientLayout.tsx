@@ -17,6 +17,7 @@ import { LayoutProvider, useLayout } from "@/context/layout-context";
 import AuthNotification from "@/components/auth/auth-notification";
 import SplashScreen from "@/components/splashscreen";
 import OnboardingPage from "@/app/onboarding/page";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Inner component that can use cart and layout context
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const isMobile = useIsMobile();
 
   // Route type checks
   const isAdminRoute = pathname?.startsWith("/admin") ?? false;
@@ -41,13 +43,27 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isProductPage = pathname.startsWith("/products/");
   const isCheckoutRoute = pathname.startsWith("/checkout");
 
-  // Layout component visibility - cleaner boolean logic
-  const showHeader =
-    !isAdminRoute &&
-    !isFAQPage &&
-    !isAuthRoute &&
-    !isOnboardingPage &&
-    !isCheckoutRoute;
+  // Layout component visibility - updated logic for mobile/desktop header behavior
+  const showHeader = (() => {
+    // Don't show header on these routes regardless of device
+    if (
+      isAdminRoute ||
+      isFAQPage ||
+      isAuthRoute ||
+      isOnboardingPage ||
+      isCheckoutRoute
+    ) {
+      return false;
+    }
+
+    // For mobile devices: only show header on home page
+    if (isMobile) {
+      return isHomePage;
+    }
+
+    // For desktop: show header on all allowed pages
+    return true;
+  })();
   const showSidebar =
     !isAdminRoute && !isAuthRoute && !isOnboardingPage && !isCheckoutRoute;
   const showBottomNav =

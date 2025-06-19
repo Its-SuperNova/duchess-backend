@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { RiHomeSmile2Fill } from "react-icons/ri";
-import { FaCartShopping } from "react-icons/fa6";
+import { HiSquares2X2 } from "react-icons/hi2";
 import { PiHeartFill } from "react-icons/pi";
 import { HiUser } from "react-icons/hi2";
 import { useSession } from "next-auth/react";
@@ -40,11 +40,11 @@ export default function BottomNav() {
       isCartButton: false,
     },
     {
-      name: "Cart",
-      href: "/cart", // Not used for cart button
-      icon: FaCartShopping,
+      name: "Categories",
+      href: "/categories",
+      icon: HiSquares2X2,
       isReactIcon: true,
-      isCartButton: true,
+      isCartButton: false,
     },
     {
       name: "Favorites",
@@ -81,69 +81,40 @@ export default function BottomNav() {
 
               return (
                 <li key={item.name} className="relative">
-                  {item.isCartButton ? (
-                    <Link
-                      href="/cart"
-                      className={`flex flex-row items-center justify-center h-12 px-5 rounded-full gap-1 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${
-                        isActive
-                          ? "bg-[#7A0000] text-white shadow-md"
-                          : "text-black hover:text-gray-800"
-                      }`}
-                      onClick={() => setActiveTab(item.href)}
-                    >
+                  <Link
+                    href={item.href}
+                    className={`flex flex-row items-center justify-center h-12 px-4 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${
+                      isActive
+                        ? "bg-[#7A0000] text-white shadow-md"
+                        : "text-black hover:text-gray-800"
+                    }`}
+                    onClick={() => setActiveTab(item.href)}
+                  >
+                    {item.isReactIcon ? (
                       <IconComponent
                         size={20}
                         className={`transition-colors duration-200 ${
                           isActive ? "text-white" : "text-black"
                         }`}
                       />
-                      {isActive && (
-                        <span
-                          className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"
-                          style={{
-                            animation: "fadeIn 200ms ease-in-out",
-                          }}
-                        >
-                          {item.name}
-                        </span>
-                      )}
-                    </Link>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={`flex flex-row items-center justify-center h-12 px-4 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${
-                        isActive
-                          ? "bg-[#7A0000] text-white shadow-md"
-                          : "text-black hover:text-gray-800"
-                      }`}
-                      onClick={() => setActiveTab(item.href)}
-                    >
-                      {item.isReactIcon ? (
-                        <IconComponent
-                          size={20}
-                          className={`transition-colors duration-200 ${
-                            isActive ? "text-white" : "text-black"
-                          }`}
-                        />
-                      ) : (
-                        <IconComponent
-                          className={`w-[18px] h-[18px] transition-colors duration-200 ${
-                            isActive ? "text-white" : "text-black"
-                          }`}
-                        />
-                      )}
-                      {isActive && (
-                        <span
-                          className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"
-                          style={{
-                            animation: "fadeIn 200ms ease-in-out",
-                          }}
-                        >
-                          {item.name}
-                        </span>
-                      )}
-                    </Link>
-                  )}
+                    ) : (
+                      <IconComponent
+                        className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                          isActive ? "text-white" : "text-black"
+                        }`}
+                      />
+                    )}
+                    {isActive && (
+                      <span
+                        className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"
+                        style={{
+                          animation: "fadeIn 200ms ease-in-out",
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                    )}
+                  </Link>
                 </li>
               );
             })}
