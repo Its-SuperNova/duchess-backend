@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react"; // Import useEffect
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,10 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Fetch products and categories on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -157,13 +161,13 @@ export default function ProductsPage() {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "in-stock":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:bg-green-100 hover:text-green-800 dark:hover:bg-green-900 dark:hover:text-green-300";
       case "low-stock":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 hover:bg-yellow-100 hover:text-yellow-800 dark:hover:bg-yellow-900 dark:hover:text-yellow-300";
       case "out-of-stock":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-900 dark:hover:text-red-300";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-800 dark:hover:text-gray-300";
     }
   };
 
@@ -171,60 +175,129 @@ export default function ProductsPage() {
   const getStockStatus = (product: any) => {
     if (!product.is_active) return "out-of-stock";
 
-    // Check weight options
-    if (product.weight_options && product.weight_options.length > 0) {
-      const activeWeightOptions = product.weight_options.filter(
-        (opt: any) => opt.isActive
-      );
-      if (activeWeightOptions.length === 0) return "out-of-stock";
+    // Use selling_type to determine which stock to check
+    if (product.selling_type === "weight" || product.selling_type === "both") {
+      // Check weight stock for weight-based products
+      if (product.weight_options && product.weight_options.length > 0) {
+        const activeWeightOptions = product.weight_options.filter(
+          (opt: any) => opt.isActive
+        );
+        if (activeWeightOptions.length > 0) {
+          const totalStock = activeWeightOptions.reduce(
+            (sum: number, opt: any) => {
+              const stock = parseInt(opt.stock) || 0;
+              return sum + stock;
+            },
+            0
+          );
 
-      const totalStock = activeWeightOptions.reduce((sum: number, opt: any) => {
-        const stock = parseInt(opt.stock) || 0;
-        return sum + stock;
-      }, 0);
-
-      if (totalStock === 0) return "out-of-stock";
-      if (totalStock <= 5) return "low-stock";
-      return "in-stock";
+          if (totalStock === 0) return "out-of-stock";
+          if (totalStock <= 5) return "low-stock";
+          return "in-stock";
+        }
+        return "out-of-stock"; // Has weight options but none are active
+      }
     }
 
-    // Check piece options
+    // Check piece stock for piece-based products or fallback
     if (product.piece_options && product.piece_options.length > 0) {
       const activePieceOptions = product.piece_options.filter(
         (opt: any) => opt.isActive
       );
-      if (activePieceOptions.length === 0) return "out-of-stock";
+      if (activePieceOptions.length > 0) {
+        const totalStock = activePieceOptions.reduce(
+          (sum: number, opt: any) => {
+            const stock = parseInt(opt.stock) || 0;
+            return sum + stock;
+          },
+          0
+        );
 
-      const totalStock = activePieceOptions.reduce((sum: number, opt: any) => {
-        const stock = parseInt(opt.stock) || 0;
-        return sum + stock;
-      }, 0);
-
-      if (totalStock === 0) return "out-of-stock";
-      if (totalStock <= 5) return "low-stock";
-      return "in-stock";
+        if (totalStock === 0) return "out-of-stock";
+        if (totalStock <= 5) return "low-stock";
+        return "in-stock";
+      }
     }
 
     return "out-of-stock";
   };
 
+  // Get order type from product
+  const getOrderType = (product: any) => {
+    // Use the selling_type field from database as the authoritative source
+    switch (product.selling_type) {
+      case "weight":
+        return "By weight";
+      case "piece":
+        return "By piece";
+      case "both":
+        return "Both";
+      default:
+        return "N/A";
+    }
+  };
+
   // Get price from product
   const getProductPrice = (product: any) => {
-    if (product.weight_options && product.weight_options.length > 0) {
-      const activeOption = product.weight_options.find(
-        (opt: any) => opt.isActive
-      );
-      return activeOption ? parseInt(activeOption.price) : 0;
+    // Use selling_type to determine what price to show
+    if (product.selling_type === "weight" || product.selling_type === "both") {
+      // Show weight price with weight
+      if (product.weight_options && product.weight_options.length > 0) {
+        const activeWeightOptions = product.weight_options.filter(
+          (opt: any) => opt.isActive
+        );
+        if (activeWeightOptions.length > 0) {
+          // Find the option with minimum price
+          const minPriceOption = activeWeightOptions.reduce(
+            (min: any, current: any) => {
+              const currentPrice = parseFloat(current.price) || 0;
+              const minPrice = parseFloat(min.price) || 0;
+              return currentPrice < minPrice ? current : min;
+            }
+          );
+
+          const price = parseFloat(minPriceOption.price) || 0;
+          const weight = minPriceOption.weight || "";
+
+          return {
+            price,
+            display: `₹${price}/${weight}`,
+            type: "weight",
+          };
+        }
+      }
     }
 
+    // Show piece price only (for selling_type === 'piece' or fallback)
     if (product.piece_options && product.piece_options.length > 0) {
-      const activeOption = product.piece_options.find(
+      const activePieceOptions = product.piece_options.filter(
         (opt: any) => opt.isActive
       );
-      return activeOption ? parseInt(activeOption.price) : 0;
+      if (activePieceOptions.length > 0) {
+        // Find the option with minimum price
+        const minPriceOption = activePieceOptions.reduce(
+          (min: any, current: any) => {
+            const currentPrice = parseFloat(current.price) || 0;
+            const minPrice = parseFloat(min.price) || 0;
+            return currentPrice < minPrice ? current : min;
+          }
+        );
+
+        const price = parseFloat(minPriceOption.price) || 0;
+
+        return {
+          price,
+          display: `₹${price}/piece`,
+          type: "piece",
+        };
+      }
     }
 
-    return 0;
+    return {
+      price: 0,
+      display: "₹0",
+      type: "none",
+    };
   };
 
   // Filter products based on search term, category, and stock status
@@ -251,6 +324,31 @@ export default function ProductsPage() {
 
     return matchesSearch && matchesCategory && matchesStock;
   });
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, stockFilter]);
+
+  // Pagination calculations
+  const totalItems = filteredProducts.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const goToPrevious = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const goToNext = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
 
   if (loading) {
     return (
@@ -372,7 +470,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Products Table or Empty State */}
-      {showEmptyState || filteredProducts.length === 0 ? (
+      {showEmptyState || totalItems === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-blue-100 p-4 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
@@ -405,22 +503,25 @@ export default function ProductsPage() {
                     Category
                   </TableHead>
                   <TableHead>Price</TableHead>
-                  <TableHead className="hidden sm:table-cell">Stock</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Order Type
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Visibility</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => {
+                {currentProducts.map((product) => {
                   const stockStatus = getStockStatus(product);
-                  const price = getProductPrice(product);
+                  const priceData = getProductPrice(product);
+                  const orderType = getOrderType(product);
 
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
+                          <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 shadow-sm">
                             <Image
                               src={product.banner_image || "/placeholder.svg"}
                               alt={product.name}
@@ -428,9 +529,11 @@ export default function ProductsPage() {
                               className="object-cover"
                             />
                           </div>
-                          <div>
-                            <div className="font-medium">{product.name}</div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">
+                          <div className="min-w-0 max-w-[200px]">
+                            <div className="font-medium truncate">
+                              {product.name}
+                            </div>
+                            <div className="text-sm text-muted-foreground line-clamp-1 truncate">
                               {product.short_description}
                             </div>
                           </div>
@@ -442,7 +545,7 @@ export default function ProductsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">₹{price}</div>
+                        <div className="font-medium">{priceData.display}</div>
                         {product.has_offer && product.offer_percentage && (
                           <div className="text-sm text-green-600">
                             {product.offer_percentage}% off
@@ -450,13 +553,9 @@ export default function ProductsPage() {
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
-                        <div className="text-sm text-muted-foreground">
-                          {stockStatus === "in-stock"
-                            ? "Available"
-                            : stockStatus === "low-stock"
-                            ? "Low Stock"
-                            : "Out of Stock"}
-                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {orderType}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusBadgeColor(stockStatus)}>
@@ -526,12 +625,16 @@ export default function ProductsPage() {
       ) : (
         // Card view implementation would go here
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => {
+          {currentProducts.map((product) => {
             const stockStatus = getStockStatus(product);
-            const price = getProductPrice(product);
+            const priceData = getProductPrice(product);
+            const orderType = getOrderType(product);
 
             return (
-              <Card key={product.id} className="overflow-hidden">
+              <Card
+                key={product.id}
+                className="overflow-hidden flex flex-col h-full"
+              >
                 <div className="relative h-48 bg-gray-100">
                   <Image
                     src={product.banner_image || "/placeholder.svg"}
@@ -540,28 +643,51 @@ export default function ProductsPage() {
                     className="object-cover"
                   />
                   {product.has_offer && product.offer_percentage && (
-                    <Badge className="absolute top-2 left-2 bg-red-500">
+                    <Badge className="absolute top-2 left-2 bg-red-500 text-white">
                       {product.offer_percentage}% OFF
                     </Badge>
                   )}
                 </div>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold line-clamp-1">
+
+                <CardContent className="p-4 flex flex-col flex-grow">
+                  {/* Header Section */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-sm leading-tight flex-1 min-w-0">
                       {product.name}
                     </h3>
-                    <Badge className={getStatusBadgeColor(stockStatus)}>
+                    <Badge
+                      className={`${getStatusBadgeColor(
+                        stockStatus
+                      )} flex-shrink-0 text-xs`}
+                    >
                       {stockStatus.replace("-", " ")}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+
+                  {/* Description */}
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3 flex-grow">
                     {product.short_description}
                   </p>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-medium">₹{price}</span>
-                    <Badge variant="outline">{product.categories?.name}</Badge>
+
+                  {/* Price and Badges Section */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-lg">
+                        {priceData.display}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="outline" className="text-xs">
+                        {product.categories?.name}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {orderType}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
+
+                  {/* Footer Section */}
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
                     <div className="flex items-center space-x-2">
                       <Switch
                         checked={product.is_active}
@@ -570,7 +696,7 @@ export default function ProductsPage() {
                         }
                         className="data-[state=checked]:bg-blue-600"
                       />
-                      <Label className="text-sm">
+                      <Label className="text-xs text-muted-foreground">
                         {product.is_active ? "Active" : "Inactive"}
                       </Label>
                     </div>
@@ -579,9 +705,9 @@ export default function ProductsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEditProduct(product)}
-                        className="h-8 w-8"
+                        className="h-7 w-7"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -590,9 +716,9 @@ export default function ProductsPage() {
                           setProductToDelete(product.id);
                           setIsDeleteDialogOpen(true);
                         }}
-                        className="h-8 w-8 text-red-500 hover:text-red-700"
+                        className="h-7 w-7 text-red-500 hover:text-red-700"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -604,33 +730,102 @@ export default function ProductsPage() {
       )}
 
       {/* Pagination */}
-      {!showEmptyState && products.length > 0 && (
-        <div className="flex items-center justify-end">
-          <div className="text-sm text-muted-foreground mr-4">
-            Showing <strong>1 - {Math.min(10, filteredProducts.length)}</strong>{" "}
-            of <strong>{filteredProducts.length}</strong> products
+      {!showEmptyState && totalItems > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing{" "}
+            <strong>
+              {startIndex + 1} - {Math.min(endIndex, totalItems)}
+            </strong>{" "}
+            of <strong>{totalItems}</strong> products
           </div>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious href="#" />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink href="#" isActive>
-                  1
-                </PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink href="#">2</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext href="#" />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={goToPrevious}
+                    className={
+                      currentPage === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+
+                {/* First page */}
+                {currentPage > 2 && (
+                  <>
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => goToPage(1)}
+                        className="cursor-pointer"
+                      >
+                        1
+                      </PaginationLink>
+                    </PaginationItem>
+                    {currentPage > 3 && <PaginationEllipsis />}
+                  </>
+                )}
+
+                {/* Previous page */}
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => goToPage(currentPage - 1)}
+                      className="cursor-pointer"
+                    >
+                      {currentPage - 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                {/* Current page */}
+                <PaginationItem>
+                  <PaginationLink isActive>{currentPage}</PaginationLink>
+                </PaginationItem>
+
+                {/* Next page */}
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => goToPage(currentPage + 1)}
+                      className="cursor-pointer"
+                    >
+                      {currentPage + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                {/* Last page */}
+                {currentPage < totalPages - 1 && (
+                  <>
+                    {currentPage < totalPages - 2 && <PaginationEllipsis />}
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() => goToPage(totalPages)}
+                        className="cursor-pointer"
+                      >
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  </>
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={goToNext}
+                    className={
+                      currentPage === totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       )}
 
