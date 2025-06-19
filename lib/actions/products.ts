@@ -251,7 +251,7 @@ export async function getActiveProducts() {
           )
           .eq("is_active", true)
           .order("created_at", { ascending: false })
-          .limit(12); // Limit to 12 products for homepage
+          .limit(20); // Limit to 20 products for homepage
 
         if (error) {
           console.error("Error fetching active products:", error);

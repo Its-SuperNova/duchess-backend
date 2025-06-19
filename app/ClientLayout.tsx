@@ -52,8 +52,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     !isAdminRoute && !isAuthRoute && !isOnboardingPage && !isCheckoutRoute;
   const showBottomNav =
     !isAdminRoute &&
-    !isHomePage &&
-    !isProfileRoute &&
     !isFAQPage &&
     !isAuthRoute &&
     !isOnboardingPage &&

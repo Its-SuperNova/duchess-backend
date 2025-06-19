@@ -2,15 +2,23 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Heart, ShoppingBag, User, UserPlus } from "lucide-react";
-import { RiHome6Fill } from "react-icons/ri";
+import { UserPlus } from "lucide-react";
+import { RiHomeSmile2Fill } from "react-icons/ri";
+import { FaCartShopping } from "react-icons/fa6";
+import { PiHeartFill } from "react-icons/pi";
+import { HiUser } from "react-icons/hi2";
 import { useSession } from "next-auth/react";
-import { useCart } from "@/context/cart-context";
+import { useState, useEffect } from "react";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const { openCart } = useCart();
+  const [activeTab, setActiveTab] = useState(pathname);
+
+  // Update active tab when pathname changes
+  useEffect(() => {
+    setActiveTab(pathname);
+  }, [pathname]);
 
   // Hide bottom nav on login, register, and admin pages
   if (
@@ -27,108 +35,121 @@ export default function BottomNav() {
     {
       name: "Home",
       href: "/",
-      icon: RiHome6Fill,
+      icon: RiHomeSmile2Fill,
       isReactIcon: true,
-      isCartButton: false,
-    },
-    {
-      name: "Search",
-      href: "/search",
-      icon: Search,
-      isReactIcon: false,
-      isCartButton: false,
-    },
-    {
-      name: "Favorites",
-      href: "/favorites",
-      icon: Heart,
-      isReactIcon: false,
       isCartButton: false,
     },
     {
       name: "Cart",
       href: "/cart", // Not used for cart button
-      icon: ShoppingBag,
-      isReactIcon: false,
+      icon: FaCartShopping,
+      isReactIcon: true,
       isCartButton: true,
+    },
+    {
+      name: "Favorites",
+      href: "/favorites",
+      icon: PiHeartFill,
+      isReactIcon: true,
+      isCartButton: false,
     },
     {
       name: isAuthenticated ? "Profile" : "Sign Up",
       href: isAuthenticated ? "/profile" : "/register",
-      icon: isAuthenticated ? User : UserPlus,
-      isReactIcon: false,
+      icon: isAuthenticated ? HiUser : UserPlus,
+      isReactIcon: isAuthenticated ? true : false,
       isCartButton: false,
     },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-20 md:hidden bottom-nav">
-      {/* Blurred background */}
-      <div className="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800"></div>
+    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[60] md:hidden bottom-nav">
+      {/* Animated floating container */}
+      <div
+        className="bg-white backdrop-blur-md rounded-full shadow-md p-2 transition-all duration-300 ease-in-out border border-gray-100"
+        style={{
+          boxShadow:
+            "0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)",
+        }}
+      >
+        {/* Navigation items */}
+        <nav className="relative">
+          <ul className="flex items-center justify-center gap-2">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              const IconComponent = item.icon;
 
-      {/* Navigation items */}
-      <nav className="relative h-full max-w-md mx-auto px-4">
-        <ul className="flex h-full items-center justify-between">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href && !item.isCartButton;
-            const IconComponent = item.icon;
-
-            return (
-              <li key={item.name} className="relative flex-1">
-                {item.isCartButton ? (
-                  <button
-                    onClick={openCart}
-                    className="flex flex-col items-center justify-center h-full w-full"
-                  >
-                    {item.isReactIcon ? (
+              return (
+                <li key={item.name} className="relative">
+                  {item.isCartButton ? (
+                    <Link
+                      href="/cart"
+                      className={`flex flex-row items-center justify-center h-12 px-5 rounded-full gap-1 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${
+                        isActive
+                          ? "bg-[#7A0000] text-white shadow-md"
+                          : "text-black hover:text-gray-800"
+                      }`}
+                      onClick={() => setActiveTab(item.href)}
+                    >
                       <IconComponent
-                        size={28}
-                        className="text-gray-500 dark:text-gray-400"
-                      />
-                    ) : (
-                      <IconComponent className="w-7 h-7 text-gray-500 dark:text-gray-400" />
-                    )}
-                    <span className="text-sm mt-1 font-medium">
-                      {item.name}
-                    </span>
-                  </button>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className="flex flex-col items-center justify-center h-full w-full"
-                  >
-                    {item.isReactIcon ? (
-                      <IconComponent
-                        size={28}
-                        className={
-                          isActive
-                            ? "text-primary"
-                            : "text-gray-500 dark:text-gray-400"
-                        }
-                      />
-                    ) : (
-                      <IconComponent
-                        className={`w-7 h-7 ${
-                          isActive
-                            ? "text-primary"
-                            : "text-gray-500 dark:text-gray-400"
+                        size={20}
+                        className={`transition-colors duration-200 ${
+                          isActive ? "text-white" : "text-black"
                         }`}
                       />
-                    )}
-                    <span
-                      className={`text-sm mt-1 font-medium ${
-                        isActive ? "text-primary" : ""
+                      {isActive && (
+                        <span
+                          className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"
+                          style={{
+                            animation: "fadeIn 200ms ease-in-out",
+                          }}
+                        >
+                          {item.name}
+                        </span>
+                      )}
+                    </Link>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className={`flex flex-row items-center justify-center h-12 px-4 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${
+                        isActive
+                          ? "bg-[#7A0000] text-white shadow-md"
+                          : "text-black hover:text-gray-800"
                       }`}
+                      onClick={() => setActiveTab(item.href)}
                     >
-                      {item.name}
-                    </span>
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+                      {item.isReactIcon ? (
+                        <IconComponent
+                          size={20}
+                          className={`transition-colors duration-200 ${
+                            isActive ? "text-white" : "text-black"
+                          }`}
+                        />
+                      ) : (
+                        <IconComponent
+                          className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                            isActive ? "text-white" : "text-black"
+                          }`}
+                        />
+                      )}
+                      {isActive && (
+                        <span
+                          className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"
+                          style={{
+                            animation: "fadeIn 200ms ease-in-out",
+                          }}
+                        >
+                          {item.name}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
     </div>
   );
 }

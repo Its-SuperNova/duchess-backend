@@ -371,3 +371,19 @@
 .sticky-cart {
   z-index: 40;
 }
+
+/* Bottom navigation animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 200ms ease-in-out;
+}

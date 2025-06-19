@@ -181,7 +181,7 @@ export default function HomeClient(props: HomeClientProps) {
 
   return (
     <div
-      className={`w-full overflow-x-hidden bg-white dark:bg-gray-900 ${homePadding}`}
+      className={`w-full overflow-x-hidden bg-[#F4F4F7] dark:bg-gray-900 ${homePadding}`}
     >
       {/* Hero Section */}
       <div className="w-full">

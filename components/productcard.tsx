@@ -92,7 +92,7 @@ export default function ProductCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-white dark:bg-gray-800 rounded-[24px] overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
       {/* Product Image with Favorite Button and Offer Badge */}
       <div className="relative">
         <Link href={`/products/${id}`}>
@@ -146,12 +146,12 @@ export default function ProductCard({
 
         <div className="flex items-center mb-2">
           <div
-            className={`w-3 h-3 border ${
+            className={`w-10 h-4 border-[1px] ${
               isVeg ? "border-green-600" : "border-red-600"
             } flex items-center justify-center rounded-sm mr-1.5`}
           >
             <div
-              className={`w-1.5 h-1.5 ${
+              className={`w-2  ${
                 isVeg ? "bg-green-600" : "bg-red-600"
               } rounded-full`}
             ></div>

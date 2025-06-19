@@ -147,7 +147,7 @@ const DesktopHeader = () => {
 
   return (
     <div
-      className={`flex lg:fixed lg:top-0 z-50 bg-white dark:bg-[#202028] lg:border-b lg:border-gray-200 lg:dark:border-gray-700 h-16 items-center justify-between px-4 lg:px-6 ${headerPositionClasses}`}
+      className={`flex lg:fixed lg:top-0 z-50 bg-[#F4F4F7] lg:bg-white dark:bg-[#202028] lg:border-b lg:border-gray-200 lg:dark:border-gray-700 h-16 items-center justify-between px-4 lg:px-6 ${headerPositionClasses}`}
     >
       {/* Left side - User Address */}
       <div
@@ -160,7 +160,7 @@ const DesktopHeader = () => {
             href="/profile/addresses"
             className="flex items-center gap-2 hover:opacity-80 transition-opacity w-full"
           >
-            <div className="flex items-center justify-center p-2.5 bg-gray-100 dark:bg-gray-800 rounded-full">
+            <div className="flex items-center justify-center p-2.5 bg-[#E8EAED] lg:bg-gray-100 dark:bg-gray-800 rounded-full">
               <HiMapPin className="h-5 w-5 text-[#7A0000]" />
             </div>
             <div className="w-full">

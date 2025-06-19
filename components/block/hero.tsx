@@ -12,9 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { isUserAdmin } from "@/lib/auth-utils";
 import { getCategories } from "@/lib/actions/categories";
 import { toast } from "sonner";
-import { useCart } from "@/context/cart-context";
 import { useLayout } from "@/context/layout-context";
-
 interface Category {
   id: string;
   name: string;
@@ -333,21 +331,6 @@ const Hero = () => {
 
       {/* Mobile/Tablet Content - Hidden on lg screens and up */}
       <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[50px] overflow-x-hidden">
-        {/* Search Bar & Filter */}
-        <div className="flex justify-between items-center gap-2 w-full">
-          <div className="relative flex-1 min-w-0">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#523435] text-xl" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="w-full pl-10 pr-3 py-2 rounded-[20px] focus:outline-none focus:ring-1 focus:ring-black border border-gray-200"
-            />
-          </div>
-          <div className="bg-white h-[41px] w-[48px] rounded-lg flex justify-center items-center border border-gray-200 flex-shrink-0">
-            <IoFilter className="text-[#523435]" />
-          </div>
-        </div>
-
         {/* Pink Container for Mobile */}
         <div className="w-full h-[200px] mb-4 overflow-hidden rounded-2xl">
           <div className="bg-gradient-to-br from-pink-400 to-pink-600 w-full h-full rounded-2xl flex items-center justify-center text-white">
@@ -357,6 +340,24 @@ const Hero = () => {
                 Discover our premium collection
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Search Bar & Filter */}
+        <div className="flex items-center w-full">
+          <div className="relative flex-1 min-w-0">
+            <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full pl-12 pr-4 py-3 bg-white rounded-l-full focus:outline-none focus:ring-2 focus:ring-gray-200 border-0 shadow-sm text-gray-700 placeholder-gray-400"
+            />
+          </div>
+          <div className="bg-white h-12 flex items-center w-[2px]">
+            <div className="w-[2px] h-4 rounded-full bg-gray-200"></div>
+          </div>
+          <div className="bg-white h-12 w-12 rounded-r-full flex justify-center items-center shadow-sm flex-shrink-0">
+            <IoFilter className="w-5 h-5 text-gray-600" />
           </div>
         </div>
 
