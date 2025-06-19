@@ -168,10 +168,10 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             <main
               className={`${
                 useSidebarLayout
-                  ? `flex-1 transition-all duration-300 pt-20 ${
-                      isUserSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
-                    }`
-                  : "flex-1 pt-20"
+                  ? `flex-1 transition-all duration-300 ${
+                      !isAdminRoute ? "lg:pt-20" : ""
+                    } ${isUserSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`
+                  : `flex-1 ${!isAdminRoute ? "lg:pt-20" : ""}`
               }`}
               style={{
                 marginRight:

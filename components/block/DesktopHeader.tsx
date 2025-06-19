@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { FiSearch } from "react-icons/fi";
-import { Bell, ShoppingCart, ChevronDown, Shield, MapPin } from "lucide-react";
+import { Bell, ShoppingCart, ChevronDown, Shield } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import LogoutButton from "@/components/auth/logout-button";
@@ -14,7 +14,7 @@ import { useLayout } from "@/context/layout-context";
 import { getDefaultAddress } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
-
+import { HiMapPin } from "react-icons/hi2";
 const DesktopHeader = () => {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -53,32 +53,50 @@ const DesktopHeader = () => {
   // Calculate header positioning based on sidebar states
   const leftPosition = isUserSidebarCollapsed ? "lg:left-16" : "lg:left-64";
   const rightPosition = isCartOpen ? "lg:right-96" : "lg:right-0";
-  const headerPositionClasses = `left-0 right-0 ${leftPosition} ${rightPosition} transition-all duration-300`;
+  const headerPositionClasses = `${leftPosition} ${rightPosition} lg:transition-all lg:duration-300`;
 
   // Responsive classes based on available space
   const getResponsiveClasses = () => {
     if (isVeryCompact) {
       return {
-        addressMaxWidth: "max-w-[8rem]", // Very narrow address
+        addressMaxWidth: "max-w-[3rem]", // Very narrow address
         hideNotifications: true, // Hide notification icon
         itemGap: "gap-2", // Smaller gap between items
+        hideSearchBar: "hidden", // Hide search bar below 1100px
       };
     } else if (isCompact) {
       return {
         addressMaxWidth: "max-w-[12rem]", // Medium address width
         hideNotifications: false,
         itemGap: "gap-3", // Medium gap between items
+        hideSearchBar: "hidden", // Hide search bar below 1100px
       };
     } else {
       return {
         addressMaxWidth: "max-w-xs", // Full address width
         hideNotifications: false,
         itemGap: "gap-4", // Full gap between items
+        hideSearchBar: "", // Show search bar
       };
     }
   };
 
   const responsiveClasses = getResponsiveClasses();
+
+  // Additional responsive logic for search bar
+  const getSearchBarClasses = () => {
+    let classes = responsiveClasses.hideSearchBar;
+
+    // Hide below 1100px unconditionally
+    classes += " max-[1100px]:hidden";
+
+    // Hide below 1300px when user sidebar is expanded
+    if (!isUserSidebarCollapsed) {
+      classes += " max-[1300px]:hidden";
+    }
+
+    return classes;
+  };
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -129,23 +147,27 @@ const DesktopHeader = () => {
 
   return (
     <div
-      className={`flex fixed top-0 z-50 bg-white dark:bg-[#202028] border-b border-gray-200 dark:border-gray-700 h-16 items-center justify-between px-4 lg:px-6 ${headerPositionClasses}`}
+      className={`flex lg:fixed lg:top-0 z-50 bg-white dark:bg-[#202028] lg:border-b lg:border-gray-200 lg:dark:border-gray-700 h-16 items-center justify-between px-4 lg:px-6 ${headerPositionClasses}`}
     >
       {/* Left side - User Address */}
-      <div className="flex items-center">
+      <div
+        className={`flex items-center max-w-[40%] lg:max-w-none ${
+          isCartOpen ? "hidden" : ""
+        }`}
+      >
         {isAuthenticated && defaultAddress && (
           <Link
             href="/profile/addresses"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity w-full"
           >
-            <MapPin className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-            <div
-              className={`${responsiveClasses.addressMaxWidth} lg:${responsiveClasses.addressMaxWidth}`}
-            >
+            <div className="flex items-center justify-center p-2.5 bg-gray-100 dark:bg-gray-800 rounded-full">
+              <HiMapPin className="h-5 w-5 text-[#7A0000]" />
+            </div>
+            <div className="w-full">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {defaultAddress.address_name}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate lg:block hidden">
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {defaultAddress.full_address}
               </p>
             </div>
@@ -207,7 +229,7 @@ const DesktopHeader = () => {
         className={`hidden lg:flex items-center ${responsiveClasses.itemGap}`}
       >
         {/* Small Search Bar */}
-        <div className="relative w-80">
+        <div className={`relative w-80 ${getSearchBarClasses()}`}>
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 text-lg" />
           <input
             type="text"
