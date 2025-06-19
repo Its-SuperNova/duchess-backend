@@ -2,8 +2,6 @@
 
 import {
   Home,
-  Search,
-  ShoppingCart,
   Heart,
   User,
   Package,
@@ -17,7 +15,6 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useTheme } from "@/context/theme-context";
-import { useCart } from "@/context/cart-context";
 
 interface UserSidebarProps {
   isCollapsed: boolean;
@@ -30,7 +27,6 @@ export default function UserSidebar({
 }: UserSidebarProps) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const { openCart } = useCart();
 
   // Try to get theme context, with fallback
   let theme = "light";
@@ -101,23 +97,6 @@ export default function UserSidebar({
           </Link>
 
           <Link
-            href="/search"
-            className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
-              pathname === "/search"
-                ? "bg-[#560000] text-white font-semibold"
-                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
-            } ${isCollapsed ? "justify-center" : ""}`}
-            title={isCollapsed ? "Search" : ""}
-          >
-            <Search
-              className={`h-5 w-5 flex-shrink-0 ${
-                pathname === "/search" ? "text-white" : ""
-              } ${isCollapsed ? "" : "mr-3"}`}
-            />
-            {!isCollapsed && "Search"}
-          </Link>
-
-          <Link
             href="/categories"
             className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl ${
               pathname === "/categories"
@@ -133,23 +112,6 @@ export default function UserSidebar({
             />
             {!isCollapsed && "Categories"}
           </Link>
-
-          <button
-            onClick={() => openCart()}
-            className={`group flex items-center px-2 py-3 text-sm font-medium rounded-xl w-full text-left ${
-              pathname === "/cart"
-                ? "bg-[#560000] text-white font-semibold"
-                : "text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary"
-            } ${isCollapsed ? "justify-center" : ""}`}
-            title={isCollapsed ? "Cart" : ""}
-          >
-            <ShoppingCart
-              className={`h-5 w-5 flex-shrink-0 ${
-                pathname === "/cart" ? "text-white" : ""
-              } ${isCollapsed ? "" : "mr-3"}`}
-            />
-            {!isCollapsed && "Cart"}
-          </button>
 
           <Link
             href="/favorites"

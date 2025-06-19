@@ -22,7 +22,7 @@ const DesktopHeader = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [defaultAddress, setDefaultAddress] = useState<Address | null>(null);
   const isAuthenticated = status === "authenticated" && session?.user;
-  const { openCart, cart, isCartOpen } = useCart();
+  const { openCart, cart, isCartOpen, isCheckoutMode } = useCart();
 
   // Try to get layout context, with fallback
   let getLayoutClasses = () => ({
@@ -96,6 +96,11 @@ const DesktopHeader = () => {
       classes += " max-[1300px]:hidden";
     }
 
+    // Hide when in checkout mode
+    if (isCheckoutMode) {
+      classes += " hidden";
+    }
+
     return classes;
   };
 
@@ -153,7 +158,7 @@ const DesktopHeader = () => {
       {/* Left side - User Address */}
       <div
         className={`flex items-center max-w-[40%] lg:max-w-none ${
-          isCartOpen ? "hidden" : ""
+          isCartOpen && !isCheckoutMode ? "hidden" : ""
         }`}
       >
         {isAuthenticated && defaultAddress && (

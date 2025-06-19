@@ -537,7 +537,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               </div>
             ) : (
               /* Checkout Content */
-              <div className="flex-1 overflow-y-auto py-4 scrollbar-hide bg-[#f5f5f5]">
+              <div className="flex-1 overflow-y-auto py-4 scrollbar-hide bg-[#f5f5f7]">
                 {renderCheckoutContent("mobile")}
               </div>
             )}
@@ -628,7 +628,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               </div>
             ) : (
               /* Checkout Content */
-              <div className="flex-1 overflow-y-auto py-4 scrollbar-hide bg-white">
+              <div className="flex-1 overflow-y-auto py-4 scrollbar-hide bg-[#f5f5f7]">
                 {renderCheckoutContent("desktop")}
               </div>
             )}
