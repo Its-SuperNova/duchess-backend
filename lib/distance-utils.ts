@@ -17,6 +17,8 @@ export interface DistanceResult {
   duration?: number; // estimated travel time in minutes
   formattedDistance: string;
   formattedDuration?: string;
+  isDeliverable: boolean; // whether address is within delivery radius
+  deliveryMessage?: string; // message for delivery status
 }
 
 // Default shop location - Duchess Pastries actual location
@@ -29,6 +31,9 @@ export const DEFAULT_SHOP_LOCATION: ShopLocation = {
     longitude: 77.001487,
   },
 };
+
+// Delivery radius in kilometers
+export const DELIVERY_RADIUS_KM = 30;
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -147,12 +152,30 @@ export function calculateDistanceFromShop(
   const distanceMiles = kmToMiles(distance);
   const duration = estimateTravelTime(distance);
 
+  // Check if within delivery radius (30km)
+  const isDeliverable = distance <= DELIVERY_RADIUS_KM;
+  let deliveryMessage: string | undefined;
+
+  if (!isDeliverable) {
+    if (distance <= DELIVERY_RADIUS_KM + 5) {
+      deliveryMessage =
+        "Address is slightly outside our current delivery range. We're working on expanding our service area!";
+    } else if (distance <= DELIVERY_RADIUS_KM + 20) {
+      deliveryMessage =
+        "Address is outside our delivery range. We're planning to expand our service area soon!";
+    } else {
+      deliveryMessage = `Address is outside our delivery range. We currently deliver within ${DELIVERY_RADIUS_KM}km of Coimbatore.`;
+    }
+  }
+
   return {
     distance,
     distanceMiles,
     duration,
     formattedDistance: formatDistance(distance),
     formattedDuration: formatDuration(duration),
+    isDeliverable,
+    deliveryMessage,
   };
 }
 
@@ -400,52 +423,131 @@ export function checkEnvironmentVariables() {
  * Hardcoded coordinates for common Indian cities as fallback
  */
 const CITY_COORDINATES: Record<string, Coordinates> = {
-  coimbatore: { latitude: 11.0168, longitude: 76.9558 },
-  chennai: { latitude: 13.0827, longitude: 80.2707 },
-  bangalore: { latitude: 12.9716, longitude: 77.5946 },
-  mumbai: { latitude: 19.076, longitude: 72.8777 },
-  delhi: { latitude: 28.7041, longitude: 77.1025 },
-  hyderabad: { latitude: 17.385, longitude: 78.4867 },
-  kolkata: { latitude: 22.5726, longitude: 88.3639 },
-  pune: { latitude: 18.5204, longitude: 73.8567 },
-  ahmedabad: { latitude: 23.0225, longitude: 72.5714 },
-  jaipur: { latitude: 26.9124, longitude: 75.7873 },
-  lucknow: { latitude: 26.8467, longitude: 80.9462 },
-  kanpur: { latitude: 26.4499, longitude: 80.3319 },
-  nagpur: { latitude: 21.1458, longitude: 79.0882 },
-  indore: { latitude: 22.7196, longitude: 75.8577 },
-  thane: { latitude: 19.2183, longitude: 72.9781 },
-  bhopal: { latitude: 23.2599, longitude: 77.4126 },
-  visakhapatnam: { latitude: 17.6868, longitude: 83.2185 },
-  patna: { latitude: 25.5941, longitude: 85.1376 },
-  vadodara: { latitude: 22.3072, longitude: 73.1812 },
-  ghaziabad: { latitude: 28.6692, longitude: 77.4538 },
-  ludhiana: { latitude: 30.901, longitude: 75.8573 },
-  agra: { latitude: 27.1767, longitude: 78.0081 },
-  nashik: { latitude: 19.9975, longitude: 73.7898 },
-  faridabad: { latitude: 28.4089, longitude: 77.3178 },
-  meerut: { latitude: 28.9845, longitude: 77.7064 },
-  rajkot: { latitude: 22.3039, longitude: 70.8022 },
-  kalyan: { latitude: 19.2433, longitude: 73.1355 },
-  vasai: { latitude: 19.4259, longitude: 72.8225 },
-  srinagar: { latitude: 34.0837, longitude: 74.7973 },
-  aurangabad: { latitude: 19.8762, longitude: 75.3433 },
-  dhanbad: { latitude: 23.7957, longitude: 86.4304 },
-  amritsar: { latitude: 31.634, longitude: 74.8723 },
-  allahabad: { latitude: 25.4358, longitude: 81.8463 },
-  ranchi: { latitude: 23.3441, longitude: 85.3096 },
-  howrah: { latitude: 22.5958, longitude: 88.2636 },
-  cochin: { latitude: 9.9312, longitude: 76.2673 },
-  raipur: { latitude: 21.2514, longitude: 81.6296 },
-  jabalpur: { latitude: 23.1815, longitude: 79.9864 },
-  gwalior: { latitude: 26.2183, longitude: 78.1828 },
-  vijayawada: { latitude: 16.5062, longitude: 80.648 },
-  jodhpur: { latitude: 26.2389, longitude: 73.0243 },
-  madurai: { latitude: 9.9252, longitude: 78.1198 },
-  salem: { latitude: 11.6643, longitude: 78.146 },
-  tiruchirappalli: { latitude: 10.7905, longitude: 78.7047 },
-  bhubaneswar: { latitude: 20.2961, longitude: 85.8245 },
-  varanasi: { latitude: 25.3176, longitude: 82.9739 },
+  gandhipuram: { latitude: 11.0174, longitude: 76.9661 },
+  rs_puram: { latitude: 11.0066, longitude: 76.9502 },
+  peelamedu: { latitude: 11.0354, longitude: 77.008 },
+  saibaba_colony: { latitude: 11.0229, longitude: 76.9483 },
+  race_course: { latitude: 11.0089, longitude: 76.9618 },
+  singanallur: { latitude: 11.0084, longitude: 77.0266 },
+  ukkadam: { latitude: 10.9923, longitude: 76.9544 },
+  podanur: { latitude: 10.9742, longitude: 76.9635 },
+  vadavalli: { latitude: 11.0251, longitude: 76.9011 },
+  kuniamuthur: { latitude: 10.9763, longitude: 76.9401 },
+  sundarapuram: { latitude: 10.9652, longitude: 76.9487 },
+  kovilpalayam: { latitude: 11.1163, longitude: 77.0342 },
+  sulur: { latitude: 11.0262, longitude: 77.1459 },
+  perur: { latitude: 10.9989, longitude: 76.9113 },
+  thudiyalur: { latitude: 11.0707, longitude: 76.9402 },
+  eachanari: { latitude: 10.9505, longitude: 76.9773 },
+  vellalore: { latitude: 10.9391, longitude: 76.9996 },
+  karamadai: { latitude: 11.2432, longitude: 76.9606 },
+  mettupalayam: { latitude: 11.2991, longitude: 76.9345 },
+  saravanampatti: { latitude: 11.0804, longitude: 76.9994 },
+  kalapatti: { latitude: 11.0664, longitude: 77.0386 },
+  irugur: { latitude: 11.0024, longitude: 77.0596 },
+  ganapathy: { latitude: 11.0413, longitude: 76.9723 },
+  kurichi: { latitude: 10.9625, longitude: 76.9395 },
+  malumichampatti: { latitude: 10.9191, longitude: 76.9914 },
+  madukkarai: { latitude: 10.8869, longitude: 76.9637 },
+  neelambur: { latitude: 11.0323, longitude: 77.0851 },
+  chinniampalayam: { latitude: 11.0159, longitude: 77.0359 },
+  gudalur: { latitude: 11.026, longitude: 76.7292 },
+  kinathukadavu: { latitude: 10.7979, longitude: 77.0027 },
+  karumathampatti: { latitude: 11.1027, longitude: 77.1166 },
+  annur: { latitude: 11.2333, longitude: 77.1667 },
+  somayampalayam: { latitude: 11.0252, longitude: 76.9153 },
+  narasimhanaickenpalayam: { latitude: 11.0872, longitude: 76.9583 },
+  vedapatti: { latitude: 10.9985, longitude: 76.8938 },
+  vadapudhur: { latitude: 10.9605, longitude: 76.9684 },
+  vellakinar: { latitude: 11.0701, longitude: 76.9611 },
+  vellanaipatti: { latitude: 11.0993, longitude: 77.0132 },
+  chinnavedampatti: { latitude: 11.0645, longitude: 76.9855 },
+  kallapalayam: { latitude: 11.0792, longitude: 76.9713 },
+  chettipalayam: { latitude: 10.9165, longitude: 77.0054 },
+  sivanandha_colony: { latitude: 11.0258, longitude: 76.9596 },
+  hopes: { latitude: 11.0333, longitude: 77.0125 },
+  sitra: { latitude: 11.0374, longitude: 77.0495 },
+  kalveerampalayam: { latitude: 11.0389, longitude: 76.891 },
+  kurudampalayam: { latitude: 11.0788, longitude: 76.9489 },
+  maniyakarampalayam: { latitude: 11.0487, longitude: 76.9795 },
+  kavundampalayam: { latitude: 11.0422, longitude: 76.9308 },
+  pappampatti: { latitude: 10.9781, longitude: 77.0503 },
+  kannampalayam: { latitude: 11.0457, longitude: 77.0679 },
+  vadamadurai: { latitude: 11.1861, longitude: 77.1478 },
+  thondamuthur: { latitude: 11.0021, longitude: 76.8403 },
+  arasampalayam: { latitude: 10.9973, longitude: 76.9354 },
+  karumbukadai: { latitude: 10.9801, longitude: 76.9515 },
+  pattaravakkam: { latitude: 11.0062, longitude: 77.0003 },
+  nggo_colony: { latitude: 11.0799, longitude: 76.9433 },
+  attukal: { latitude: 10.9227, longitude: 77.0136 },
+  veerakeralam: { latitude: 10.9999, longitude: 76.887 },
+  pattinam: { latitude: 10.9487, longitude: 77.016 },
+  selvapuram: { latitude: 10.9978, longitude: 76.9321 },
+  karanampettai: { latitude: 10.8911, longitude: 77.1466 },
+  ondipudur: { latitude: 11.0046, longitude: 77.0408 },
+  podanur_railway_colony: { latitude: 10.9691, longitude: 76.9649 },
+  puliakulam: { latitude: 11.0054, longitude: 76.984 },
+  texmo_colony: { latitude: 11.0246, longitude: 76.9752 },
+  kurumbapalayam: { latitude: 11.0893, longitude: 77.0287 },
+  kovaipudur: { latitude: 10.9786, longitude: 76.9003 },
+  ramanathapuram: { latitude: 11.0081, longitude: 77.0064 },
+  selvapuram_south: { latitude: 10.9942, longitude: 76.9265 },
+  coimbatore_fort_area: { latitude: 11.0045, longitude: 76.954 },
+
+  /**
+   * POLLACHI_COORDINATES
+   */
+  pollachi_town: { latitude: 10.6584, longitude: 77.0085 },
+  udumalpet_road: { latitude: 10.6685, longitude: 77.0415 },
+  achipatti: { latitude: 10.6421, longitude: 77.0337 },
+  anamalai: { latitude: 10.5715, longitude: 76.9345 },
+  zaminuthukuli: { latitude: 10.6511, longitude: 77.0045 },
+  meenakshipuram: { latitude: 10.6409, longitude: 77.0483 },
+  vennandur: { latitude: 10.6807, longitude: 77.0263 },
+  kottur: { latitude: 10.5871, longitude: 77.0323 },
+  vadugapalayam: { latitude: 10.6493, longitude: 77.0722 },
+  sultanpet: { latitude: 10.6964, longitude: 77.0376 },
+  mahalingapuram: { latitude: 10.6357, longitude: 77.0182 },
+  kaliyapuram: { latitude: 10.6625, longitude: 77.0632 },
+  kollengode_border: { latitude: 10.6354, longitude: 76.7645 },
+  pongalur: { latitude: 10.8294, longitude: 77.2529 },
+  top_slip: { latitude: 10.4882, longitude: 76.9189 },
+  parambikulam: { latitude: 10.4781, longitude: 76.8709 },
+  sethumadai: { latitude: 10.5617, longitude: 76.9445 },
+  udumalpet_border: { latitude: 10.5967, longitude: 77.2419 },
+  kottamangalam: { latitude: 10.6764, longitude: 77.0009 },
+  vadakkipalayam: { latitude: 10.6768, longitude: 76.9856 },
+  vadakkipalayam_pudur: { latitude: 10.6822, longitude: 76.9784 },
+  moolathurai: { latitude: 10.5483, longitude: 76.9267 },
+  veerappampalayam: { latitude: 10.6353, longitude: 76.9962 },
+  velanthavalam: { latitude: 10.7633, longitude: 76.9008 },
+  samathur: { latitude: 10.6119, longitude: 76.9762 },
+  vadakkanandal: { latitude: 10.6239, longitude: 76.9472 },
+  kinathukadavu_pollachi_side: { latitude: 10.7353, longitude: 76.9987 },
+  sulakkal: { latitude: 10.5934, longitude: 77.1015 },
+  jallipatti: { latitude: 10.4982, longitude: 77.1637 },
+  periya_negamam: { latitude: 10.7346, longitude: 76.9492 },
+  malumichampatti_pollachi_road: { latitude: 10.9203, longitude: 77.0121 },
+  valparai: { latitude: 10.3253, longitude: 76.9552 },
+  attakatti: { latitude: 10.3484, longitude: 76.9565 },
+  loams_view_point: { latitude: 10.355, longitude: 76.95 },
+  aliyar_dam: { latitude: 10.4895, longitude: 76.9556 },
+  monkey_falls: { latitude: 10.4953, longitude: 76.956 },
+  elayamuthur: { latitude: 10.6072, longitude: 77.0464 },
+  muthur: { latitude: 10.5783, longitude: 77.0172 },
+  kollankinar: { latitude: 10.6641, longitude: 76.9544 },
+  devarayapuram: { latitude: 10.6521, longitude: 76.9768 },
+  vadavalli_pollachi: { latitude: 10.682, longitude: 77.0409 },
+  vadakkanampalayam: { latitude: 10.6969, longitude: 77.0246 },
+  thippampatti: { latitude: 10.7234, longitude: 76.9763 },
+  myleripalayam: { latitude: 10.878, longitude: 77.0049 },
+  kannivadi: { latitude: 10.6187, longitude: 77.1599 },
+  devipatinam: { latitude: 10.6908, longitude: 77.0055 },
+  anjur: { latitude: 10.6034, longitude: 77.0833 },
+  vazhukkalpatti: { latitude: 10.7097, longitude: 77.0755 },
+  thalakkarai: { latitude: 10.6394, longitude: 76.9583 },
+  puravipalayam: { latitude: 10.7032, longitude: 76.9874 },
+  karumathampatti_pollachi_side: { latitude: 10.9303, longitude: 77.0659 },
 };
 
 /**
