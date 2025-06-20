@@ -8,6 +8,8 @@ export interface CreateAddressData {
   state: string;
   zip_code: string;
   is_default?: boolean;
+  distance?: number;
+  duration?: number;
 }
 
 export interface UpdateAddressData {
@@ -17,6 +19,8 @@ export interface UpdateAddressData {
   state?: string;
   zip_code?: string;
   is_default?: boolean;
+  distance?: number;
+  duration?: number;
 }
 
 export interface LocationData {
@@ -178,6 +182,24 @@ export async function createAddress(
 ): Promise<Address | null> {
   try {
     console.log("Creating address with data:", { userId, addressData });
+
+    // Validate that we have a valid user ID
+    if (!userId || typeof userId !== "string") {
+      console.error("Invalid user ID provided:", userId);
+      return null;
+    }
+
+    // Validate address data
+    if (
+      !addressData.address_name ||
+      !addressData.full_address ||
+      !addressData.city ||
+      !addressData.state ||
+      !addressData.zip_code
+    ) {
+      console.error("Missing required address fields:", addressData);
+      return null;
+    }
 
     const { data, error } = await supabase
       .from("addresses")

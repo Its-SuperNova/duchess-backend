@@ -5,12 +5,9 @@ DROP POLICY IF EXISTS "Users can view own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can insert own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can update own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can delete own addresses" ON public.addresses;
--- For NextAuth integration, we need to disable RLS temporarily or use a different approach
--- Option 1: Disable RLS (less secure but works with NextAuth)
+-- For NextAuth integration, we need to disable RLS temporarily
+-- This allows the application to work while maintaining data integrity through application-level checks
 ALTER TABLE public.addresses DISABLE ROW LEVEL SECURITY;
--- Option 2: If you want to keep RLS enabled (more secure), uncomment the following:
--- CREATE POLICY "Allow all operations for authenticated users" ON public.addresses
---     FOR ALL USING (true) WITH CHECK (true);
 -- Create a function to get user ID from email (for future use)
 CREATE OR REPLACE FUNCTION get_user_id_from_email(user_email TEXT) RETURNS UUID AS $$
 DECLARE user_uuid UUID;

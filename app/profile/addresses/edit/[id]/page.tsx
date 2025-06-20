@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import { updateAddress, getUserAddresses } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
+import { calculateAddressDistance } from "@/lib/distance-utils";
 
 export default function EditAddressPage() {
   const router = useRouter();
@@ -111,12 +112,22 @@ export default function EditAddressPage() {
       setSaving(true);
       setError(null);
 
+      // Recalculate distance
+      const distanceResult = await calculateAddressDistance({
+        full_address: formData.fullAddress.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        zip_code: formData.zipCode.trim(),
+      });
+
       const updatedAddress = await updateAddress(addressId, {
         address_name: formData.addressName.trim(),
         full_address: formData.fullAddress.trim(),
         city: formData.city.trim(),
         state: formData.state.trim(),
         zip_code: formData.zipCode.trim(),
+        distance: distanceResult?.distance,
+        duration: distanceResult?.duration,
       });
 
       if (updatedAddress) {

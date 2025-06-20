@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createAddress, getCurrentLocationAddress } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
+import { calculateAddressDistance } from "@/lib/distance-utils";
 
 export default function NewAddressPage() {
   const router = useRouter();
@@ -91,6 +92,14 @@ export default function NewAddressPage() {
         return;
       }
 
+      // Calculate distance
+      const distanceResult = await calculateAddressDistance({
+        full_address: formData.fullAddress,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+      });
+
       const newAddress = await createAddress(user.id, {
         address_name: formData.addressName,
         full_address: formData.fullAddress,
@@ -98,6 +107,8 @@ export default function NewAddressPage() {
         state: formData.state,
         zip_code: formData.zipCode,
         is_default: false,
+        distance: distanceResult?.distance,
+        duration: distanceResult?.duration,
       });
 
       if (newAddress) {

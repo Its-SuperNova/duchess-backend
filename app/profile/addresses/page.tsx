@@ -20,6 +20,7 @@ import {
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import AddressDistanceDisplay from "@/components/address-distance-display";
 
 export default function ManageAddressPage() {
   const router = useRouter();
@@ -208,81 +209,62 @@ export default function ManageAddressPage() {
         ) : (
           <>
             {/* Addresses List */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {addresses.map((address, index) => (
-                <div key={address.id}>
-                  <div className="p-4 bg-white min-h-[80px] flex items-center">
-                    <div className="flex items-start w-full">
-                      {/* Radio button for default selection */}
-                      <div className="flex-shrink-0 mt-1">
-                        <div className="relative flex items-center justify-center">
-                          <input
-                            type="radio"
-                            id={`address-${address.id}`}
-                            name="address"
-                            checked={address.is_default}
-                            onChange={() => handleSetDefault(address.id)}
-                            className="sr-only"
-                          />
-                          <div
-                            className={`h-5 w-5 rounded-full border ${
-                              address.is_default
-                                ? "border-[#8B4513] bg-white"
-                                : "border-gray-300 bg-white"
-                            }`}
-                          >
-                            {address.is_default && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="h-3 w-3 rounded-full bg-[#8B4513]"></div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+            <div className="space-y-4">
+              {addresses.map((address) => (
+                <div
+                  key={address.id}
+                  className="bg-white rounded-xl shadow-sm p-4"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-medium text-gray-900">
+                          {address.address_name}
+                        </h3>
+                        {address.is_default && (
+                          <span className="px-2 py-1 text-xs bg-[#7A0000] text-white rounded-full">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-500 text-sm mb-3">
+                        {formatAddress(address)}
+                      </p>
+
+                      {/* Distance from shop */}
+                      <div className="mb-3">
+                        <AddressDistanceDisplay address={address} />
                       </div>
 
-                      <div className="ml-3 flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium text-gray-900 flex items-center">
-                              {address.address_name}
-                              {address.is_default && (
-                                <span className="ml-2 px-2 py-1 text-xs bg-[#8B4513] text-white rounded-full">
-                                  Default
-                                </span>
-                              )}
-                            </h3>
-                            <p className="text-gray-500 text-sm mt-1">
-                              {formatAddress(address)}
-                            </p>
-                          </div>
+                      {/* Set as default button */}
+                      {!address.is_default && (
+                        <button
+                          onClick={() => handleSetDefault(address.id)}
+                          className="text-[#7A0000] text-sm font-medium hover:text-[#5A0000] transition-colors"
+                        >
+                          Set as default
+                        </button>
+                      )}
+                    </div>
 
-                          {/* Action buttons */}
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() =>
-                                router.push(
-                                  `/profile/addresses/edit/${address.id}`
-                                )
-                              }
-                              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAddress(address.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                    {/* Action buttons */}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() =>
+                          router.push(`/profile/addresses/edit/${address.id}`)
+                        }
+                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAddress(address.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                  {/* Add divider if not the last item */}
-                  {index < addresses.length - 1 && (
-                    <div className="h-px bg-gray-200 mx-4"></div>
-                  )}
                 </div>
               ))}
             </div>

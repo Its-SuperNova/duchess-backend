@@ -55,6 +55,8 @@ export interface Address {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  distance: number | null;
+  duration: number | null;
 }
 
 export interface Database {
@@ -68,7 +70,7 @@ export interface Database {
       addresses: {
         Row: Address;
         Insert: Omit<Address, "id" | "created_at" | "updated_at">;
-        Update: Partial<Omit<Address, "id" | "created_at" | "updated_at">>;
+        Update: Partial<Address>;
       };
     };
   };
