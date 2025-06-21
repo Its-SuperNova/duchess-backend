@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 // Import server actions
@@ -350,15 +351,128 @@ export default function ProductsPage() {
     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   };
 
+  // Skeleton components
+  const TableSkeleton = () => (
+    <Card>
+      <div className="overflow-x-auto">
+        <Table className="admin-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead className="hidden md:table-cell">Category</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead className="hidden sm:table-cell">Order Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Visibility</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 10 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-16 w-16 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <Skeleton className="h-5 w-10 rounded-full" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end space-x-2">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </Card>
+  );
+
+  const CardSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <Card key={index} className="overflow-hidden flex flex-col h-full">
+          <Skeleton className="h-48 w-full" />
+          <CardContent className="p-4 flex flex-col flex-grow space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-20" />
+              <div className="flex gap-1">
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-12 rounded-full" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-auto pt-2">
+              <div className="flex items-center space-x-2">
+                <Skeleton className="h-5 w-10 rounded-full" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <div className="flex space-x-1">
+                <Skeleton className="h-7 w-7 rounded" />
+                <Skeleton className="h-7 w-7 rounded" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex-1 space-y-6 p-6 md:p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading products...</p>
+        {/* Page Header Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+
+        {/* Search and Filters Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <Skeleton className="h-10 flex-1" />
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-24" />
           </div>
         </div>
+
+        {/* Table Skeleton */}
+        <TableSkeleton />
       </div>
     );
   }

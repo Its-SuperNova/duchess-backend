@@ -42,6 +42,7 @@ import { supabase } from "@/lib/supabase";
 import type { User as UserType } from "@/lib/supabase";
 import { updateUserRole } from "@/lib/auth-utils";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -423,12 +424,113 @@ export default function UsersPage() {
     ),
   ];
 
+  // Skeleton components
+  const TableSkeleton = () => (
+    <Card>
+      <CardContent className="pt-6">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="hidden lg:table-cell">Gender</TableHead>
+              <TableHead className="hidden lg:table-cell">Address</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Total Orders
+              </TableHead>
+              <TableHead className="hidden md:table-cell">
+                Total Amount
+              </TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 10 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Skeleton className="h-4 w-12" />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Skeleton className="h-4 w-8" />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">Loading users...</p>
+      <div className="space-y-6">
+        {/* Page Header Skeleton */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+
+        {/* Filters Card Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-16" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table Skeleton */}
+        <TableSkeleton />
+
+        {/* Pagination Skeleton */}
+        <div className="flex justify-center">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-16 rounded" />
+            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-16 rounded" />
+          </div>
         </div>
       </div>
     );
