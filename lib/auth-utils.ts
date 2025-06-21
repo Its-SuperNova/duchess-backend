@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";
+"use server";
+// import { supabase } from "./supabase";
 import { supabaseAdmin } from "./supabase/admin";
 import type { User } from "./supabase";
 
