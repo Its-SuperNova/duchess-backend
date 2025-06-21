@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { supabaseAdmin } from "./supabase/admin";
 import type { User } from "./supabase";
 
 export interface AuthUserData {
@@ -11,7 +12,8 @@ export interface AuthUserData {
 
 export async function upsertUser(userData: AuthUserData): Promise<User | null> {
   try {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for user creation
+    const { data, error } = await supabaseAdmin
       .from("users")
       .upsert(
         {
@@ -44,7 +46,8 @@ export async function upsertUser(userData: AuthUserData): Promise<User | null> {
 
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for user queries
+    const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
       .eq("email", email)
@@ -73,7 +76,8 @@ export async function updateUserProfile(
   }
 ): Promise<User | null> {
   try {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for user profile updates
+    const { data, error } = await supabaseAdmin
       .from("users")
       .update({
         ...profileData,
@@ -100,7 +104,8 @@ export async function getUserRole(
   email: string
 ): Promise<"user" | "admin" | "delivery_agent" | "shop_worker" | null> {
   try {
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for user role queries
+    const { data, error } = await supabaseAdmin
       .from("users")
       .select("role")
       .eq("email", email)
@@ -137,7 +142,8 @@ export async function updateUserRole(
   try {
     console.log("updateUserRole called with:", { email, role });
 
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for user role updates
+    const { data, error } = await supabaseAdmin
       .from("users")
       .update({
         role,

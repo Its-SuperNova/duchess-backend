@@ -132,6 +132,29 @@ export interface Product {
   updated_at: string;
 }
 
+// Cart related types
+export interface Cart {
+  id: string;
+  user_id: string;
+  session_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CartItemDB {
+  id: string;
+  cart_id: string;
+  product_id: string;
+  quantity: number;
+  variant: string;
+  price: number;
+  product_name: string;
+  product_image: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -159,6 +182,16 @@ export interface Database {
         Row: Product;
         Insert: Omit<Product, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<Product, "id" | "created_at" | "updated_at">>;
+      };
+      carts: {
+        Row: Cart;
+        Insert: Omit<Cart, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<Cart, "id" | "created_at" | "updated_at">>;
+      };
+      cart_items: {
+        Row: CartItemDB;
+        Insert: Omit<CartItemDB, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<CartItemDB, "id" | "created_at" | "updated_at">>;
       };
     };
   };

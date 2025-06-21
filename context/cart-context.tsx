@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface CartItem {
   id: number;
@@ -24,6 +25,7 @@ interface CartContextType {
   closeCart: () => void;
   isCheckoutMode: boolean;
   setCheckoutMode: (mode: boolean) => void;
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -33,12 +35,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { data: session, status } = useSession();
 
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
     setIsClient(true);
+  }, []);
 
-    // Load cart from localStorage
+  // Load cart based on authentication status
+  useEffect(() => {
+    if (!isClient) return;
+
+    const loadCart = async () => {
+      if (session?.user?.email) {
+        // User is authenticated, load from database
+        await loadCartFromDatabase();
+      } else if (status === "unauthenticated") {
+        // User is not authenticated, load from localStorage
+        loadCartFromLocalStorage();
+      }
+      // If status is "loading", wait for auth to complete
+    };
+
+    loadCart();
+  }, [isClient, session, status]);
+
+  // Sync localStorage cart with database when user logs in
+  useEffect(() => {
+    if (session?.user?.email && isClient) {
+      syncCartOnLogin();
+    }
+  }, [session?.user?.email, isClient]);
+
+  // Save cart to localStorage whenever it changes (for non-authenticated users)
+  useEffect(() => {
+    if (isClient && !session?.user?.email) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+  }, [cart, isClient, session?.user?.email]);
+
+  const loadCartFromLocalStorage = () => {
     const storedCart = localStorage.getItem("cart");
     if (storedCart) {
       try {
@@ -47,16 +84,97 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error("Failed to parse cart from localStorage:", error);
       }
     }
-  }, []);
+  };
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem("cart", JSON.stringify(cart));
+  const loadCartFromDatabase = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/cart");
+      if (response.ok) {
+        const data = await response.json();
+        setCart(data.cart || []);
+      } else {
+        console.error("Failed to load cart from database");
+        // Fallback to localStorage
+        loadCartFromLocalStorage();
+      }
+    } catch (error) {
+      console.error("Error loading cart from database:", error);
+      // Fallback to localStorage
+      loadCartFromLocalStorage();
+    } finally {
+      setIsLoading(false);
     }
-  }, [cart, isClient]);
+  };
 
-  const addToCart = (item: CartItem) => {
+  const syncCartOnLogin = async () => {
+    const localCart = localStorage.getItem("cart");
+    if (localCart) {
+      try {
+        const localCartItems = JSON.parse(localCart);
+        if (localCartItems.length > 0) {
+          const response = await fetch("/api/cart/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ localCartItems }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setCart(data.cart || []);
+            // Clear localStorage after successful sync
+            localStorage.removeItem("cart");
+          }
+        } else {
+          // Load existing database cart
+          await loadCartFromDatabase();
+        }
+      } catch (error) {
+        console.error("Error syncing cart:", error);
+        await loadCartFromDatabase();
+      }
+    } else {
+      // Load existing database cart
+      await loadCartFromDatabase();
+    }
+  };
+
+  const addToCart = async (item: CartItem) => {
+    if (session?.user?.email) {
+      // User is authenticated, add to database
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/cart/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        });
+
+        if (response.ok) {
+          // Reload cart from database to get updated state
+          await loadCartFromDatabase();
+        } else {
+          console.error("Failed to add item to database cart");
+          // Fallback to localStorage behavior
+          addToCartLocal(item);
+        }
+      } catch (error) {
+        console.error("Error adding to database cart:", error);
+        // Fallback to localStorage behavior
+        addToCartLocal(item);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // User is not authenticated, use localStorage
+      addToCartLocal(item);
+    }
+
+    // Automatically open cart sidebar when item is added
+    setIsCartOpen(true);
+  };
+
+  const addToCartLocal = (item: CartItem) => {
     setCart((prev) => {
       const existingItemIndex = prev.findIndex(
         (cartItem) =>
@@ -74,19 +192,76 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return [...prev, item];
       }
     });
-
-    // Automatically open cart sidebar when item is added
-    setIsCartOpen(true);
   };
 
-  const removeFromCart = (id: number) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
+  const removeFromCart = async (id: number) => {
+    if (session?.user?.email) {
+      // User is authenticated, remove from database
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/cart/remove", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: id }),
+        });
+
+        if (response.ok) {
+          // Reload cart from database to get updated state
+          await loadCartFromDatabase();
+        } else {
+          console.error("Failed to remove item from database cart");
+          // Fallback to localStorage behavior
+          setCart((prev) => prev.filter((item) => item.id !== id));
+        }
+      } catch (error) {
+        console.error("Error removing from database cart:", error);
+        // Fallback to localStorage behavior
+        setCart((prev) => prev.filter((item) => item.id !== id));
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // User is not authenticated, use localStorage
+      setCart((prev) => prev.filter((item) => item.id !== id));
+    }
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
-    setCart((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, quantity } : item))
-    );
+  const updateQuantity = async (id: number, quantity: number) => {
+    if (session?.user?.email) {
+      // User is authenticated, update in database
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/cart/update", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: id, quantity }),
+        });
+
+        if (response.ok) {
+          // Reload cart from database to get updated state
+          await loadCartFromDatabase();
+        } else {
+          console.error("Failed to update quantity in database cart");
+          // Fallback to localStorage behavior
+          setCart((prev) =>
+            prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+          );
+        }
+      } catch (error) {
+        console.error("Error updating quantity in database cart:", error);
+        // Fallback to localStorage behavior
+        setCart((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // User is not authenticated, use localStorage
+      setCart((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+      );
+    }
   };
 
   const getSubtotal = () => {
@@ -119,6 +294,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         closeCart,
         isCheckoutMode,
         setCheckoutMode: setCheckoutModeHandler,
+        isLoading,
       }}
     >
       {children}
@@ -145,6 +321,7 @@ export function useCart() {
       closeCart: () => {},
       isCheckoutMode: false,
       setCheckoutMode: () => {},
+      isLoading: false,
     };
   }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import { supabaseAdmin } from "../lib/supabase/admin";
 import type { User } from "../lib/supabase";
 
 export function useSupabaseUser(email: string | null) {
@@ -19,7 +19,8 @@ export function useSupabaseUser(email: string | null) {
         setLoading(true);
         setError(null);
 
-        const { data, error } = await supabase
+        // Use admin client to bypass RLS for user queries
+        const { data, error } = await supabaseAdmin
           .from("users")
           .select("*")
           .eq("email", email)

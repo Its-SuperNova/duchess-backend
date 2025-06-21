@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Database } from "../supabase";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceRoleKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl) {
   throw new Error(
@@ -47,7 +47,7 @@ export async function withRetry<T>(
   maxRetries: number = 3,
   delayMs: number = 1000
 ): Promise<T> {
-  let lastError: Error;
+  let lastError: Error = new Error("Operation failed after maximum retries");
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
