@@ -482,8 +482,11 @@ export default function ProductsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             Products
+            <span className="text-base font-medium text-muted-foreground">
+              (Total: {totalItems})
+            </span>
           </h1>
           <p className="text-muted-foreground">
             Manage your product catalog and inventory

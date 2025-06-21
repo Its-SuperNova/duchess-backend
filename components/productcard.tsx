@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FaStar, FaHeart, FaRegHeart } from "react-icons/fa";
+import { GrSquare } from "react-icons/gr";
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
@@ -145,18 +146,12 @@ export default function ProductCard({
         </div>
 
         <div className="flex items-center mb-2">
-          <div
-            className={`w-10 h-4 border-[1px] ${
-              isVeg ? "border-green-600" : "border-red-600"
-            } flex items-center justify-center rounded-sm mr-1.5`}
-          >
-            <div
-              className={`w-2  ${
-                isVeg ? "bg-green-600" : "bg-red-600"
-              } rounded-full`}
-            ></div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+          <GrSquare
+            className={isVeg ? "text-green-600" : "text-red-600"}
+            style={{ width: 16, height: 16, minWidth: 16, minHeight: 16 }}
+            aria-label={isVeg ? "Vegetarian" : "Non-Vegetarian"}
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 ml-2">
             {description || "Delicious pastry made with premium ingredients"}
           </p>
         </div>
@@ -172,12 +167,7 @@ export default function ProductCard({
               </p>
             )}
           </div>
-          <button
-            onClick={handleAddToCart}
-            className="bg-[#361C1C] hover:bg-[#4a2a2a] text-white text-xs font-medium py-1.5 px-3 rounded-full transition-colors"
-          >
-            Add to Cart
-          </button>
+          {/* Removed Add to Cart button */}
         </div>
       </div>
     </div>
