@@ -1,6 +1,7 @@
 import { getActiveProducts } from "@/lib/actions/products";
 import ProductCard from "@/components/productcard";
 import { notFound } from "next/navigation";
+import { processProductForHomepage } from "@/lib/utils";
 
 export default async function ProductsPage({
   searchParams,
@@ -13,10 +14,15 @@ export default async function ProductsPage({
   // Fetch all active products
   const products = await getActiveProducts();
 
+  // Map products through processProductForHomepage
+  const processedProducts = products.map(processProductForHomepage);
+
   // Filter by categoryId if provided
   const filteredProducts = categoryId
-    ? products.filter((product) => product.categories?.id === categoryId)
-    : products;
+    ? processedProducts.filter(
+        (product) => product.categories?.id === categoryId
+      )
+    : processedProducts;
 
   // Optionally, show notFound if category is set but no products found
   if (categoryId && filteredProducts.length === 0) {
