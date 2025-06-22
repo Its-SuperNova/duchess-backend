@@ -34,7 +34,15 @@ import {
 } from "@/components/ui/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Plus, Search, Tag, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  Plus,
+  Search,
+  Tag,
+  Pencil,
+  Trash2,
+  RefreshCw,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 // Add these imports at the top with the other imports
@@ -63,7 +71,6 @@ import {
 import { CategoryImageUpload } from "./components/category-image-upload";
 
 export default function CategoriesPage() {
-  const [showEmptyState, setShowEmptyState] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -88,21 +95,20 @@ export default function CategoriesPage() {
   // Category image state
   const [categoryImage, setCategoryImage] = useState<string | null>(null);
 
-  // Load categories on component mount
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        setLoading(true);
-        const categoriesData = await getCategoriesWithProductCounts();
-        setCategories(categoriesData || []);
-      } catch (error) {
-        console.error("Error loading categories:", error);
-        toast.error("Failed to load categories");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadCategories = async () => {
+    try {
+      setLoading(true);
+      const categoriesData = await getCategoriesWithProductCounts();
+      setCategories(categoriesData || []);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      toast.error("Failed to load categories");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadCategories();
   }, []);
 
@@ -441,7 +447,9 @@ export default function CategoriesPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             Categories
-            <span className="text-base font-medium text-muted-foreground">(Total: {filteredCategories.length})</span>
+            <span className="text-base font-medium text-muted-foreground">
+              (Total: {filteredCategories.length})
+            </span>
           </h1>
           <p className="text-muted-foreground">
             Manage product categories and classifications
@@ -492,16 +500,18 @@ export default function CategoriesPage() {
           </Button>
           <Button
             variant="outline"
+            size="icon"
             className="flex-1 sm:flex-none"
-            onClick={() => setShowEmptyState(!showEmptyState)}
+            onClick={() => loadCategories()}
+            aria-label="Refresh"
           >
-            {showEmptyState ? "Show Categories" : "Show Empty"}
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Categories Table or Empty State */}
-      {showEmptyState || filteredCategories.length === 0 ? (
+      {filteredCategories.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-blue-100 p-4 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
@@ -728,7 +738,7 @@ export default function CategoriesPage() {
       )}
 
       {/* Pagination */}
-      {!showEmptyState && categories.length > 0 && (
+      {categories.length > 0 && (
         <div className="flex items-center justify-center">
           <Pagination>
             <PaginationContent>

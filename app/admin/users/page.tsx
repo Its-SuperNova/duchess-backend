@@ -553,6 +553,31 @@ export default function UsersPage() {
           <span className="text-sm text-muted-foreground">
             {filteredUsers.length} of {users.length} users
           </span>
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="ml-2"
+            onClick={fetchUsers}
+            title="Refresh user data"
+            aria-label="Refresh user data"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4.5 12a7.5 7.5 0 0113.36-4.64m0 0V3.75m0 3.61H15.11m4.39 4.64a7.5 7.5 0 01-13.36 4.64m0 0v3.61m0-3.61h2.75"
+              />
+            </svg>
+          </Button>
         </div>
       </div>
 

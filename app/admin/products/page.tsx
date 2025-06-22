@@ -46,6 +46,7 @@ import {
   Plus,
   Search,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { CiCircleList } from "react-icons/ci";
@@ -71,7 +72,6 @@ import { getCategories } from "@/lib/actions/categories";
 
 export default function ProductsPage() {
   const router = useRouter();
-  const [showEmptyState, setShowEmptyState] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -88,24 +88,24 @@ export default function ProductsPage() {
   const itemsPerPage = 10;
 
   // Fetch products and categories on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [productsData, categoriesData] = await Promise.all([
-          getProducts(),
-          getCategories(),
-        ]);
-        setProducts(productsData || []);
-        setCategories(categoriesData || []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to fetch products and categories");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [productsData, categoriesData] = await Promise.all([
+        getProducts(),
+        getCategories(),
+      ]);
+      setProducts(productsData || []);
+      setCategories(categoriesData || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to fetch products and categories");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -569,25 +569,27 @@ export default function ProductsPage() {
             </Select>
           </div>
 
-          <div className="flex gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
             <Button variant="outline" className="flex-1 sm:flex-none">
               <FileDown className="mr-2 h-4 w-4" />
               Export
             </Button>
-
+            {/* Refresh Button */}
             <Button
               variant="outline"
+              size="icon"
               className="flex-1 sm:flex-none"
-              onClick={() => setShowEmptyState(!showEmptyState)}
+              onClick={() => fetchData()}
+              aria-label="Refresh"
             >
-              {showEmptyState ? "Show Products" : "Show Empty"}
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
 
       {/* Products Table or Empty State */}
-      {showEmptyState || totalItems === 0 ? (
+      {totalItems === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-blue-100 p-4 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
@@ -847,7 +849,7 @@ export default function ProductsPage() {
       )}
 
       {/* Pagination */}
-      {!showEmptyState && totalItems > 0 && (
+      {!totalItems === 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Showing{" "}
