@@ -305,7 +305,7 @@ const Hero = () => {
             <div className={gridClasses}>
               {categories.slice(0, maxCategories).map((category) => (
                 <Link
-                  href={`/products?category=${category.name.toLowerCase()}`}
+                  href={`/products?category=${category.id}`}
                   key={category.id}
                 >
                   <div className="flex flex-col items-center group cursor-pointer flex-shrink-0 w-24">
@@ -389,7 +389,7 @@ const Hero = () => {
               <div className="hidden sm:grid sm:grid-cols-7 md:hidden gap-4 w-full">
                 {categories.slice(0, 7).map((category) => (
                   <Link
-                    href={`/products?category=${category.name.toLowerCase()}`}
+                    href={`/products?category=${category.id}`}
                     key={category.id}
                   >
                     <div className="flex flex-col items-center group cursor-pointer">
@@ -414,7 +414,7 @@ const Hero = () => {
               <div className="hidden xs:grid xs:grid-cols-5 sm:hidden gap-4 w-full">
                 {categories.slice(0, 5).map((category) => (
                   <Link
-                    href={`/products?category=${category.name.toLowerCase()}`}
+                    href={`/products?category=${category.id}`}
                     key={category.id}
                   >
                     <div className="flex flex-col items-center group cursor-pointer">
@@ -439,7 +439,7 @@ const Hero = () => {
               <div className="grid grid-cols-4 xs:hidden gap-4 w-full">
                 {categories.slice(0, 4).map((category) => (
                   <Link
-                    href={`/products?category=${category.name.toLowerCase()}`}
+                    href={`/products?category=${category.id}`}
                     key={category.id}
                   >
                     <div className="flex flex-col items-center group cursor-pointer">

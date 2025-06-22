@@ -18,6 +18,11 @@ export interface ProcessedProduct {
   category: string;
   hasOffer: boolean;
   offerPercentage?: number;
+  categories?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
 }
 
 // Extract the minimum price from weight or piece options
@@ -88,6 +93,7 @@ export function processProductForHomepage(dbProduct: any): ProcessedProduct {
     category: dbProduct.categories?.name || "Pastry",
     hasOffer: dbProduct.has_offer,
     offerPercentage: dbProduct.offer_percentage,
+    categories: dbProduct.categories,
   };
 }
 

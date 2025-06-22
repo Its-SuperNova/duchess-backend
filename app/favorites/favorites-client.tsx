@@ -30,22 +30,6 @@ export default function FavoritesClient() {
 
   return (
     <div className="bg-white min-h-screen pb-32">
-      {/* Page Header */}
-      <div className="px-4 py-4 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Link href="/" className="mr-4">
-              <div className="bg-gray-100 p-2 rounded-full">
-                <ArrowLeft className="h-5 w-5" />
-              </div>
-            </Link>
-            <h1 className="text-xl font-semibold">My Favorites</h1>
-          </div>
-          <div className="text-sm text-gray-500">
-            {favorites.length} {favorites.length === 1 ? "item" : "items"}
-          </div>
-        </div>
-      </div>
 
       {/* Favorites List */}
       <div className="px-4">
