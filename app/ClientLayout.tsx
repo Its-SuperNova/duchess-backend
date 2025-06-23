@@ -200,7 +200,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Bottom Navigation */}
-          {showBottomNav && <BottomNav />}
+          {showBottomNav && !isProductPage && <BottomNav />}
 
           <Toaster />
           <SonnerToaster />

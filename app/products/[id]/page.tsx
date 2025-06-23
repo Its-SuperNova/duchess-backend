@@ -34,6 +34,7 @@ import { getProductById } from "@/lib/actions/products";
 import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
 import ProductSkeleton from "./product-skeleton";
+import { useProductSelection } from "@/context/product-selection-context";
 
 // Types for database product
 interface DatabaseProduct {
@@ -96,12 +97,18 @@ export default function ProductPage() {
   const [error, setError] = useState<string | null>(null);
 
   // UI state
-  const [selectedWeightOption, setSelectedWeightOption] = useState<number>(0);
-  const [selectedPieceOption, setSelectedPieceOption] = useState<number>(0);
+  const {
+    selectedWeightOption,
+    setSelectedWeightOption,
+    selectedPieceOption,
+    setSelectedPieceOption,
+    orderType,
+    setOrderType,
+    pieceQuantity,
+    setPieceQuantity,
+  } = useProductSelection();
   const [mainImage, setMainImage] = useState<string>("");
   const [isLiked, setIsLiked] = useState(false);
-  const [orderType, setOrderType] = useState<"weight" | "piece">("weight");
-  const [pieceQuantity, setPieceQuantity] = useState(1);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const { addToCart } = useCart();
@@ -396,7 +403,7 @@ export default function ProductPage() {
 
   return (
     <>
-      <div className="bg-[#f5f5f5] flex flex-col items-center mt-10">
+      <div className="bg-[#f5f5f5] flex flex-col items-center pt-3">
         <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
           {/* Back Button */}
           <div className="mt-2  md:p-8 md:pb-0">
@@ -829,45 +836,6 @@ export default function ProductPage() {
           </div>
 
           <CakeDeliveryCard stock={currentStock} />
-
-          {/* Mobile sticky bottom bar */}
-          <div className="fixed bottom-20 left-0 right-0 bg-white dark:bg-gray-900 p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between z-40 md:hidden">
-            <div>
-              <p className="text-gray-500 text-sm">Total Price</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xl font-bold text-gray-900">
-                  ₹{currentPrice}
-                </p>
-                {originalPrice && originalPrice > currentPrice && (
-                  <p className="text-sm text-gray-500 line-through">
-                    ₹{originalPrice}
-                  </p>
-                )}
-              </div>
-              {currentStock === 0 && (
-                <p className="text-xs font-medium text-red-600">Out of Stock</p>
-              )}
-              {currentStock > 0 && currentStock <= 3 && (
-                <p className="text-xs font-medium text-amber-600">
-                  Only {currentStock} left
-                </p>
-              )}
-            </div>
-            <button
-              onClick={handleAddToCart}
-              disabled={currentStock === 0}
-              className={`rounded-full px-6 py-3 flex items-center gap-2 ${
-                currentStock === 0
-                  ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-[#560000] text-white"
-              }`}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              <span className="font-medium">
-                {currentStock === 0 ? "Out of Stock" : "Add to Cart"}
-              </span>
-            </button>
-          </div>
 
           {/* Mobile bottom padding */}
           <div className="h-24 md:h-0"></div>

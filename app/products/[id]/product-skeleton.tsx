@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProductSkeleton() {
   return (
-    <div className="bg-[#f5f5f5] flex flex-col items-center mt-10">
+    <div className="bg-[#f5f5f5] flex flex-col items-center pt-3">
       <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
         {/* Back Button Skeleton */}
         <div className="mt-2 md:p-8 md:pb-0">
@@ -180,22 +180,6 @@ export default function ProductSkeleton() {
             </div>
           </div>
         </div>
-
-        {/* Mobile sticky bottom bar skeleton */}
-        <div className="fixed bottom-20 left-0 right-0 bg-white p-4 border-t border-gray-200 flex items-center justify-between z-40 md:hidden">
-          <div>
-            <Skeleton className="h-3 w-16 mb-1" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-6 w-12" />
-              <Skeleton className="h-4 w-10" />
-            </div>
-            <Skeleton className="h-3 w-20 mt-1" />
-          </div>
-          <Skeleton className="h-12 w-32 rounded-full" />
-        </div>
-
-        {/* Mobile bottom padding */}
-        <div className="h-24 md:h-0"></div>
       </div>
     </div>
   );
