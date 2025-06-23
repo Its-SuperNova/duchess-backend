@@ -15,6 +15,17 @@ import { getProductById } from "@/lib/actions/products";
 import { getProductPrice, isProductInStock } from "@/lib/utils";
 import { ShoppingCart } from "lucide-react";
 import { useProductSelection } from "@/context/product-selection-context";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 // Types for database product
 interface DatabaseProduct {
   id: string;
@@ -67,13 +78,18 @@ interface DatabaseProduct {
 function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
   const {
     selectedWeightOption,
+    setSelectedWeightOption,
     selectedPieceOption,
+    setSelectedPieceOption,
     orderType,
+    setOrderType,
     pieceQuantity,
+    setPieceQuantity,
   } = useProductSelection();
   const [price, setPrice] = useState(0);
   const [originalPrice, setOriginalPrice] = useState<number | undefined>();
   const [inStock, setInStock] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -133,22 +149,293 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
           ? product.weight_options[selectedWeightOption]?.weight || "Regular"
           : `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`,
     });
+    setIsDrawerOpen(false);
+  };
+
+  const handleWeightOptionChange = (index: number) => {
+    setSelectedWeightOption(index);
+    setOrderType("weight");
+  };
+
+  const handlePieceOptionChange = (index: number) => {
+    setSelectedPieceOption(index);
+    setOrderType("piece");
+  };
+
+  const handleQuantityChange = (quantity: number) => {
+    setPieceQuantity(quantity);
   };
 
   return (
-    <div className="fixed bottom-6 left-0 right-0 flex justify-center z-[61] md:hidden px-4 pb-3">
-      <div className="w-[100%] max-w-md rounded-2xl bg-[#7A0000] flex items-center justify-between px-6 py-4 shadow-lg">
-        <div className="flex items-center gap-3 text-white">
-          <ShoppingCart className="h-6 w-6" />
-          <span className="font-medium text-lg">Add To Cart</span>
-          {/* Removed weight/piece info */}
-        </div>
-        <div className="h-8 w-px bg-white ml-[20px]" />
-        <div className="flex items-center text-white font-bold text-xl">
-          ₹{price}
-        </div>
+    <>
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center z-[61] md:hidden px-4 pb-3">
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <DrawerTrigger asChild>
+            <div className="w-[100%] max-w-md rounded-2xl bg-[#7A0000] flex items-center justify-between px-6 py-4 shadow-lg cursor-pointer">
+              <div className="flex items-center gap-3 text-white">
+                <ShoppingCart className="h-6 w-6" />
+                <span className="font-medium text-lg">Add To Cart</span>
+              </div>
+              <div className="h-8 w-px bg-white ml-[20px]" />
+              <div className="flex items-center text-white font-bold text-xl">
+                ₹{price}
+              </div>
+            </div>
+          </DrawerTrigger>
+          <DrawerContent className="max-h-[80vh]">
+            <DrawerHeader className="text-left">
+              <DrawerTitle className="text-lg font-semibold">
+                Select Options
+              </DrawerTitle>
+            </DrawerHeader>
+
+            <div className="px-4 pb-4 space-y-6">
+              {/* Tabs for Weight/Piece selection when both are available */}
+              {product.selling_type === "both" &&
+                product.weight_options &&
+                product.weight_options.length > 0 &&
+                product.piece_options &&
+                product.piece_options.length > 0 && (
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setOrderType("weight")}
+                      className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        orderType === "weight"
+                          ? "bg-white text-[#7A0000] shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Weight
+                    </button>
+                    <button
+                      onClick={() => setOrderType("piece")}
+                      className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        orderType === "piece"
+                          ? "bg-white text-[#7A0000] shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Piece
+                    </button>
+                  </div>
+                )}
+
+              {/* Weight Options - Show only if selling_type is "weight" or "both" */}
+              {(product.selling_type === "weight" ||
+                product.selling_type === "both") &&
+                product.weight_options &&
+                product.weight_options.length > 0 &&
+                (product.selling_type === "weight" ||
+                  orderType === "weight") && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900">
+                      Weight Options
+                    </h3>
+                    <RadioGroup
+                      value={selectedWeightOption.toString()}
+                      onValueChange={(value) =>
+                        handleWeightOptionChange(parseInt(value))
+                      }
+                    >
+                      {product.weight_options.map((option, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3"
+                        >
+                          <RadioGroupItem
+                            value={index.toString()}
+                            id={`weight-${index}`}
+                            disabled={!option.isActive}
+                          />
+                          <Label
+                            htmlFor={`weight-${index}`}
+                            className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
+                              selectedWeightOption === index
+                                ? "border-[#7A0000] bg-[#7A0000]/5"
+                                : "border-gray-200"
+                            } ${!option.isActive ? "opacity-50" : ""}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium">
+                                {option.weight}
+                              </span>
+                              {parseInt(option.stock) <= 3 &&
+                                parseInt(option.stock) > 0 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Only {option.stock} left
+                                  </Badge>
+                                )}
+                              {parseInt(option.stock) === 0 && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  Out of Stock
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold text-gray-900">
+                                ₹{parseInt(option.price)}
+                              </div>
+                              {product.has_offer &&
+                                product.offer_percentage && (
+                                  <div className="text-sm text-gray-500 line-through">
+                                    ₹
+                                    {Math.round(
+                                      parseInt(option.price) /
+                                        (1 - product.offer_percentage / 100)
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                )}
+
+              {/* Piece Options - Show only if selling_type is "piece" or "both" */}
+              {(product.selling_type === "piece" ||
+                product.selling_type === "both") &&
+                product.piece_options &&
+                product.piece_options.length > 0 &&
+                (product.selling_type === "piece" || orderType === "piece") && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900">Piece Options</h3>
+                    <RadioGroup
+                      value={selectedPieceOption.toString()}
+                      onValueChange={(value) =>
+                        handlePieceOptionChange(parseInt(value))
+                      }
+                    >
+                      {product.piece_options.map((option, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3"
+                        >
+                          <RadioGroupItem
+                            value={index.toString()}
+                            id={`piece-${index}`}
+                            disabled={!option.isActive}
+                          />
+                          <Label
+                            htmlFor={`piece-${index}`}
+                            className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
+                              selectedPieceOption === index
+                                ? "border-[#7A0000] bg-[#7A0000]/5"
+                                : "border-gray-200"
+                            } ${!option.isActive ? "opacity-50" : ""}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium">
+                                {option.quantity}
+                              </span>
+                              {parseInt(option.stock) <= 3 &&
+                                parseInt(option.stock) > 0 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Only {option.stock} left
+                                  </Badge>
+                                )}
+                              {parseInt(option.stock) === 0 && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  Out of Stock
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold text-gray-900">
+                                ₹{parseInt(option.price)}
+                              </div>
+                              {product.has_offer &&
+                                product.offer_percentage && (
+                                  <div className="text-sm text-gray-500 line-through">
+                                    ₹
+                                    {Math.round(
+                                      parseInt(option.price) /
+                                        (1 - product.offer_percentage / 100)
+                                    )}
+                                  </div>
+                                )}
+                            </div>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                )}
+
+              {/* Quantity Selector for Piece Orders */}
+              {orderType === "piece" &&
+                product.piece_options &&
+                product.piece_options.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900">Quantity</h3>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleQuantityChange(Math.max(1, pieceQuantity - 1))
+                        }
+                        disabled={pieceQuantity <= 1}
+                      >
+                        -
+                      </Button>
+                      <span className="font-medium text-lg min-w-[3rem] text-center">
+                        {pieceQuantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityChange(pieceQuantity + 1)}
+                        disabled={
+                          pieceQuantity >=
+                          parseInt(
+                            product.piece_options[selectedPieceOption]?.stock ||
+                              "0"
+                          )
+                        }
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+              {/* Bottom Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={!inStock}
+                  className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white"
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {inStock ? "Add to Cart" : "Out of Stock"}
+                </Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
       </div>
-    </div>
+    </>
   );
 }
 
