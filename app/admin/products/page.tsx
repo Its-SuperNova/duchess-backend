@@ -80,12 +80,13 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
 
   // Fetch products and categories on component mount
   const fetchData = async () => {
@@ -301,7 +302,7 @@ export default function ProductsPage() {
     };
   };
 
-  // Filter products based on search term, category, and stock status
+  // Filter products based on search term, category, stock status, and order type
   const filteredProducts = products.filter((product) => {
     // Search filter
     const matchesSearch =
@@ -323,13 +324,21 @@ export default function ProductsPage() {
       (stockFilter === "low-stock" && stockStatus === "low-stock") ||
       (stockFilter === "out-of-stock" && stockStatus === "out-of-stock");
 
-    return matchesSearch && matchesCategory && matchesStock;
+    // Order type filter
+    const orderType = getOrderType(product);
+    const matchesOrderType =
+      orderTypeFilter === "all" ||
+      (orderTypeFilter === "weight" && product.selling_type === "weight") ||
+      (orderTypeFilter === "piece" && product.selling_type === "piece") ||
+      (orderTypeFilter === "both" && product.selling_type === "both");
+
+    return matchesSearch && matchesCategory && matchesStock && matchesOrderType;
   });
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, stockFilter]);
+  }, [searchTerm, categoryFilter, stockFilter, orderTypeFilter]);
 
   // Pagination calculations
   const totalItems = filteredProducts.length;
@@ -565,6 +574,21 @@ export default function ProductsPage() {
                 <SelectItem value="in-stock">In Stock</SelectItem>
                 <SelectItem value="low-stock">Low Stock</SelectItem>
                 <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={orderTypeFilter}
+              onValueChange={(value) => setOrderTypeFilter(value)}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Order Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Order Types</SelectItem>
+                <SelectItem value="weight">By Weight</SelectItem>
+                <SelectItem value="piece">By Piece</SelectItem>
+                <SelectItem value="both">Both</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -849,7 +873,7 @@ export default function ProductsPage() {
       )}
 
       {/* Pagination */}
-      {!totalItems === 0 && (
+      {totalItems > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Showing{" "}
