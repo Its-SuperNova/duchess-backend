@@ -7,6 +7,7 @@ import {
   Ticket,
   FileText,
   AlertCircle,
+  ChevronRight,
 } from "lucide-react";
 import { TiDocumentText } from "react-icons/ti";
 import Link from "next/link";

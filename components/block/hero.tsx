@@ -13,6 +13,7 @@ import { isUserAdmin } from "@/lib/auth-utils";
 import { getCategories } from "@/lib/actions/categories";
 import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
+import BannerSlider from "./banner-slider";
 interface Category {
   id: string;
   name: string;
@@ -263,16 +264,9 @@ const Hero = () => {
 
   return (
     <div className="w-full">
-      {/* Desktop Single Card - Only visible on lg screens and up */}
+      {/* Desktop Pink Banner - Only visible on lg screens and up */}
       <div className="hidden lg:block w-full mt-6 mb-8 px-4 max-w-full">
-        <div className="bg-gradient-to-br from-pink-400 to-pink-600 w-full h-48 rounded-2xl flex items-center justify-center text-white">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-2">Sweet Delights</h2>
-            <p className="text-lg opacity-90">
-              Discover our premium collection
-            </p>
-          </div>
-        </div>
+        <div className="w-full h-[250px] bg-gradient-to-br from-pink-400 to-pink-600 rounded-[28px]" />
       </div>
 
       {/* Desktop Categories - Only visible on lg screens and up */}
@@ -330,17 +324,10 @@ const Hero = () => {
       </div>
 
       {/* Mobile/Tablet Content - Hidden on lg screens and up */}
-      <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[50px] overflow-x-hidden">
-        {/* Pink Container for Mobile */}
-        <div className="w-full h-[200px] mb-4 overflow-hidden rounded-2xl">
-          <div className="bg-gradient-to-br from-pink-400 to-pink-600 w-full h-full rounded-2xl flex items-center justify-center text-white">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-2">Sweet Delights</h2>
-              <p className="text-base opacity-90">
-                Discover our premium collection
-              </p>
-            </div>
-          </div>
+      <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[30px] overflow-x-hidden">
+        {/* Banner Slider for Mobile */}
+        <div className="w-full max-w-md mx-auto mb-2">
+          <BannerSlider />
         </div>
 
         {/* Search Bar & Filter */}
