@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
 import Image from "next/image";
-import { NewsletterSubscription } from "@/components/block/NewsletterSubscription";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
@@ -248,12 +247,9 @@ export default function HomeClient(props: HomeClientProps) {
 
         {/* Why We Are Best Banner - Mobile/Tablet Version */}
         <div className="block lg:hidden px-4 md:px-6 py-6 md:py-8 mb-20 w-full">
-          <h2 className="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-white">
-            Why We Are Best?
-          </h2>
           <div className="rounded-3xl overflow-hidden shadow-md w-full">
             <Image
-              src="/images/duchess-pastries-banner.png"
+              src="/images/duchess-pastries-banner-mobile.png"
               alt="Why we are the best - Handcrafted fresh daily, delivered with care, affordable prices, and loved by thousands"
               width={800}
               height={200}
@@ -266,7 +262,7 @@ export default function HomeClient(props: HomeClientProps) {
         <div className="hidden lg:block px-4 md:px-6 lg:px-8 py-6 md:py-8 w-full">
           <div className="rounded-3xl overflow-hidden shadow-md w-full">
             <Image
-              src="/images/duchess-pastries-banner.png"
+              src="/images/duchess-pastries-banner-desktop.png"
               alt="Why we are the best - Handcrafted fresh daily, delivered with care, affordable prices, and loved by thousands"
               width={1280}
               height={320}
@@ -274,11 +270,6 @@ export default function HomeClient(props: HomeClientProps) {
               priority
             />
           </div>
-        </div>
-
-        {/* Newsletter Subscription - only on home page - full width */}
-        <div className="w-full">
-          <NewsletterSubscription />
         </div>
       </div>
     </div>
