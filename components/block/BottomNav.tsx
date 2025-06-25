@@ -343,7 +343,10 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                               <RadioGroupItem
                                 value={index.toString()}
                                 id={`weight-${index}`}
-                                disabled={!option.isActive}
+                                disabled={
+                                  !option.isActive ||
+                                  parseInt(option.stock) === 0
+                                }
                               />
                               <Label
                                 htmlFor={`weight-${index}`}
@@ -351,7 +354,12 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                                   selectedWeightOption === index
                                     ? "border-[#7A0000] bg-[#7A0000]/5"
                                     : "border-gray-200"
-                                } ${!option.isActive ? "opacity-50" : ""}`}
+                                } ${
+                                  !option.isActive ||
+                                  parseInt(option.stock) === 0
+                                    ? "opacity-50"
+                                    : ""
+                                }`}
                               >
                                 <div className="flex items-center gap-3">
                                   <span className="font-medium">
