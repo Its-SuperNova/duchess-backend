@@ -125,36 +125,86 @@
 .swiper-custom .swiper-pagination-bullet {
   width: 8px;
   height: 8px;
-  background: white;
-  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 1;
+  transition: all 0.3s ease;
 }
 
 .swiper-custom .swiper-pagination-bullet-active {
-  opacity: 1;
-  background: white;
+  background: #ffffff;
+  transform: scale(1.25);
 }
 
 .swiper-custom .swiper-pagination {
-  bottom: 10px !important;
+  bottom: 16px !important;
 }
 
 /* Custom styles for Swiper pagination */
 .swiper-pagination-bullet.white-bullet {
-  background: rgba(255, 255, 255, 0.7) !important;
-  opacity: 0.7 !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  width: 8px !important;
+  height: 8px !important;
 }
 
 .swiper-pagination-bullet-active.white-bullet-active {
-  background: white !important;
-  opacity: 1 !important;
+  background: #ffffff !important;
+  transform: scale(1.25) !important;
 }
 
 .swiper-slide-active {
-  transition: transform 0.3s ease;
+  opacity: 1;
 }
 
 .swiper-slide-active + .swiper-slide {
-  transition: transform 0.3s ease;
+  opacity: 0.8;
+}
+
+/* Product page Swiper styles */
+.mySwiper {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  display: block !important;
+}
+
+.mySwiper .swiper-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.mySwiper .swiper-slide {
+  width: 100% !important;
+  height: 100% !important;
+  flex-shrink: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.mySwiper .swiper-slide img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.mySwiper .swiper-pagination {
+  bottom: 16px !important;
+  z-index: 10 !important;
+}
+
+.mySwiper .swiper-pagination-bullet {
+  width: 8px !important;
+  height: 8px !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  opacity: 1 !important;
+  transition: all 0.3s ease !important;
+}
+
+.mySwiper .swiper-pagination-bullet-active {
+  background: #ffffff !important;
+  transform: scale(1.25) !important;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

@@ -27,16 +27,14 @@ export default function Loading() {
                   </div>
                 </div>
 
-                {/* Skeleton thumbnails */}
-                <div className="absolute bottom-3 left-0 right-0 px-3">
-                  <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1">
-                    {[1, 2, 3, 4, 5].map((_, index) => (
-                      <Skeleton
-                        key={index}
-                        className="w-16 h-16 rounded-xl flex-shrink-0 border-2 border-transparent"
-                      />
-                    ))}
-                  </div>
+                {/* Skeleton dots */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                  {[1, 2, 3, 4, 5].map((_, index) => (
+                    <Skeleton
+                      key={index}
+                      className="w-2 h-2 rounded-full bg-white/50"
+                    />
+                  ))}
                 </div>
               </div>
             </div>

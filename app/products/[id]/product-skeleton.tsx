@@ -17,16 +17,14 @@ export default function ProductSkeleton() {
             <div className="relative mt-4 rounded-2xl overflow-hidden">
               <Skeleton className="h-[350px] lg:h-[450px] w-full rounded-2xl bg-white border border-gray-200" />
 
-              {/* Image thumbnails skeleton */}
-              <div className="absolute bottom-3 left-0 right-0 px-3">
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1 justify-center">
-                  {[1, 2, 3, 4].map((index) => (
-                    <Skeleton
-                      key={index}
-                      className="w-16 h-16 rounded-xl flex-shrink-0 bg-white border border-gray-200"
-                    />
-                  ))}
-                </div>
+              {/* Dots skeleton */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                {[1, 2, 3, 4].map((index) => (
+                  <Skeleton
+                    key={index}
+                    className="w-2 h-2 rounded-full bg-white/50"
+                  />
+                ))}
               </div>
             </div>
 

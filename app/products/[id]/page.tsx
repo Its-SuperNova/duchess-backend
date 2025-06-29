@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { FaStar, FaHeart, FaRegHeart, FaShare } from "react-icons/fa";
 import { BsArrowLeft } from "react-icons/bs";
@@ -35,6 +35,12 @@ import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
 import ProductSkeleton from "./product-skeleton";
 import { useProductSelection } from "@/context/product-selection-context";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay } from "swiper/modules";
+
+// Import Swiper styles
+import "swiper/css";
+import "swiper/css/pagination";
 
 // Types for database product
 interface DatabaseProduct {
@@ -107,7 +113,7 @@ export default function ProductPage() {
     pieceQuantity,
     setPieceQuantity,
   } = useProductSelection();
-  const [mainImage, setMainImage] = useState<string>("");
+
   const [isLiked, setIsLiked] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
@@ -125,7 +131,6 @@ export default function ProductPage() {
 
         const productData = await getProductById(productId);
         setProduct(productData);
-        setMainImage(productData.banner_image || "/placeholder.svg");
 
         // Set initial order type based on selling type
         if (productData.selling_type === "piece") {
@@ -226,7 +231,7 @@ export default function ProductPage() {
           setError(null);
           const productData = await getProductById(productId);
           setProduct(productData);
-          setMainImage(productData.banner_image || "/placeholder.svg");
+          // setMainImage(productData.banner_image || "/placeholder.svg"); // This line was removed as per the new_code
           sonnerToast.success("Product loaded successfully");
         } catch (error) {
           setError("Failed to load product details");
@@ -299,7 +304,7 @@ export default function ProductPage() {
         orderType === "piece"
           ? parseInt(product.piece_options?.[selectedPieceOption]?.price || "0")
           : price,
-      image: product.banner_image || "/placeholder.svg",
+      image: images[0] || "/placeholder.svg",
       quantity: orderType === "piece" ? pieceQuantity : 1,
       category: product.categories?.name || "Product",
       variant: variant,
@@ -401,6 +406,7 @@ export default function ProductPage() {
     originalPrice,
   } = getCurrentPriceAndStock();
   const images = getAllImages();
+  console.log('Product images:', images); // Debug log
 
   return (
     <>
@@ -419,55 +425,70 @@ export default function ProductPage() {
           {/* Main content: two columns on desktop, one column on mobile */}
           <div className="flex flex-col md:flex-row md:gap-8 md:px-8 md:pt-0 md:pb-8 flex-1">
             {/* Left column */}
-            <div className="md:w-2/3 flex flex-col gap-6 w-full max-w-full overflow-hidden">
+            <div className="md:w-2/3 flex flex-col gap-6 w-full max-w-full">
               {/* Top navigation and Hero Image */}
               <div className="relative mt-4 rounded-2xl overflow-hidden">
-                {/* Hero Image */}
+                {/* Hero Image Carousel */}
                 <div className="relative h-[350px] lg:h-[450px] w-full rounded-2xl overflow-hidden">
-                  <Image
-                    src={mainImage || "/placeholder.svg"}
-                    alt={product.name}
-                    fill
-                    priority
-                    className="object-cover rounded-2xl"
-                  />
+                  {images.length > 0 ? (
+                    <Swiper
+                      loop={true}
+                      autoplay={{
+                        delay: 5000,
+                        disableOnInteraction: false,
+                      }}
+                      pagination={{
+                        clickable: true,
+                      }}
+                      modules={[Autoplay, Pagination]}
+                      className="mySwiper w-full h-full"
+                      style={{ width: "100%", height: "100%" }}
+                      spaceBetween={16}
+                      slidesPerView={1}
+                    >
+                      {images.map((image, index) => (
+                        <SwiperSlide key={index} className="w-full h-full">
+                          <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                            <Image
+                              src={image || "/placeholder.svg"}
+                              alt={`${product.name} ${index + 1}`}
+                              fill
+                              priority={index === 0}
+                              className="object-cover rounded-2xl"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
 
-                  {/* Offer Badge */}
-                  {product.has_offer && product.offer_percentage && (
-                    <div className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
-                      {product.offer_percentage}% OFF
+                            {/* Offer Badge */}
+                            {product.has_offer && product.offer_percentage && (
+                              <div className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
+                                {product.offer_percentage}% OFF
+                              </div>
+                            )}
+                          </div>
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+                  ) : (
+                    // Fallback single image if no images available
+                    <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                      <Image
+                        src={product.banner_image || "/placeholder.svg"}
+                        alt={product.name}
+                        fill
+                        priority
+                        className="object-cover rounded-2xl"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      
+                      {/* Offer Badge */}
+                      {product.has_offer && product.offer_percentage && (
+                        <div className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
+                          {product.offer_percentage}% OFF
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {/* Image thumbnails */}
-                {images.length > 1 && (
-                  <div className="absolute bottom-3 left-0 right-0 px-3">
-                    <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1 justify-center">
-                      {images.map((image, index) => (
-                        <button
-                          key={index}
-                          onClick={() =>
-                            setMainImage(image || "/placeholder.svg")
-                          }
-                          className={`w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 ${
-                            mainImage === image
-                              ? "border-[#560000]"
-                              : "border-white"
-                          }`}
-                        >
-                          <Image
-                            src={image || "/placeholder.svg"}
-                            alt={`${product.name} thumbnail ${index + 1}`}
-                            width={64}
-                            height={64}
-                            className="object-cover w-full h-full"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Product Info Section */}
