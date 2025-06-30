@@ -117,7 +117,7 @@ export default function ProductPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  const { addToCart } = useCart();
+  const { addToCart, cart, openCart } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
 
   // Fetch product data
@@ -271,7 +271,7 @@ export default function ProductPage() {
   };
 
   // Handle add to cart
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
 
     const { price, stock } = getCurrentPriceAndStock();
@@ -312,13 +312,6 @@ export default function ProductPage() {
     };
 
     addToCart(cartItem);
-
-    toast({
-      title: "Added to cart!",
-      description: `${product.name} has been added to your cart.`,
-      duration: 3000,
-      className: "bg-green-50 text-green-800 border-green-300 py-3",
-    });
   };
 
   // Get all images for gallery
@@ -406,19 +399,32 @@ export default function ProductPage() {
     originalPrice,
   } = getCurrentPriceAndStock();
   const images = getAllImages();
-  console.log('Product images:', images); // Debug log
+  console.log("Product images:", images); // Debug log
 
   return (
     <>
       <div className="bg-[#f5f5f5] flex flex-col items-center pt-3">
         <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
-          {/* Back Button */}
-          <div className="mt-2  md:p-8 md:pb-0">
+          {/* Header with Back Button and Cart Button */}
+          <div className="mt-2 md:p-8 md:pb-0 flex justify-between items-center">
             <button
               onClick={() => router.push("/")}
               className="w-10 h-10 rounded-[14px] bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm border border-gray-200 transition-colors"
             >
               <BsArrowLeft className="text-gray-800" size={20} />
+            </button>
+
+            {/* Cart Button */}
+            <button
+              onClick={() => openCart()}
+              className="relative w-10 h-10 rounded-[14px] bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm border border-gray-200 transition-colors"
+            >
+              <ShoppingCart className="text-gray-800" size={20} />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
 

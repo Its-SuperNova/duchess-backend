@@ -12,23 +12,6 @@ import {
   FileText,
 } from "lucide-react";
 
-// Declare custom element for TypeScript
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "creattie-embed": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement>,
-        HTMLElement
-      > & {
-        src?: string;
-        delay?: string;
-        speed?: string;
-        frame_rate?: string;
-        trigger?: string;
-      };
-    }
-  }
-}
 import { TiDocumentText } from "react-icons/ti";
 import { IoIosArrowBack } from "react-icons/io";
 import Image from "next/image";
@@ -37,6 +20,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import Lottie from "lottie-react";
 import {
   Drawer,
   DrawerClose,
@@ -71,25 +55,25 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const subtotal = getSubtotal();
   const isMobile = useIsMobile();
 
-  // Load Creattie script for Lottie animation
+  // Animation data - using a simple shopping cart animation
+  const [animationData, setAnimationData] = useState(null);
+
+  // Load animation data
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://creattie.com/js/embed.js?id=3f6954fde297cd31b441";
-    script.defer = true;
-    script.id = "creattie-script";
-
-    // Only add script if it doesn't already exist
-    if (!document.getElementById("creattie-script")) {
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      // Cleanup script when component unmounts
-      const existingScript = document.getElementById("creattie-script");
-      if (existingScript) {
-        existingScript.remove();
+    // Using a simple empty cart animation
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch(
+          "https://d1jj76g3lut4fe.cloudfront.net/saved_colors/98652/0M71xqBxut5tSYdp.json"
+        );
+        const data = await response.json();
+        setAnimationData(data);
+      } catch (error) {
+        console.error("Failed to load animation:", error);
       }
     };
+
+    loadAnimation();
   }, []);
 
   // Sample coupons data
@@ -214,17 +198,16 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
       {cart.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 px-6">
           <div className="mb-4 flex justify-center">
-            <creattie-embed
-              src="https://d1jj76g3lut4fe.cloudfront.net/saved_colors/98652/0M71xqBxut5tSYdp.json"
-              delay="1"
-              speed="100"
-              frame_rate="24"
-              trigger="loop"
-              style={{
-                width: isMobile ? "320px" : "320px",
-                backgroundColor: "transparent",
-              }}
-            />
+            {animationData && (
+              <Lottie
+                animationData={animationData}
+                loop={true}
+                style={{
+                  width: isMobile ? "320px" : "320px",
+                  height: "auto",
+                }}
+              />
+            )}
           </div>
           <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Your cart is empty

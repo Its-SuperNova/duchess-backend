@@ -84,12 +84,6 @@ export default function ProductCard({
       category: category || "Pastry",
       variant: "Regular",
     });
-
-    toast({
-      title: "Added to cart!",
-      description: `${name} has been added to your cart.`,
-      duration: 3000,
-    });
   };
 
   return (

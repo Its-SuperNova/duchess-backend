@@ -13,6 +13,7 @@ import { useParams } from "next/navigation";
 import { useCart } from "@/context/cart-context";
 import { getProductById } from "@/lib/actions/products";
 import { getProductPrice, isProductInStock } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart } from "lucide-react";
 import { useProductSelection } from "@/context/product-selection-context";
 import {
@@ -94,6 +95,7 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
   const [inStock, setInStock] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { addToCart } = useCart();
+  const { toast } = useToast();
   const [addTextOnCake, setAddTextOnCake] = useState(false);
   const [addCandles, setAddCandles] = useState(false);
   const [addKnife, setAddKnife] = useState(false);
@@ -101,6 +103,7 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
   const [drawerStep, setDrawerStep] = useState(1);
   const [cakeText, setCakeText] = useState("");
   const [giftCardText, setGiftCardText] = useState("");
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
     // Compute price and originalPrice based on selected option and orderType
@@ -161,32 +164,41 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
     return true;
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product || !inStock) return;
 
     // Validate text inputs if they are enabled
     if (!isTextInputValid()) return;
 
-    addToCart({
-      id: parseInt(product.id.replace(/\D/g, "")) || 0,
-      name: product.name,
-      price: price,
-      image: product.banner_image || "/placeholder.svg",
-      quantity: orderType === "piece" ? pieceQuantity : 1,
-      category: product.categories?.name || "Pastry",
-      variant:
-        orderType === "weight"
-          ? product.weight_options[selectedWeightOption]?.weight || "Regular"
-          : `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`,
-      addTextOnCake,
-      addCandles,
-      addKnife,
-      addMessageCard,
-      cakeText: addTextOnCake ? cakeText : undefined,
-      giftCardText: addMessageCard ? giftCardText : undefined,
-      uniqueId: `${Date.now()}-${Math.random()}`,
-    });
-    setIsDrawerOpen(false);
+    setIsAddingToCart(true);
+
+    try {
+      addToCart({
+        id: parseInt(product.id.replace(/\D/g, "")) || 0,
+        name: product.name,
+        price: price,
+        image: product.banner_image || "/placeholder.svg",
+        quantity: orderType === "piece" ? pieceQuantity : 1,
+        category: product.categories?.name || "Pastry",
+        variant:
+          orderType === "weight"
+            ? product.weight_options[selectedWeightOption]?.weight || "Regular"
+            : `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`,
+        addTextOnCake,
+        addCandles,
+        addKnife,
+        addMessageCard,
+        cakeText: addTextOnCake ? cakeText : undefined,
+        giftCardText: addMessageCard ? giftCardText : undefined,
+        uniqueId: `${Date.now()}-${Math.random()}`,
+      });
+
+      setIsDrawerOpen(false);
+    } catch (error) {
+      // Silent error handling - no toast notification
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
   const handleWeightOptionChange = (index: number) => {
     setSelectedWeightOption(index);
@@ -547,15 +559,24 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                     </Button>
                     <Button
                       onClick={handleAddToCart}
-                      disabled={!inStock || !isTextInputValid()}
+                      disabled={!inStock || !isTextInputValid() || isAddingToCart}
                       className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white disabled:opacity-50"
                     >
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      {!inStock
-                        ? "Out of Stock"
-                        : !isTextInputValid()
-                        ? "Check Text Inputs"
-                        : "Add to Cart"}
+                      {isAddingToCart ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-5 w-5 mr-2" />
+                          {!inStock
+                            ? "Out of Stock"
+                            : !isTextInputValid()
+                            ? "Check Text Inputs"
+                            : "Add to Cart"}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </>

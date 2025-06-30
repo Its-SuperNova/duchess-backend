@@ -148,64 +148,68 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addToCart = async (item: CartItem) => {
-    if (session?.user?.email) {
-      // User is authenticated, add to database
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/cart/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item),
-        });
+    // Generate unique ID for the item
+    const uniqueId = item.uniqueId || `${Date.now()}-${Math.random()}`;
+    const itemWithUniqueId = { ...item, uniqueId };
 
-        if (response.ok) {
-          // Reload cart from database to get updated state
-          await loadCartFromDatabase();
-        } else {
-          console.error("Failed to add item to database cart");
-          // Fallback to localStorage behavior
-          addToCartLocal(item);
-        }
-      } catch (error) {
-        console.error("Error adding to database cart:", error);
-        // Fallback to localStorage behavior
-        addToCartLocal(item);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // User is not authenticated, use localStorage
-      addToCartLocal(item);
-    }
-
-    // Automatically open cart sidebar when item is added
-    setIsCartOpen(true);
-  };
-
-  const addToCartLocal = (item: CartItem) => {
+    // Optimistic update - add item immediately for instant feedback
+    const previousCart = [...cart];
     setCart((prev) => {
       // If uniqueId is present, always add as a new item
-      if (item.uniqueId) {
-        return [...prev, item];
+      if (itemWithUniqueId.uniqueId) {
+        return [...prev, itemWithUniqueId];
       }
       // Fallback to old logic for legacy items
       const existingItemIndex = prev.findIndex(
         (cartItem) =>
-          cartItem.id === item.id && cartItem.variant === item.variant
+          cartItem.id === itemWithUniqueId.id &&
+          cartItem.variant === itemWithUniqueId.variant
       );
 
       if (existingItemIndex !== -1) {
         const updatedCart = [...prev];
         updatedCart[existingItemIndex] = {
           ...updatedCart[existingItemIndex],
-          quantity: updatedCart[existingItemIndex].quantity + item.quantity,
+          quantity:
+            updatedCart[existingItemIndex].quantity + itemWithUniqueId.quantity,
         };
         return updatedCart;
       } else {
-        return [...prev, item];
+        return [...prev, itemWithUniqueId];
       }
     });
+
+    // Automatically open cart sidebar when item is added
+    setIsCartOpen(true);
+
+    if (session?.user?.email) {
+      // User is authenticated, sync with database in background
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/cart/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(itemWithUniqueId),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to add item to database cart");
+          // Revert optimistic update on failure
+          setCart(previousCart);
+        }
+        // Success: keep the optimistic update (item stays in cart)
+      } catch (error) {
+        console.error("Error adding to database cart:", error);
+        // Revert optimistic update on error
+        setCart(previousCart);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    // For non-authenticated users, the optimistic update is already applied
   };
+
+
 
   const removeFromCart = async (uniqueId: string) => {
     // Optimistic update - remove item immediately for instant feedback
