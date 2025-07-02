@@ -52,23 +52,37 @@ export default function ProductCard({
     setIsLiked(isFavorite(numericId));
   });
 
-  const handleFavoriteToggle = () => {
+  const handleFavoriteToggle = async () => {
     if (!isClient) return;
 
-    if (isLiked) {
-      removeFromFavorites(numericId);
-      setIsLiked(false);
-    } else {
-      addToFavorites({
-        id: numericId,
-        name,
-        price,
-        image: imageUrl,
-        isVeg,
-        description,
-        rating,
+    try {
+      if (isLiked) {
+        await removeFromFavorites(numericId);
+        setIsLiked(false);
+      } else {
+        await addToFavorites({
+          id: numericId,
+          name,
+          price,
+          image: imageUrl,
+          isVeg,
+          description,
+          rating,
+          category,
+        });
+        setIsLiked(true);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      // Revert UI state on error
+      setIsLiked(!isLiked);
+
+      // Show toast notification
+      toast({
+        title: "Error",
+        description: "Failed to update favorites. Please try again.",
+        variant: "destructive",
       });
-      setIsLiked(true);
     }
   };
 

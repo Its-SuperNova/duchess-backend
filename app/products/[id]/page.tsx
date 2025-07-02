@@ -245,7 +245,7 @@ export default function ProductPage() {
   };
 
   // Handle favorite toggle
-  const handleFavoriteToggle = () => {
+  const handleFavoriteToggle = async () => {
     if (!product) return;
 
     const numericId = parseInt(product.id.replace(/\D/g, "")) || 0;
@@ -259,14 +259,24 @@ export default function ProductPage() {
       isVeg: product.is_veg,
       description: product.short_description || product.long_description || "",
       rating: generateRating(),
+      category: product.category?.name,
     };
 
-    if (isLiked) {
-      removeFromFavorites(numericId);
-      setIsLiked(false);
-    } else {
-      addToFavorites(productData);
-      setIsLiked(true);
+    try {
+      if (isLiked) {
+        await removeFromFavorites(numericId);
+        setIsLiked(false);
+      } else {
+        await addToFavorites(productData);
+        setIsLiked(true);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      // Revert UI state on error
+      setIsLiked(!isLiked);
+
+      // Show toast notification
+      sonnerToast.error("Failed to update favorites. Please try again.");
     }
   };
 
@@ -485,7 +495,7 @@ export default function ProductPage() {
                         className="object-cover rounded-2xl"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
-                      
+
                       {/* Offer Badge */}
                       {product.has_offer && product.offer_percentage && (
                         <div className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">

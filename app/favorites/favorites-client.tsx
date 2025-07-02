@@ -10,7 +10,7 @@ import { useCart } from "@/context/cart-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function FavoritesClient() {
-  const { favorites, removeFromFavorites } = useFavorites();
+  const { favorites, removeFromFavorites, isLoading, error } = useFavorites();
   const { addToCart } = useCart();
   const isMobile = useIsMobile();
 
@@ -34,8 +34,13 @@ export default function FavoritesClient() {
     loadAnimation();
   }, []);
 
-  const handleRemoveFavorite = (id: number) => {
-    removeFromFavorites(id);
+  const handleRemoveFavorite = async (id: number) => {
+    try {
+      await removeFromFavorites(id);
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      // Could add toast notification here
+    }
   };
 
   const handleAddToCart = (id: number) => {
@@ -72,7 +77,20 @@ export default function FavoritesClient() {
 
       {/* Favorites List */}
       <div className="px-4 py-4">
-        {favorites.length > 0 ? (
+        {/* Error message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <p className="mt-2 text-gray-500">Loading favorites...</p>
+          </div>
+        ) : favorites.length > 0 ? (
           <div className="space-y-4">
             {favorites.map((item) => (
               <div

@@ -172,6 +172,21 @@ export interface CartItem {
   updated_at: string;
 }
 
+export interface Favorite {
+  id: string;
+  user_id: string;
+  product_id: string;
+  product_name: string;
+  product_price: number;
+  product_image: string | null;
+  product_category: string | null;
+  product_description: string | null;
+  product_rating: number | null;
+  is_veg: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -209,6 +224,11 @@ export interface Database {
         Row: CartItem;
         Insert: Omit<CartItem, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<CartItem, "id" | "created_at" | "updated_at">>;
+      };
+      favorites: {
+        Row: Favorite;
+        Insert: Omit<Favorite, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<Favorite, "id" | "created_at" | "updated_at">>;
       };
     };
   };

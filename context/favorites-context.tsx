@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 export interface Product {
   id: number;
@@ -16,9 +17,11 @@ export interface Product {
 
 interface FavoritesContextType {
   favorites: Product[];
-  addToFavorites: (product: Product) => void;
-  removeFromFavorites: (productId: number) => void;
+  addToFavorites: (product: Product) => Promise<void>;
+  removeFromFavorites: (productId: number) => Promise<void>;
   isFavorite: (productId: number) => boolean;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(
@@ -28,41 +31,162 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<Product[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { data: session, status } = useSession();
 
-  // Set isClient to true when component mounts (client-side only)
+  // Set isClient to true when component mounts
   useEffect(() => {
     setIsClient(true);
+  }, []);
 
-    // Load favorites from localStorage
+  // Fetch favorites when session changes or component mounts
+  useEffect(() => {
+    if (isClient && status !== "loading") {
+      fetchFavorites();
+    }
+  }, [isClient, session, status]);
+
+  // API call to fetch favorites
+  const fetchFavorites = async () => {
+    if (!isClient) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (session?.user) {
+        // Authenticated user - fetch from API
+        const response = await fetch("/api/favorites");
+
+        if (response.ok) {
+          const data = await response.json();
+          setFavorites(data.favorites || []);
+        } else if (response.status === 401) {
+          // Unauthorized - fallback to localStorage
+          loadFromLocalStorage();
+        } else {
+          throw new Error("Failed to fetch favorites");
+        }
+      } else {
+        // Guest user - use localStorage
+        loadFromLocalStorage();
+      }
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      setError("Failed to load favorites");
+      // Fallback to localStorage on error
+      loadFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load favorites from localStorage (fallback)
+  const loadFromLocalStorage = () => {
     const storedFavorites = localStorage.getItem("favorites");
     if (storedFavorites) {
       try {
         setFavorites(JSON.parse(storedFavorites));
       } catch (error) {
         console.error("Failed to parse favorites from localStorage:", error);
+        setFavorites([]);
       }
+    } else {
+      setFavorites([]);
     }
-  }, []);
-
-  // Save favorites to localStorage whenever they change
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem("favorites", JSON.stringify(favorites));
-    }
-  }, [favorites, isClient]);
-
-  const addToFavorites = (product: Product) => {
-    setFavorites((prev) => {
-      // Check if product already exists in favorites
-      if (prev.some((item) => item.id === product.id)) {
-        return prev;
-      }
-      return [...prev, product];
-    });
   };
 
-  const removeFromFavorites = (productId: number) => {
-    setFavorites((prev) => prev.filter((item) => item.id !== productId));
+  // Save to localStorage (for guest users)
+  const saveToLocalStorage = (newFavorites: Product[]) => {
+    if (isClient) {
+      localStorage.setItem("favorites", JSON.stringify(newFavorites));
+    }
+  };
+
+  const addToFavorites = async (product: Product) => {
+    if (!isClient) return;
+
+    // Check if product already exists in favorites
+    if (favorites.some((item) => item.id === product.id)) {
+      return;
+    }
+
+    setError(null);
+    const newFavorites = [...favorites, product];
+
+    // Optimistically update UI
+    setFavorites(newFavorites);
+
+    try {
+      if (session?.user) {
+        // Authenticated user - save to API
+        const response = await fetch("/api/favorites/add", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(product),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to add to favorites");
+        }
+      } else {
+        // Guest user - save to localStorage
+        saveToLocalStorage(newFavorites);
+      }
+    } catch (error) {
+      console.error("Error adding to favorites:", error);
+      setError("Failed to add to favorites");
+      // Revert optimistic update
+      setFavorites(favorites);
+
+      // For authenticated users, try localStorage as fallback
+      if (session?.user) {
+        saveToLocalStorage(newFavorites);
+      }
+    }
+  };
+
+  const removeFromFavorites = async (productId: number) => {
+    if (!isClient) return;
+
+    setError(null);
+    const newFavorites = favorites.filter((item) => item.id !== productId);
+
+    // Optimistically update UI
+    setFavorites(newFavorites);
+
+    try {
+      if (session?.user) {
+        // Authenticated user - remove from API
+        const response = await fetch("/api/favorites/remove", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ productId }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to remove from favorites");
+        }
+      } else {
+        // Guest user - update localStorage
+        saveToLocalStorage(newFavorites);
+      }
+    } catch (error) {
+      console.error("Error removing from favorites:", error);
+      setError("Failed to remove from favorites");
+      // Revert optimistic update
+      setFavorites(favorites);
+
+      // For authenticated users, try localStorage as fallback
+      if (session?.user) {
+        saveToLocalStorage(newFavorites);
+      }
+    }
   };
 
   const isFavorite = (productId: number) => {
@@ -71,7 +195,14 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <FavoritesContext.Provider
-      value={{ favorites, addToFavorites, removeFromFavorites, isFavorite }}
+      value={{
+        favorites,
+        addToFavorites,
+        removeFromFavorites,
+        isFavorite,
+        isLoading,
+        error,
+      }}
     >
       {children}
     </FavoritesContext.Provider>
@@ -88,9 +219,11 @@ export function useFavorites() {
   if (!isBrowser && context === undefined) {
     return {
       favorites: [],
-      addToFavorites: () => {},
-      removeFromFavorites: () => {},
+      addToFavorites: async () => {},
+      removeFromFavorites: async () => {},
       isFavorite: () => false,
+      isLoading: false,
+      error: null,
     };
   }
 
