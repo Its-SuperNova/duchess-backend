@@ -121,7 +121,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
       {cart.map((item) => (
         <div
           key={item.uniqueId || item.id}
-          className="flex items-start gap-4 py-3 px-3 bg-white rounded-[20px]"
+          className="flex h-[124px] items-start gap-4 py-3 px-3 bg-white rounded-[20px]"
         >
           {/* Product image */}
           <div className="relative h-[100px] w-24 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
@@ -138,7 +138,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             />
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col justify-between h-full">
             {/* Product details */}
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight ">

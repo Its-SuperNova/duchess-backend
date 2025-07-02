@@ -1,83 +1,88 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 export interface Product {
-  id: number
-  name: string
-  price: number
-  image: string
-  isVeg: boolean
-  description?: string
-  rating?: number
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  isVeg: boolean;
+  description?: string;
+  rating?: number;
+  category?: string;
 }
 
 interface FavoritesContextType {
-  favorites: Product[]
-  addToFavorites: (product: Product) => void
-  removeFromFavorites: (productId: number) => void
-  isFavorite: (productId: number) => boolean
+  favorites: Product[];
+  addToFavorites: (product: Product) => void;
+  removeFromFavorites: (productId: number) => void;
+  isFavorite: (productId: number) => boolean;
 }
 
-const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined)
+const FavoritesContext = createContext<FavoritesContextType | undefined>(
+  undefined
+);
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
-  const [favorites, setFavorites] = useState<Product[]>([])
-  const [isClient, setIsClient] = useState(false)
+  const [favorites, setFavorites] = useState<Product[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
-    setIsClient(true)
+    setIsClient(true);
 
     // Load favorites from localStorage
-    const storedFavorites = localStorage.getItem("favorites")
+    const storedFavorites = localStorage.getItem("favorites");
     if (storedFavorites) {
       try {
-        setFavorites(JSON.parse(storedFavorites))
+        setFavorites(JSON.parse(storedFavorites));
       } catch (error) {
-        console.error("Failed to parse favorites from localStorage:", error)
+        console.error("Failed to parse favorites from localStorage:", error);
       }
     }
-  }, [])
+  }, []);
 
   // Save favorites to localStorage whenever they change
   useEffect(() => {
     if (isClient) {
-      localStorage.setItem("favorites", JSON.stringify(favorites))
+      localStorage.setItem("favorites", JSON.stringify(favorites));
     }
-  }, [favorites, isClient])
+  }, [favorites, isClient]);
 
   const addToFavorites = (product: Product) => {
     setFavorites((prev) => {
       // Check if product already exists in favorites
       if (prev.some((item) => item.id === product.id)) {
-        return prev
+        return prev;
       }
-      return [...prev, product]
-    })
-  }
+      return [...prev, product];
+    });
+  };
 
   const removeFromFavorites = (productId: number) => {
-    setFavorites((prev) => prev.filter((item) => item.id !== productId))
-  }
+    setFavorites((prev) => prev.filter((item) => item.id !== productId));
+  };
 
   const isFavorite = (productId: number) => {
-    return favorites.some((item) => item.id === productId)
-  }
+    return favorites.some((item) => item.id === productId);
+  };
 
   return (
-    <FavoritesContext.Provider value={{ favorites, addToFavorites, removeFromFavorites, isFavorite }}>
+    <FavoritesContext.Provider
+      value={{ favorites, addToFavorites, removeFromFavorites, isFavorite }}
+    >
       {children}
     </FavoritesContext.Provider>
-  )
+  );
 }
 
 export function useFavorites() {
-  const context = useContext(FavoritesContext)
+  const context = useContext(FavoritesContext);
 
   // Check if we're in a browser environment
-  const isBrowser = typeof window !== "undefined"
+  const isBrowser = typeof window !== "undefined";
 
   // If we're not in a browser and context is undefined, return a dummy context
   if (!isBrowser && context === undefined) {
@@ -86,12 +91,12 @@ export function useFavorites() {
       addToFavorites: () => {},
       removeFromFavorites: () => {},
       isFavorite: () => false,
-    }
+    };
   }
 
   if (context === undefined) {
-    throw new Error("useFavorites must be used within a FavoritesProvider")
+    throw new Error("useFavorites must be used within a FavoritesProvider");
   }
 
-  return context
+  return context;
 }
