@@ -215,12 +215,6 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
           <p className="text-gray-500 dark:text-gray-400  text-center mb-6">
             Looks like you haven't added any items to your cart yet.
           </p>
-          <Button
-            onClick={handleClose}
-            className="bg-primary text-white px-8 py-4 rounded-full text-md font-medium hover:bg-primary/90"
-          >
-            Continue Shopping
-          </Button>
         </div>
       )}
     </>
