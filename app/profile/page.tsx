@@ -37,6 +37,7 @@ import {
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/context/theme-context";
 import { getUserByEmail } from "@/lib/auth-utils";
+import { useFavorites } from "@/context/favorites-context";
 
 // Mock profile data type
 interface Profile {
@@ -72,10 +73,11 @@ export default function ProfilePage() {
   }
 
   const { theme, resolvedTheme, toggleTheme, setTheme } = themeContext;
+  const { favorites } = useFavorites();
 
   // Mock data for demonstration, matching the Figma numbers
   const totalOrders = 12;
-  const totalFavorites = 12;
+  const totalFavorites = favorites.length;
 
   // Handle mounting state
   useEffect(() => {

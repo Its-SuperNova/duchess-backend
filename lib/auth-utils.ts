@@ -70,18 +70,27 @@ export async function updateUserProfile(
   email: string,
   profileData: {
     name?: string;
-    phone_number?: string;
-    date_of_birth?: string;
-    gender?: string;
-    image?: string;
+    phone_number?: string | null;
+    date_of_birth?: string | null;
+    gender?: string | null;
+    image?: string | null;
   }
 ): Promise<User | null> {
   try {
+    console.log("updateUserProfile called with:", { email, profileData });
+
+    // Filter out undefined values to avoid database errors
+    const cleanProfileData = Object.fromEntries(
+      Object.entries(profileData).filter(([_, value]) => value !== undefined)
+    );
+
+    console.log("Clean profile data:", cleanProfileData);
+
     // Use admin client to bypass RLS for user profile updates
     const { data, error } = await supabaseAdmin
       .from("users")
       .update({
-        ...profileData,
+        ...cleanProfileData,
         updated_at: new Date().toISOString(),
       })
       .eq("email", email)
@@ -89,14 +98,28 @@ export async function updateUserProfile(
       .single();
 
     if (error) {
-      console.error("Error updating user profile:", error);
-      return null;
+      console.error("Supabase error updating user profile:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      throw new Error(`Database error: ${error.message}`);
     }
 
+    if (!data) {
+      console.error("No user found with email:", email);
+      throw new Error("User not found");
+    }
+
+    console.log("Profile updated successfully:", data);
     return data;
   } catch (error) {
     console.error("Error in updateUserProfile:", error);
-    return null;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to update user profile");
   }
 }
 

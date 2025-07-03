@@ -616,11 +616,12 @@ export default function BottomNav() {
     }
   }, [isProductPage, productId]);
 
-  // Hide bottom nav on login, register, and admin pages
+  // Hide bottom nav on login, register, admin pages, and profile edit
   if (
     pathname === "/login" ||
     pathname === "/register" ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    pathname === "/profile/edit"
   ) {
     return null;
   }
