@@ -236,25 +236,66 @@ export default function ProfileEditPage() {
 
   if (loading || !mounted) {
     return (
-      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
-        <div className="max-w-md mx-auto space-y-6">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-6 w-6" />
-            <Skeleton className="h-6 w-32" />
+      <div className="h-[calc(100vh-70px)] bg-[#f4f4f7] dark:bg-[#18171C] lg:p-4">
+        <div className="space-y-6">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between p-4 lg:p-0">
+            <Skeleton className="h-11 w-11 rounded-full" />
+            <Skeleton className="h-6 w-24" />
+            <div className="hidden lg:block">
+              <Skeleton className="h-9 w-32 rounded-xl" />
+            </div>
+            <div className="lg:hidden w-11" /> {/* Spacer for mobile */}
           </div>
-          <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent">
+
+          {/* Profile Form Skeleton */}
+          <div className="bg-white dark:bg-[#202028] rounded-[52px] lg:rounded-[20px] shadow-sm p-6 border border-gray-200 dark:border-transparent pb-32">
+            {/* Avatar Section Skeleton */}
             <div className="flex flex-col items-center space-y-4 mb-6">
               <Skeleton className="h-24 w-24 rounded-full" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-12" />
             </div>
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i}>
-                  <Skeleton className="h-4 w-16 mb-2" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
+
+            {/* Form Fields Skeleton */}
+            <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
+              {/* Full Name */}
+              <div>
+                <Skeleton className="h-4 w-16 mb-2" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+
+              {/* Email */}
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+
+              {/* Date of Birth */}
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+
+              {/* Gender */}
+              <div className="lg:col-span-2">
+                <Skeleton className="h-4 w-12 mb-2" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Fixed Bottom Buttons Skeleton (Mobile Only) */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#202028] border-t border-gray-200 dark:border-gray-700 px-4 py-6 z-50 lg:hidden">
+          <div className="flex gap-3 max-w-md mx-auto">
+            <Skeleton className="flex-1 h-[54px] rounded-lg" />
+            <Skeleton className="flex-1 h-[54px] rounded-lg" />
           </div>
         </div>
       </div>
@@ -262,10 +303,10 @@ export default function ProfileEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-4  lg:pt-24">
-      <div className="max-w-md lg:max-w-2xl mx-auto space-y-6">
+    <div className=" h-[calc(100vh-70px)] bg-[#f4f4f7] dark:bg-[#18171C] lg:p-4 ">
+      <div className=" space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between px-4">
+        <div className="flex items-center justify-between p-4 lg:p-0">
           <Link href="/profile">
             <div className="bg-white dark:bg-[#202028] p-3 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <IoIosArrowBack className="h-5 w-5 text-gray-700 dark:text-gray-300" />
@@ -278,7 +319,7 @@ export default function ProfileEditPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-[#7a0000] dark:bg-[#7a0000] hover:bg-[#5a0000] dark:hover:bg-[#5a0000] text-white text-[14px] rounded-xl px-4 py-2"
+              className="bg-primary hover:bg-primary/80 text-white text-[14px] rounded-xl px-4 py-2"
             >
               {saving ? "Updating..." : "Update Profile"}
             </button>
@@ -286,32 +327,26 @@ export default function ProfileEditPage() {
         </div>
 
         {/* Profile Form */}
-        <div className="bg-white dark:bg-[#202028] rounded-[52px] shadow-sm p-6 border border-gray-200 dark:border-transparent  pb-32">
+        <div className="bg-white dark:bg-[#202028] rounded-[52px] lg:rounded-[20px] shadow-sm p-6 border border-gray-200 dark:border-transparent  pb-32">
           {/* Avatar Section */}
           <div className="flex flex-col items-center space-y-4 mb-6">
             <div className="relative">
-              <Avatar
-                className="h-24 w-24 border-4 border-gray-100 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={handleAvatarClick}
-              >
+              <Avatar className="h-24 w-24 border-4 border-gray-100 dark:border-gray-600">
                 <AvatarImage
                   src={profile.avatar_url || "/profile-avatar.png"}
                   alt={profile.full_name}
                 />
-                <AvatarFallback className="bg-[#e0eeff] dark:bg-duchess-accent text-[#238aff] dark:text-white text-2xl font-semibold">
+                <AvatarFallback className="bg-gray-100 dark:bg-duchess-accent text-primary dark:text-white text-2xl font-semibold">
                   {getInitials(profile.full_name)}
                 </AvatarFallback>
               </Avatar>
-              <button
-                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full transition-opacity"
-                onClick={handleAvatarClick}
-              >
-                <Edit className="h-6 w-6 text-white" />
-              </button>
             </div>
-            <p className="text-sm text-[#858585] dark:text-gray-400 text-center">
-              Tap the profile picture to change your photo
-            </p>
+            <button
+              onClick={handleAvatarClick}
+              className="text-primary font-medium hover:opacity-80 transition-opacity"
+            >
+              Edit
+            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -335,7 +370,7 @@ export default function ProfileEditPage() {
                 type="text"
                 value={profile.full_name}
                 onChange={(e) => handleInputChange("full_name", e.target.value)}
-                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-[#238aff] dark:focus:border-[#8CC2FF]"
+                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-primary"
                 placeholder="Enter your full name"
               />
             </div>
@@ -352,7 +387,7 @@ export default function ProfileEditPage() {
                 type="email"
                 value={profile.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
-                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-[#238aff] dark:focus:border-[#8CC2FF]"
+                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-primary"
                 placeholder="Enter your email address"
               />
             </div>
@@ -371,7 +406,7 @@ export default function ProfileEditPage() {
                 onChange={(e) =>
                   handleInputChange("phone_number", e.target.value)
                 }
-                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-[#238aff] dark:focus:border-[#8CC2FF]"
+                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-primary"
                 placeholder="Enter your phone number"
               />
             </div>
@@ -390,7 +425,7 @@ export default function ProfileEditPage() {
                 onChange={(e) =>
                   handleInputChange("date_of_birth", e.target.value)
                 }
-                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-[#238aff] dark:focus:border-[#8CC2FF]"
+                className="mt-2 bg-[#f4f4f7] dark:bg-[#18171C] border-gray-200 dark:border-gray-600 focus:border-primary"
               />
             </div>
 
@@ -405,7 +440,7 @@ export default function ProfileEditPage() {
                 id="gender"
                 value={profile.gender}
                 onChange={(e) => handleInputChange("gender", e.target.value)}
-                className="mt-2 w-full px-3 py-2 bg-[#f4f4f7] dark:bg-[#18171C] border border-gray-200 dark:border-gray-600 rounded-md focus:border-[#238aff] dark:focus:border-[#8CC2FF] focus:outline-none text-[#000000] dark:text-white 
+                className="mt-2 w-full px-3 py-2 bg-[#f4f4f7] dark:bg-[#18171C] border border-gray-200 dark:border-gray-600 rounded-md focus:border-primary focus:outline-none text-[#000000] dark:text-white 
                   h-[40px]"
               >
                 <option value="">Select gender</option>
@@ -432,7 +467,7 @@ export default function ProfileEditPage() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-[22px] bg-[#7a0000] dark:bg-[#7a0000] hover:bg-[#5a0000] dark:hover:bg-[#5a0000] text-white rounded-lg"
+            className="flex-1 py-[22px] bg-primary hover:bg-primary/80 text-white rounded-lg"
           >
             {saving ? "Updating..." : "Update"}
           </Button>
