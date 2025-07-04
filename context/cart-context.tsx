@@ -31,8 +31,6 @@ interface CartContextType {
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  isCheckoutMode: boolean;
-  setCheckoutMode: (mode: boolean) => void;
   isLoading: boolean;
 }
 
@@ -42,7 +40,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isCheckoutMode, setIsCheckoutMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { data: session, status } = useSession();
 
@@ -209,8 +206,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // For non-authenticated users, the optimistic update is already applied
   };
 
-
-
   const removeFromCart = async (uniqueId: string) => {
     // Optimistic update - remove item immediately for instant feedback
     const previousCart = [...cart];
@@ -283,11 +278,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const closeCart = () => {
     setIsCartOpen(false);
-    setIsCheckoutMode(false); // Reset checkout mode when closing cart
-  };
-
-  const setCheckoutModeHandler = (mode: boolean) => {
-    setIsCheckoutMode(mode);
   };
 
   return (
@@ -301,8 +291,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         isCartOpen,
         openCart,
         closeCart,
-        isCheckoutMode,
-        setCheckoutMode: setCheckoutModeHandler,
         isLoading,
       }}
     >
@@ -328,8 +316,6 @@ export function useCart() {
       isCartOpen: false,
       openCart: () => {},
       closeCart: () => {},
-      isCheckoutMode: false,
-      setCheckoutMode: () => {},
       isLoading: false,
     };
   }
