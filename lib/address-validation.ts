@@ -1,13 +1,13 @@
-// Simple address validation using Google Maps
+// Enhanced address validation using Google Maps API
 
 import { calculateDistanceAndTime } from "./distance";
 
 export interface ValidationResult {
   isValid: boolean;
-  isCoimbatoreArea: boolean; // For backward compatibility
-  distance?: number;
-  duration?: number;
+  isCoimbatoreArea: boolean;
   area?: string;
+  city?: string;
+  state?: string;
   error?: string;
 }
 
@@ -16,9 +16,39 @@ export interface PincodeAutofillResult {
   area?: string;
   city: string;
   state: string;
-  distance?: number;
-  duration?: number;
   error?: string;
+}
+
+// Enhanced pincode validation using Google Maps Geocoding API via server route
+async function validatePincodeWithGoogleMaps(pincode: string): Promise<{
+  isValid: boolean;
+  city?: string;
+  state?: string;
+  area?: string;
+  error?: string;
+}> {
+  try {
+    const response = await fetch("/api/validate-pincode", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ pincode }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Pincode validation API error:", error);
+    return {
+      isValid: false,
+      error: "Failed to validate pincode. Please try again.",
+    };
+  }
 }
 
 // Validate address and calculate distance using Google Maps
@@ -39,25 +69,40 @@ export async function validateAddressForCoimbatoreDelivery(address: {
       };
     }
 
-    // Use Google Maps to calculate distance (it will handle if the address is valid)
-    const result = await calculateDistanceAndTime("", pincode);
+    // Enhanced pincode validation using Google Maps
+    const pincodeValidation = await validatePincodeWithGoogleMaps(pincode);
 
-    if (result.success) {
-      return {
-        isValid: true,
-        isCoimbatoreArea: true,
-        distance: result.distance,
-        duration: result.duration,
-        area: "", // Google Maps handles this
-      };
-    } else {
+    if (!pincodeValidation.isValid) {
       return {
         isValid: false,
         isCoimbatoreArea: false,
-        error: "Unable to calculate delivery distance for this pincode.",
+        error: pincodeValidation.error || "Invalid pincode",
       };
     }
+
+    // Check if it's in Coimbatore area
+    if (!pincodeValidation.isCoimbatoreArea) {
+      return {
+        isValid: false,
+        isCoimbatoreArea: false,
+        city: pincodeValidation.city,
+        state: pincodeValidation.state,
+        error:
+          pincodeValidation.error ||
+          "This pincode is not in Coimbatore area. We only deliver within Coimbatore.",
+      };
+    }
+
+    // Return the enhanced validation result
+    return {
+      isValid: true,
+      isCoimbatoreArea: true,
+      area: pincodeValidation.area,
+      city: pincodeValidation.city,
+      state: pincodeValidation.state,
+    };
   } catch (error) {
+    console.error("Address validation error:", error);
     return {
       isValid: false,
       isCoimbatoreArea: false,
@@ -66,7 +111,7 @@ export async function validateAddressForCoimbatoreDelivery(address: {
   }
 }
 
-// Autofill address from pincode using Google Maps
+// Enhanced autofill address from pincode using Google Maps
 export async function autofillAddressFromPincode(
   pincode: string
 ): Promise<PincodeAutofillResult> {
@@ -82,28 +127,27 @@ export async function autofillAddressFromPincode(
       };
     }
 
-    // Use Google Maps to validate and get distance
-    const result = await calculateDistanceAndTime("", cleanPincode);
+    // Enhanced pincode validation using Google Maps
+    const pincodeValidation = await validatePincodeWithGoogleMaps(cleanPincode);
 
-    if (result.success) {
-      return {
-        isValid: true,
-        area: "", // Google Maps will handle area detection
-        city: "Coimbatore",
-        state: "Tamil Nadu",
-        distance: result.distance,
-        duration: result.duration,
-      };
-    } else {
+    if (!pincodeValidation.isValid) {
       return {
         isValid: false,
         city: "",
         state: "",
-        error:
-          "This pincode may not be serviceable or is outside our delivery area.",
+        error: pincodeValidation.error || "Invalid pincode",
       };
     }
+
+    // Always return area information for valid pincodes (regardless of Coimbatore area)
+    return {
+      isValid: true,
+      area: pincodeValidation.area || "",
+      city: pincodeValidation.city || "",
+      state: pincodeValidation.state || "",
+    };
   } catch (error) {
+    console.error("Pincode autofill error:", error);
     return {
       isValid: false,
       city: "",

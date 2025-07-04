@@ -2,14 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Edit,
-  MapPin,
-  ChevronRight,
-} from "lucide-react";
+import { Plus, Trash2, Edit, MapPin, ChevronRight } from "lucide-react";
+import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -148,8 +142,8 @@ export default function ManageAddressPage() {
       <div className="min-h-screen bg-[#F5F6FB] flex flex-col">
         <div className="p-4 flex items-center">
           <Link href="/profile" className="inline-block">
-            <div className="bg-white p-2 rounded-lg shadow-sm">
-              <ArrowLeft className="h-5 w-5" />
+            <div className="bg-white p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
+              <IoIosArrowBack className="h-5 w-5 text-gray-700" />
             </div>
           </Link>
           <h1 className="text-xl font-semibold ml-4">My Addresses</h1>
@@ -195,8 +189,8 @@ export default function ManageAddressPage() {
       {/* Back Button and Title */}
       <div className="p-4 flex items-center">
         <Link href="/profile" className="inline-block">
-          <div className="bg-white p-2 rounded-lg shadow-sm">
-            <ArrowLeft className="h-5 w-5" />
+          <div className="bg-white p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
+            <IoIosArrowBack className="h-5 w-5 text-gray-700" />
           </div>
         </Link>
         <h1 className="text-xl font-semibold ml-4">My Addresses</h1>
@@ -269,12 +263,12 @@ export default function ManageAddressPage() {
                         <AddressDistanceDisplay address={address} />
                       </div>
 
-                      {/* Alternate Phone */}
+                      {/* Phone */}
                       {address.alternate_phone && (
                         <div className="mb-3">
                           <p className="text-gray-500 text-sm">
                             <span className="font-medium">
-                              Alternate Phone:
+                              Phone:
                             </span>{" "}
                             {address.alternate_phone}
                           </p>

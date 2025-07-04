@@ -182,7 +182,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4">
       <div className="max-w-md sm:max-w-lg md:max-w-xl lg:max-w-4xl xl:max-w-6xl mx-auto space-y-4 pb-20">
         {/* Top Section for Desktop: User Info, Logout, Stats */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start lg:gap-4">

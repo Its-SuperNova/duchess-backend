@@ -332,7 +332,7 @@ function AddressDrawer({
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Alternate Phone*"
+                placeholder="Phone*"
                 className="bg-white text-sm pl-10"
                 value={addressFormData.alternatePhone}
                 onChange={(e) =>
@@ -364,7 +364,7 @@ function AddressDrawer({
                     setOpen(false);
                   } else {
                     setLocationError(
-                      "Please fill in all required fields including alternate phone number."
+                      "Please fill in all required fields including phone number."
                     );
                   }
                 }}
