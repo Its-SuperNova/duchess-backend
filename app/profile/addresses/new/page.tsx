@@ -261,7 +261,7 @@ export default function NewAddressPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24 pb-24">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4  pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -276,6 +276,54 @@ export default function NewAddressPage() {
                 Add New Address
               </h1>
             </div>
+          </div>
+
+          {/* Desktop Validation Status and Save Button */}
+          <div className="hidden lg:flex items-center gap-4">
+            {/* Validation Status */}
+            {validationResult && (
+              <div className="flex items-center gap-2">
+                {validationResult.isCoimbatoreArea ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-green-700 dark:text-green-300 text-sm font-medium">
+                      ✓ Delivery available
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-red-700 dark:text-red-300 text-sm font-medium">
+                      {validationResult.error || "Outside delivery area"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Save Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={
+                loading ||
+                !formData.addressName ||
+                !formData.fullAddress ||
+                !formData.area ||
+                !formData.zipCode ||
+                !formData.alternatePhone ||
+                (validationResult && !validationResult.isCoimbatoreArea)
+              }
+              className="px-6 py-3 bg-[#7a0000] dark:bg-[#7a0000] text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-[#6a0000] transition-colors"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                "Save Address"
+              )}
+            </button>
           </div>
         </div>
 
@@ -514,8 +562,8 @@ export default function NewAddressPage() {
         </div>
       </div>
 
-      {/* Fixed Bottom Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#202028] border-t border-gray-200 dark:border-gray-700 p-4 z-50 pb-6">
+      {/* Mobile Fixed Bottom Save Button */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#202028] border-t border-gray-200 dark:border-gray-700 p-4 z-50 pb-6">
         <div className="max-w-7xl mx-auto space-y-3">
           {/* Validation Status */}
           {validationResult && (
