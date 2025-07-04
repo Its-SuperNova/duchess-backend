@@ -1,6 +1,20 @@
 import { supabase } from "./supabase";
 import type { Address } from "./supabase";
 import { validateAddressForCoimbatoreDelivery } from "./address-validation";
+import { calculateDistanceForAddress } from "./distance";
+
+// Utility function to convert stored distance (integer * 10) back to display format
+export function getDisplayDistance(
+  storedDistance: number | null
+): number | null {
+  if (storedDistance === null) return null;
+  return storedDistance / 10; // Convert back from integer storage format
+}
+
+// Utility function to convert display distance to storage format
+export function getStorageDistance(displayDistance: number): number {
+  return Math.round(displayDistance * 10); // Convert to integer storage format
+}
 
 export interface CreateAddressData {
   address_name: string;
@@ -241,13 +255,36 @@ export async function createAddress(
     const isFirstAddress = existingAddresses.length === 0;
     const shouldBeDefault = isFirstAddress || addressData.is_default;
 
+    // Calculate distance and duration using the server-side API
+    const deliveryResult = await calculateDistanceForAddress(
+      addressData.full_address,
+      addressData.city,
+      addressData.state,
+      addressData.zip_code
+    );
+
+    if (!deliveryResult.success) {
+      return {
+        address: null,
+        error: deliveryResult.error || "Failed to calculate distance and time",
+      };
+    }
+
     // Add distance and duration to address data (area is not stored in database)
+    // Ensure distance and duration are integers for database compatibility
     const addressDataWithDistance = {
       ...addressData,
-      distance: validationResult.distance,
-      duration: validationResult.duration,
+      distance: Math.round(deliveryResult.distance * 10), // Convert to integer (multiply by 10 to preserve 1 decimal place)
+      duration: Math.round(deliveryResult.duration), // Convert to integer
       is_default: shouldBeDefault,
     };
+
+    console.log("Address data with distance:", {
+      distance: deliveryResult.distance,
+      duration: deliveryResult.duration,
+      distanceInt: Math.round(deliveryResult.distance * 10),
+      durationInt: Math.round(deliveryResult.duration),
+    });
 
     // If this should be default, first unset any existing default addresses
     if (shouldBeDefault && !isFirstAddress) {
@@ -304,7 +341,7 @@ export async function updateAddress(
       // Get current address data to fill in missing fields
       const { data: currentAddress } = await supabase
         .from("addresses")
-        .select("city, state, zip_code")
+        .select("full_address, city, state, zip_code")
         .eq("id", addressId)
         .single();
 
@@ -332,9 +369,26 @@ export async function updateAddress(
           };
         }
 
+        // Calculate distance and duration using the server-side API
+        const deliveryResult = await calculateDistanceForAddress(
+          addressData.full_address || currentAddress.full_address,
+          addressData.city || currentAddress.city,
+          addressData.state || currentAddress.state,
+          addressData.zip_code || currentAddress.zip_code
+        );
+
+        if (!deliveryResult.success) {
+          return {
+            address: null,
+            error:
+              deliveryResult.error || "Failed to calculate distance and time",
+          };
+        }
+
         // Add distance and duration to address data (area is not stored in database)
-        addressData.distance = validationResult.distance;
-        addressData.duration = validationResult.duration;
+        // Ensure distance and duration are integers for database compatibility
+        addressData.distance = Math.round(deliveryResult.distance * 10); // Convert to integer (multiply by 10 to preserve 1 decimal place)
+        addressData.duration = Math.round(deliveryResult.duration); // Convert to integer
       }
     }
 
@@ -438,5 +492,117 @@ export async function getDefaultAddress(
   } catch (error) {
     console.error("Error in getDefaultAddress:", error);
     return null;
+  }
+}
+
+// Recalculate distance and time for an address
+export async function recalculateAddressDistance(
+  addressId: string
+): Promise<{ address: Address | null; error?: string }> {
+  try {
+    console.log("Recalculating distance for address ID:", addressId);
+
+    // Get the address data
+    const { data: address, error: fetchError } = await supabase
+      .from("addresses")
+      .select("*")
+      .eq("id", addressId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching address:", fetchError);
+      return { address: null, error: "Failed to fetch address" };
+    }
+
+    if (!address) {
+      console.error("Address not found for ID:", addressId);
+      return { address: null, error: "Address not found" };
+    }
+
+    console.log("Found address:", address);
+
+    // First validate that the address is in Coimbatore area
+    const validationResult = await validateAddressForCoimbatoreDelivery({
+      city: address.city,
+      state: address.state,
+      zip_code: address.zip_code,
+    });
+
+    if (!validationResult.isCoimbatoreArea) {
+      return {
+        address: null,
+        error: validationResult.error || "Address is outside delivery area",
+      };
+    }
+
+    // Calculate distance and duration using the server-side API
+    const deliveryResult = await calculateDistanceForAddress(
+      address.full_address,
+      address.city,
+      address.state,
+      address.zip_code
+    );
+
+    if (!deliveryResult.success) {
+      return {
+        address: null,
+        error: deliveryResult.error || "Failed to calculate distance and time",
+      };
+    }
+
+    console.log(
+      "Updating address with distance:",
+      deliveryResult.distance,
+      "duration:",
+      deliveryResult.duration
+    );
+
+    // First check if the address still exists
+    const { data: checkAddress, error: checkError } = await supabase
+      .from("addresses")
+      .select("id")
+      .eq("id", addressId)
+      .single();
+
+    if (checkError || !checkAddress) {
+      console.error("Address no longer exists or check failed:", checkError);
+      return { address: null, error: "Address no longer exists" };
+    }
+
+    // Update the address with new distance and duration
+    // Ensure distance and duration are integers for database compatibility
+    const { data: updatedAddress, error: updateError } = await supabase
+      .from("addresses")
+      .update({
+        distance: Math.round(deliveryResult.distance * 10), // Convert to integer (multiply by 10 to preserve 1 decimal place)
+        duration: Math.round(deliveryResult.duration), // Convert to integer
+      })
+      .eq("id", addressId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Error updating address distance:", updateError);
+      console.error("Update error details:", {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+      });
+      return { address: null, error: "Failed to update address distance" };
+    }
+
+    if (!updatedAddress) {
+      console.error("No address returned after update");
+      return {
+        address: null,
+        error: "Failed to update address - no data returned",
+      };
+    }
+
+    return { address: updatedAddress };
+  } catch (error) {
+    console.error("Error in recalculateAddressDistance:", error);
+    return { address: null, error: "Failed to recalculate distance" };
   }
 }

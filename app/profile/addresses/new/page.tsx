@@ -14,7 +14,7 @@ import {
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { createAddress } from "@/lib/address-utils";
+import { createAddress, getDisplayDistance } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import { calculateDeliveryFromAddress } from "@/lib/distance";
 import {
@@ -22,10 +22,12 @@ import {
   validateAddressForCoimbatoreDelivery,
 } from "@/lib/address-validation";
 import RouteInfoDisplay from "@/components/RouteInfoDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 export default function NewAddressPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -180,6 +182,22 @@ export default function NewAddressPage() {
       });
 
       if (result.address) {
+        // Show success toast with distance and time information
+        toast({
+          title: "Address Saved Successfully! 🎉",
+          description: `Distance from shop: ${
+            result.address.distance
+              ? `${getDisplayDistance(result.address.distance)?.toFixed(1)} km`
+              : "Calculating..."
+          } • Delivery time: ${
+            result.address.duration
+              ? `${result.address.duration} minutes`
+              : "Calculating..."
+          }`,
+          duration: 5000,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+
         router.push("/profile/addresses");
       } else {
         setError(result.error || "Failed to create address. Please try again.");

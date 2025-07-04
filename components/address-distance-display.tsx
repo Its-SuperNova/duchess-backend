@@ -2,6 +2,7 @@
 
 import { MapPin, Clock } from "lucide-react";
 import { formatDistance, formatDuration } from "@/lib/distance";
+import { getDisplayDistance } from "@/lib/address-utils";
 import type { Address } from "@/lib/supabase";
 
 interface AddressDistanceDisplayProps {
@@ -13,8 +14,9 @@ export default function AddressDistanceDisplay({
   address,
   className = "",
 }: AddressDistanceDisplayProps) {
-  // Directly use the distance and duration from the address object
-  const hasDistance = typeof address.distance === "number";
+  // Convert stored distance back to display format
+  const displayDistance = getDisplayDistance(address.distance);
+  const hasDistance = typeof displayDistance === "number";
 
   if (!hasDistance) {
     return (
@@ -27,7 +29,7 @@ export default function AddressDistanceDisplay({
     );
   }
 
-  const formattedDistance = formatDistance(address.distance!);
+  const formattedDistance = formatDistance(displayDistance!);
   const formattedDuration = address.duration
     ? formatDuration(address.duration)
     : null;

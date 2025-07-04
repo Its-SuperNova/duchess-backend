@@ -26,11 +26,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { area, pincode } = await request.json();
+    const { area, pincode, fullAddress } = await request.json();
 
     console.log("📥 Received request:", {
       area,
       pincode,
+      fullAddress,
       pincodeType: typeof pincode,
     });
 
@@ -62,17 +63,24 @@ export async function POST(request: NextRequest) {
 
     // Construct origin and destination
     const origin = `${SHOP_LOCATION.latitude},${SHOP_LOCATION.longitude}`;
-    // Handle empty area gracefully
-    const destinationParts = [
-      cleanPincode,
-      "Coimbatore",
-      "Tamil Nadu",
-      "India",
-    ];
-    if (area && area.trim()) {
-      destinationParts.unshift(area.trim());
+
+    // Use full address if provided, otherwise construct from parts
+    let destination: string;
+    if (fullAddress && fullAddress.trim()) {
+      destination = fullAddress.trim();
+    } else {
+      // Handle empty area gracefully
+      const destinationParts = [
+        cleanPincode,
+        "Coimbatore",
+        "Tamil Nadu",
+        "India",
+      ];
+      if (area && area.trim()) {
+        destinationParts.unshift(area.trim());
+      }
+      destination = destinationParts.join(", ");
     }
-    const destination = destinationParts.join(", ");
 
     console.log(`🗺️ Server-side Google Maps API call`);
     console.log(`📍 Origin: ${origin}`);

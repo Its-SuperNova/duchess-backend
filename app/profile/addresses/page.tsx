@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Edit, MapPin, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit,
+  MapPin,
+  ChevronRight,
+  RefreshCw,
+} from "lucide-react";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -10,11 +17,14 @@ import {
   getUserAddresses,
   setDefaultAddress,
   deleteAddress,
+  recalculateAddressDistance,
+  getDisplayDistance,
 } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import AddressDistanceDisplay from "@/components/address-distance-display";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,12 +39,14 @@ import {
 export default function ManageAddressPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { toast } = useToast();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [recalculating, setRecalculating] = useState<string | null>(null);
 
   // Load addresses from database
   useEffect(() => {
@@ -131,6 +143,39 @@ export default function ManageAddressPage() {
   const cancelDelete = () => {
     setDeleteDialogOpen(false);
     setAddressToDelete(null);
+  };
+
+  const handleRecalculateDistance = async (addressId: string) => {
+    try {
+      setRecalculating(addressId);
+      setError(null);
+
+      const result = await recalculateAddressDistance(addressId);
+
+      if (result.address) {
+        // Update the address in the local state
+        setAddresses((prev) =>
+          prev.map((addr) => (addr.id === addressId ? result.address! : addr))
+        );
+
+        // Show success toast
+        toast({
+          title: "Distance Updated! 🎯",
+          description: `New distance: ${getDisplayDistance(
+            result.address.distance
+          )?.toFixed(1)} km • Time: ${result.address.duration} minutes`,
+          duration: 3000,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        setError(result.error || "Failed to recalculate distance");
+      }
+    } catch (err) {
+      console.error("Error recalculating distance:", err);
+      setError("Failed to recalculate distance. Please try again.");
+    } finally {
+      setRecalculating(null);
+    }
   };
 
   const formatAddress = (address: Address) => {
@@ -248,11 +293,6 @@ export default function ManageAddressPage() {
                         <h3 className="font-medium text-gray-900">
                           {address.address_name}
                         </h3>
-                        {address.is_default && (
-                          <span className="px-2 py-1 text-xs bg-[#7A0000] text-white rounded-full">
-                            Default
-                          </span>
-                        )}
                       </div>
                       <p className="text-gray-500 text-sm mb-3">
                         {formatAddress(address)}
@@ -267,9 +307,7 @@ export default function ManageAddressPage() {
                       {address.alternate_phone && (
                         <div className="mb-3">
                           <p className="text-gray-500 text-sm">
-                            <span className="font-medium">
-                              Phone:
-                            </span>{" "}
+                            <span className="font-medium">Phone:</span>{" "}
                             {address.alternate_phone}
                           </p>
                         </div>
@@ -284,10 +322,31 @@ export default function ManageAddressPage() {
                           Set as default
                         </button>
                       )}
+
+                      {/* Default tag */}
+                      {address.is_default && (
+                        <div className="mt-3">
+                          <span className="px-2 py-1 text-xs bg-[#7A0000] text-white rounded-full">
+                            Default
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action buttons */}
                     <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleRecalculateDistance(address.id)}
+                        disabled={recalculating === address.id}
+                        className="p-2 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                        title="Recalculate distance and time"
+                      >
+                        <RefreshCw
+                          className={`h-4 w-4 ${
+                            recalculating === address.id ? "animate-spin" : ""
+                          }`}
+                        />
+                      </button>
                       <button
                         onClick={() =>
                           router.push(`/profile/addresses/edit/${address.id}`)

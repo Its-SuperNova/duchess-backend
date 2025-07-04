@@ -714,8 +714,69 @@ export async function calculateDistanceAndTime(
     const data = await response.json();
 
     return {
-      distance: data.distance || 15, // Default fallback
-      duration: data.duration || 30, // Default fallback
+      distance: Number(data.distance) || 15, // Ensure it's a number
+      duration: Number(data.duration) || 30, // Ensure it's a number
+      success: data.success || false,
+      error: data.error,
+    };
+  } catch (error) {
+    console.error("Distance calculation API call failed:", error);
+    return {
+      distance: 15, // Default fallback
+      duration: 30, // Default fallback
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Calculate distance and time for full address using server-side API
+ * This avoids CORS issues by using our server-side API route
+ * @param fullAddress Full address string
+ * @param city City name
+ * @param state State name
+ * @param zipCode ZIP code
+ * @returns Route result with distance and duration
+ */
+export async function calculateDistanceForAddress(
+  fullAddress: string,
+  city: string,
+  state: string,
+  zipCode: string
+): Promise<RouteResult> {
+  try {
+    console.log("Calculating distance for full address via API route:", {
+      fullAddress,
+      city,
+      state,
+      zipCode,
+    });
+
+    // Extract area from full address or use city as fallback
+    const area = fullAddress.split(",")[0]?.trim() || city;
+
+    const response = await fetch("/api/distance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        area,
+        pincode: zipCode,
+        fullAddress: `${fullAddress}, ${city}, ${state} ${zipCode}, India`,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      distance: Number(data.distance) || 15, // Ensure it's a number
+      duration: Number(data.duration) || 30, // Ensure it's a number
       success: data.success || false,
       error: data.error,
     };
