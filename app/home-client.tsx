@@ -189,27 +189,11 @@ export default function HomeClient(props: HomeClientProps) {
 
       {/* Products Section */}
       <div className="w-full">
-        <section className="px-4 py-8 md:px-6 lg:px-8 w-full">
+        <section className="px-4 py-8 pt-0 md:pt-8 md:px-6 lg:px-8 w-full">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
               Popular Products
             </h2>
-            {!isLoadingProducts && !productsError && products.length > 0 && (
-              <Button
-                onClick={retryFetchProducts}
-                variant="ghost"
-                size="sm"
-                className="text-primary hover:text-primary/80"
-                disabled={isLoadingProducts}
-              >
-                {isLoadingProducts ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                Refresh
-              </Button>
-            )}
           </div>
 
           {/* Products Grid with Loading States */}

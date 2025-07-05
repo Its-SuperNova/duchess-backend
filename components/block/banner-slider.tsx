@@ -39,6 +39,8 @@ const BannerSlider: React.FC<BannerSliderProps> = ({ className = "" }) => {
     align: "start",
     skipSnaps: false,
     dragFree: false,
+    containScroll: "trimSnaps",
+    inViewThreshold: 0.7,
   });
 
   const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -96,7 +98,7 @@ const BannerSlider: React.FC<BannerSliderProps> = ({ className = "" }) => {
           {bannerImages.map((banner) => (
             <div
               key={banner.id}
-              className="flex-[0_0_100%] min-w-0 relative rounded-[28px]"
+              className="flex-[0_0_100%] min-w-0 relative rounded-[28px] mr-4 last:mr-0"
             >
               <div className="relative w-full h-full rounded-[28px]">
                 <Image
