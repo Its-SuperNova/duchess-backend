@@ -199,7 +199,7 @@ export default function ManageAddressPage() {
           <Link href="/profile/addresses/new">
             <Button
               variant="ghost"
-              className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#7A0000] hover:bg-[#7A0000]/10 border border-gray-200"
+              className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#7A0000] border border-gray-200"
             >
               <div className="flex items-center gap-4">
                 <Plus className="h-5 w-5 text-[#7A0000]" />
@@ -241,21 +241,21 @@ export default function ManageAddressPage() {
         <h1 className="text-xl font-semibold ml-4">My Addresses</h1>
       </div>
 
-      {/* Add New Address Button */}
-      <div className="px-4 mb-4">
-        <Link href="/profile/addresses/new">
-          <Button
-            variant="ghost"
-            className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#7A0000] hover:bg-[#7A0000]/10 border border-gray-200"
-          >
-            <div className="flex items-center gap-4">
-              <Plus className="h-5 w-5 text-[#7A0000]" />
-              <span className="text-[#7A0000]">Add New Address</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-[#7A0000]" />
-          </Button>
-        </Link>
-      </div>
+              {/* Add New Address Button */}
+        <div className="px-4 mb-4">
+          <Link href="/profile/addresses/new">
+            <Button
+              variant="ghost"
+              className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#7A0000] border border-gray-200"
+            >
+              <div className="flex items-center gap-4">
+                <Plus className="h-5 w-5 text-[#7A0000]" />
+                <span className="text-[#7A0000]">Add New Address</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-[#7A0000]" />
+            </Button>
+          </Link>
+        </div>
 
       {/* Saved Addresses Title */}
       <div className="px-4 mb-4">

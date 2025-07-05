@@ -28,6 +28,109 @@ import {
 } from "@/lib/address-validation";
 import RouteInfoDisplay from "@/components/RouteInfoDisplay";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Skeleton Loader Component
+function AddressEditSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 pb-24 lg:pb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-11 w-11 rounded-full" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <div className="hidden lg:flex items-center gap-4">
+            <Skeleton className="h-8 w-32 rounded-full" />
+            <Skeleton className="h-12 w-32 rounded-xl" />
+          </div>
+        </div>
+
+        {/* Desktop Layout Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Form Skeleton */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent">
+              <Skeleton className="h-6 w-40 mb-6" />
+
+              <div className="space-y-6">
+                {/* Address Label Skeleton */}
+                <div>
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+
+                {/* Pincode Skeleton */}
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+
+                {/* Area Skeleton */}
+                <div>
+                  <Skeleton className="h-4 w-12 mb-2" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+
+                {/* Street Address Skeleton */}
+                <div>
+                  <Skeleton className="h-4 w-28 mb-2" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+
+                {/* Additional Details Skeleton */}
+                <div>
+                  <Skeleton className="h-4 w-36 mb-2" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+
+                {/* Phone Skeleton */}
+                <div>
+                  <Skeleton className="h-4 w-16 mb-2" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Information Panel Skeleton */}
+          <div className="lg:col-span-1">
+            <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent sticky top-8">
+              <Skeleton className="h-6 w-40 mb-4" />
+
+              <div className="space-y-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <Skeleton className="w-2 h-2 rounded-full mt-2 flex-shrink-0" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-3 w-full mb-1" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Fixed Bottom Save Button Skeleton */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#202028] border-t border-gray-200 dark:border-gray-700 p-4 z-50 pb-6">
+        <div className="max-w-7xl mx-auto space-y-3">
+          <Skeleton className="h-10 w-full rounded-full" />
+          <Skeleton className="h-14 w-full rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function EditAddressPage() {
   const router = useRouter();
@@ -277,18 +380,7 @@ export default function EditAddressPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="flex items-center space-x-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Loading address...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <AddressEditSkeleton />;
   }
 
   if (error && !address) {

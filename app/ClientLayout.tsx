@@ -71,8 +71,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     !isFAQPage &&
     !isAuthRoute &&
     !isOnboardingPage &&
-    !isCheckoutRoute &&
-    !isProfileRoute;
+    !isCheckoutRoute;
   const useSidebarLayout = showSidebar;
 
   const [showSplash, setShowSplash] = useState(true);
