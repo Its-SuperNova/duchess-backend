@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { FiSearch } from "react-icons/fi";
+
 import { IoFilter } from "react-icons/io5";
 import { Shield, RefreshCw } from "lucide-react";
 import Image from "next/image";
@@ -273,12 +273,6 @@ const Hero = () => {
       <div className="hidden lg:block w-full px-4 mb-8">
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Categories</h2>
-          <Link
-            href="/categories"
-            className="font-medium text-[#d48926de] hover:underline"
-          >
-            See All
-          </Link>
         </div>
 
         {/* Categories content based on loading/error/empty states */}
@@ -330,32 +324,9 @@ const Hero = () => {
           <BannerSlider />
         </div>
 
-        {/* Search Bar & Filter */}
-        <div className="flex items-center w-full">
-          <div className="relative flex-1 min-w-0">
-            <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full pl-12 pr-4 py-3 bg-white rounded-l-full focus:outline-none focus:ring-2 focus:ring-gray-200 border-0 shadow-sm text-gray-700 placeholder-gray-400"
-            />
-          </div>
-          <div className="bg-white h-12 flex items-center w-[2px]">
-            <div className="w-[2px] h-4 rounded-full bg-gray-200"></div>
-          </div>
-          <div className="bg-white h-12 w-12 rounded-r-full flex justify-center items-center shadow-sm flex-shrink-0">
-            <IoFilter className="w-5 h-5 text-gray-600" />
-          </div>
-        </div>
-
         {/* Categories */}
         <div className="flex w-full justify-between items-center px-1">
           <h2 className="text-lg md:text-xl font-medium">Categories</h2>
-          <div>
-            <Link href="/categories" className="font-medium text-primary">
-              See All
-            </Link>
-          </div>
         </div>
 
         {/* Categories Grid - Responsive based on specific breakpoints */}

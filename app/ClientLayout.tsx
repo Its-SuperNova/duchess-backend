@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
@@ -174,6 +175,31 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Bottom Navigation */}
           {showBottomNav && !isProductPage && <BottomNav />}
+
+          {/* Footer */}
+          <footer className="w-full border-t border-gray-200 bg-white">
+            <div className="mx-auto w-full max-w-[1200px] px-4 py-3">
+              <div className="text-xs text-gray-600 whitespace-nowrap overflow-x-auto flex justify-center">
+                <span>&copy; {new Date().getFullYear()} duchess pastry</span>
+                <span className="mx-2">•</span>
+                <Link href="#" className="hover:underline">
+                  Privacy Policy
+                </Link>
+                <span className="mx-2">•</span>
+                <Link href="#" className="hover:underline">
+                  Terms & Conditions
+                </Link>
+                <span className="mx-2">•</span>
+                <Link href="#" className="hover:underline">
+                  Refund & Cancellation
+                </Link>
+                <span className="mx-2">•</span>
+                <Link href="#" className="hover:underline">
+                  Shipping & Delivery
+                </Link>
+              </div>
+            </div>
+          </footer>
 
           <Toaster />
           <SonnerToaster />

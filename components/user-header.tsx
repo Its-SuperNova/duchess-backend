@@ -55,7 +55,7 @@ export default function UserHeader() {
       <div className="bg-white border-b border-gray-200">
         <div className="mx-auto w-full max-w-[1200px] px-4">
           <div className="py-2 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-xs md:text-sm text-gray-600">
               We also accept orders over the phone – Just call us!
             </p>
           </div>
