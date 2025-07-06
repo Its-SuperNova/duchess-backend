@@ -1,0 +1,216 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useCart } from "@/context/cart-context";
+import { useFavorites } from "@/context/favorites-context";
+import { User } from "lucide-react";
+import { Icon } from "@iconify/react";
+import { IoCloseOutline } from "react-icons/io5";
+import { useState } from "react";
+
+export default function UserHeader() {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const { cart, openCart } = useCart();
+  const { favorites } = useFavorites();
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalFavorites = favorites.length;
+
+  const goToProfile = () => {
+    if (session?.user) {
+      router.push("/profile");
+    } else {
+      router.push("/login");
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setIsSearchExpanded(false);
+    }
+  };
+
+  const handleSearchClick = () => {
+    setIsSearchExpanded(true);
+  };
+
+  const handleSearchBlur = () => {
+    if (!searchQuery.trim()) {
+      setIsSearchExpanded(false);
+    }
+  };
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
+      <div className="mx-auto w-full max-w-[1200px] px-4">
+        <div className="h-16 flex items-center justify-between gap-4">
+          {/* Left: Logo */}
+          <Link href="/" className="flex items-center gap-2 shrink-0">
+            <div className="relative h-[64px] w-[150px]">
+              <Image
+                src="/logo/duchess-pastry-2.svg"
+                alt="Duchess Pastries"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <span className="sr-only">Duchess Pastries</span>
+          </Link>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            {/* Desktop Search - Hidden on Mobile */}
+            <div
+              className={`relative transition-all duration-300 ease-in-out hidden md:block ${
+                isSearchExpanded ? "w-64" : "w-8"
+              }`}
+            >
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Enter Search"
+                  className={`h-8 bg-transparent border-b border-gray-300 focus:outline-none focus:border-black transition-all duration-300 ${
+                    isSearchExpanded ? "w-full pr-8" : "w-0 opacity-0"
+                  }`}
+                  onBlur={handleSearchBlur}
+                  style={{
+                    width: isSearchExpanded ? "calc(100% - 64px)" : "0px",
+                    marginLeft: "36px",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleSearchClick}
+                  className={`absolute left-0 top-1/2 transform -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-black ${
+                    isSearchExpanded ? "pointer-events-none" : ""
+                  }`}
+                  aria-label="Search"
+                >
+                  <Icon icon="solar:magnifer-linear" className="h-5 w-5" />
+                </button>
+                {isSearchExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSearchExpanded(false);
+                      setSearchQuery("");
+                    }}
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
+                    aria-label="Close search"
+                  >
+                    <IoCloseOutline className="h-5 w-5" />
+                  </button>
+                )}
+              </form>
+            </div>
+
+            {/* Mobile Search Icon - Hidden on Desktop */}
+            <button
+              type="button"
+              onClick={handleSearchClick}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-black md:hidden"
+              aria-label="Search"
+            >
+              <Icon icon="solar:magnifer-linear" className="h-5 w-5" />
+            </button>
+
+            {/* Favorites - Hidden on Mobile */}
+            <Link
+              href="/favorites"
+              aria-label="Favorites"
+              className="relative hidden md:inline-flex h-8 w-8 items-center justify-center rounded-full text-black"
+            >
+              <Icon icon="solar:heart-linear" className="h-5 w-5" />
+              {totalFavorites > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#7A0000] text-white text-[10px] font-semibold flex items-center justify-center">
+                  {totalFavorites > 9 ? "9+" : totalFavorites}
+                </span>
+              )}
+            </Link>
+
+            {/* Cart */}
+            <button
+              aria-label="Cart"
+              onClick={openCart}
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-black"
+            >
+              <Icon icon="solar:bag-4-linear" className="h-5 w-5" />
+              {totalCartItems > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#7A0000] text-white text-[10px] font-semibold flex items-center justify-center">
+                  {totalCartItems > 9 ? "9+" : totalCartItems}
+                </span>
+              )}
+            </button>
+
+            {/* Profile */}
+            <button
+              onClick={goToProfile}
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-black overflow-hidden"
+              aria-label="Profile"
+            >
+              {session?.user?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={session.user.image}
+                  alt={session.user.name || "Profile"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Search Expansion - Slides down from header */}
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden md:hidden ${
+            isSearchExpanded ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="pb-4">
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter Search"
+                className="w-full h-12 pl-12 pr-12 bg-transparent border-b border-gray-300 focus:outline-none focus:border-black text-base"
+                onBlur={handleSearchBlur}
+              />
+              <Icon
+                icon="solar:magnifer-linear"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5"
+              />
+              {isSearchExpanded && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchExpanded(false);
+                    setSearchQuery("");
+                  }}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
+                  aria-label="Close search"
+                >
+                  <IoCloseOutline className="h-5 w-5" />
+                </button>
+              )}
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}

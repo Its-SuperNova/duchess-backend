@@ -16,6 +16,7 @@ import AuthNotification from "@/components/auth/auth-notification";
 import SplashScreen from "@/components/splashscreen";
 import OnboardingPage from "@/app/onboarding/page";
 import { useIsMobile } from "@/hooks/use-mobile";
+import UserHeader from "@/components/user-header";
 
 // Inner component that can use cart and layout context
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
@@ -36,8 +37,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isProductPage = pathname.startsWith("/products/");
   const isCheckoutRoute = pathname.startsWith("/checkout");
 
-  // Hide header and user sidebar on all non-admin pages
-  const showHeader = false;
+  // Show header on all non-admin, non-auth, non-onboarding, non-checkout routes
+  const showHeader = !isAdminRoute && !isAuthRoute && !isOnboardingPage;
   const showSidebar = false;
   const showBottomNav =
     !isAdminRoute &&
@@ -48,7 +49,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const useSidebarLayout = showSidebar;
 
   // Apply top padding only if header is shown
-  const topPaddingClass = showHeader ? "lg:pt-16" : "";
+  const topPaddingClass = showHeader ? "pt-16 lg:pt-16" : "";
 
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -141,7 +142,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         <>
           <AuthNotification />
 
-          {/* Header removed */}
+          {showHeader && <UserHeader />}
 
           <div className="flex w-full">
             {/* User Sidebar removed */}
