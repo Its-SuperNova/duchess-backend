@@ -37,7 +37,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isProductPage = pathname.startsWith("/products/");
   const isCheckoutRoute = pathname.startsWith("/checkout");
 
-  // Show header on all non-admin, non-auth, non-onboarding, non-checkout routes
+  // Hide header and user sidebar on all non-admin pages
   const showHeader = !isAdminRoute && !isAuthRoute && !isOnboardingPage;
   const showSidebar = false;
   const showBottomNav =
@@ -48,8 +48,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     !isCheckoutRoute;
   const useSidebarLayout = showSidebar;
 
-  // Apply top padding only if header is shown
-  const topPaddingClass = showHeader ? "pt-16 lg:pt-16" : "";
+  // No top padding needed since header is not fixed
+  const topPaddingClass = "";
 
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
