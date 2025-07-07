@@ -116,7 +116,7 @@ export default function ProductPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  const { addToCart, cart, openCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
 
   // Fetch product data

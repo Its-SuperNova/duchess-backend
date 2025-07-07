@@ -14,7 +14,7 @@ import { useState } from "react";
 export default function UserHeader() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { cart, openCart } = useCart();
+  const { cart } = useCart();
   const { favorites } = useFavorites();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -154,9 +154,9 @@ export default function UserHeader() {
               </Link>
 
               {/* Cart */}
-              <button
+              <Link
+                href="/cart"
                 aria-label="Cart"
-                onClick={openCart}
                 className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-black"
               >
                 <Icon icon="solar:bag-4-linear" className="h-5 w-5" />
@@ -165,7 +165,7 @@ export default function UserHeader() {
                     {totalCartItems > 9 ? "9+" : totalCartItems}
                   </span>
                 )}
-              </button>
+              </Link>
 
               {/* Profile */}
               <button

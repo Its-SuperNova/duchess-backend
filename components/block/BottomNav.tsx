@@ -559,7 +559,9 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                     </Button>
                     <Button
                       onClick={handleAddToCart}
-                      disabled={!inStock || !isTextInputValid() || isAddingToCart}
+                      disabled={
+                        !inStock || !isTextInputValid() || isAddingToCart
+                      }
                       className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white disabled:opacity-50"
                     >
                       {isAddingToCart ? (
@@ -596,6 +598,7 @@ export default function BottomNav() {
   const params = useParams();
   const [product, setProduct] = useState<DatabaseProduct | null>(null);
   const [loadingProduct, setLoadingProduct] = useState(false);
+  const { cart } = useCart();
 
   // Detect if on product detail page
   const isProductPage = /^\/products\/[\w-]+$/.test(pathname);
@@ -642,6 +645,13 @@ export default function BottomNav() {
       icon: HiSquares2X2,
       isReactIcon: true,
       isCartButton: false,
+    },
+    {
+      name: "Cart",
+      href: "/cart",
+      icon: ShoppingCart,
+      isReactIcon: false,
+      isCartButton: true,
     },
     {
       name: "Favorites",
@@ -698,20 +708,28 @@ export default function BottomNav() {
                       }`}
                       onClick={() => setActiveTab(item.href)}
                     >
-                      {item.isReactIcon ? (
-                        <IconComponent
-                          size={20}
-                          className={`transition-colors duration-200 ${
-                            isActive ? "text-white" : "text-black"
-                          }`}
-                        />
-                      ) : (
-                        <IconComponent
-                          className={`w-[18px] h-[18px] transition-colors duration-200 ${
-                            isActive ? "text-white" : "text-black"
-                          }`}
-                        />
-                      )}
+                      <div className="relative">
+                        {item.isReactIcon ? (
+                          <IconComponent
+                            size={20}
+                            className={`transition-colors duration-200 ${
+                              isActive ? "text-white" : "text-black"
+                            }`}
+                          />
+                        ) : (
+                          <IconComponent
+                            className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                              isActive ? "text-white" : "text-black"
+                            }`}
+                          />
+                        )}
+                        {/* Cart count badge */}
+                        {item.isCartButton && cart.length > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#7A0000] text-white text-[10px] font-semibold flex items-center justify-center">
+                            {cart.length > 9 ? "9+" : cart.length}
+                          </span>
+                        )}
+                      </div>
                       {isActive && (
                         <span
                           className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"

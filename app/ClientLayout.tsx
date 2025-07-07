@@ -8,8 +8,8 @@ import { useSession } from "next-auth/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import BottomNav from "@/components/block/BottomNav";
-import CartSidebar from "@/components/cart-sidebar";
-import { CartProvider, useCart } from "@/context/cart-context";
+
+import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { LayoutProvider, useLayout } from "@/context/layout-context";
@@ -21,8 +21,7 @@ import UserHeader from "@/components/user-header";
 
 // Inner component that can use cart and layout context
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
-  const { isCartOpen, closeCart } = useCart();
-  const { isUserSidebarCollapsed, setIsCartSidebarOpen } = useLayout();
+  const { isUserSidebarCollapsed } = useLayout();
 
   const pathname = usePathname();
   const { data: session, status } = useSession();
@@ -55,11 +54,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const previousStatus = useRef<string | null>(null);
-
-  // Sync cart sidebar state with layout context
-  useEffect(() => {
-    setIsCartSidebarOpen(isCartOpen);
-  }, [isCartOpen, setIsCartSidebarOpen]);
 
   // Layout classes no longer used after removing header/sidebar
 
@@ -157,10 +151,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                     }`
                   : `flex-1 ${topPaddingClass}`
               }`}
-              style={{
-                marginRight:
-                  useSidebarLayout && isCartOpen ? "24rem" : undefined,
-              }}
             >
               {isHomePage ? (
                 <div className="mx-auto w-full max-w-[1200px]">{children}</div>
@@ -168,9 +158,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                 children
               )}
             </main>
-
-            {/* Cart Sidebar */}
-            <CartSidebar isOpen={isCartOpen} onClose={closeCart} />
           </div>
 
           {/* Bottom Navigation */}

@@ -28,9 +28,6 @@ interface CartContextType {
   removeFromCart: (uniqueId: string) => void;
   updateQuantity: (uniqueId: string, quantity: number) => void;
   getSubtotal: () => number;
-  isCartOpen: boolean;
-  openCart: () => void;
-  closeCart: () => void;
   isLoading: boolean;
   clearCart: () => void;
 }
@@ -40,7 +37,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { data: session, status } = useSession();
 
@@ -177,9 +173,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Automatically open cart sidebar when item is added
-    setIsCartOpen(true);
-
     if (session?.user?.email) {
       // User is authenticated, sync with database in background
       try {
@@ -273,14 +266,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const openCart = () => {
-    setIsCartOpen(true);
-  };
-
-  const closeCart = () => {
-    setIsCartOpen(false);
-  };
-
   const clearCart = () => {
     setCart([]);
     if (typeof window !== "undefined") {
@@ -296,9 +281,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeFromCart,
         updateQuantity,
         getSubtotal,
-        isCartOpen,
-        openCart,
-        closeCart,
         isLoading,
         clearCart,
       }}
@@ -322,9 +304,6 @@ export function useCart() {
       removeFromCart: () => {},
       updateQuantity: () => {},
       getSubtotal: () => 0,
-      isCartOpen: false,
-      openCart: () => {},
-      closeCart: () => {},
       isLoading: false,
     };
   }

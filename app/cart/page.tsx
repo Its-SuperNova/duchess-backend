@@ -1,0 +1,225 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Plus, Minus, ShoppingCart, ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import Lottie from "lottie-react";
+import { useCart } from "@/context/cart-context";
+import { useRouter } from "next/navigation";
+import { Icon } from "@iconify/react";
+
+export default function CartPage() {
+  const { cart, updateQuantity, removeFromCart } = useCart();
+  const router = useRouter();
+
+  // Animation data - using a simple shopping cart animation
+  const [animationData, setAnimationData] = useState(null);
+
+  // Load animation data
+  useEffect(() => {
+    // Using a simple empty cart animation
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch(
+          "https://d1jj76g3lut4fe.cloudfront.net/saved_colors/98652/0M71xqBxut5tSYdp.json"
+        );
+        const data = await response.json();
+        setAnimationData(data);
+      } catch (error) {
+        console.error("Failed to load animation:", error);
+      }
+    };
+
+    loadAnimation();
+  }, []);
+
+  // Render cart items component
+  const renderCartItems = () => {
+    if (cart.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 lg:py-12 text-center px-4">
+          {animationData ? (
+            <div className="w-24 h-24 lg:w-32 lg:h-32 mb-4 lg:mb-6">
+              <Lottie animationData={animationData} loop={true} />
+            </div>
+          ) : (
+            <div className="w-24 h-24 lg:w-32 lg:h-32 mb-4 lg:mb-6 flex items-center justify-center">
+              <ShoppingCart className="w-12 h-12 lg:w-16 lg:h-16 text-gray-400" />
+            </div>
+          )}
+          <h3 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Your cart is empty
+          </h3>
+          <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mb-6 max-w-sm">
+            Looks like you haven't added any delicious treats to your cart yet.
+          </p>
+          <Link href="/products">
+            <Button className="bg-[#7A0000] hover:bg-[#600000] text-white px-4 lg:px-6 py-2 lg:py-3 rounded-lg text-sm lg:text-base">
+              Start Shopping
+            </Button>
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3 lg:space-y-4">
+        {cart.map((item) => {
+          const uid = (item.uniqueId || `${item.id}-${item.variant}`) as string;
+          const qty = item.quantity || 1;
+
+          return (
+            <div
+              key={uid}
+              className="bg-white dark:bg-gray-800 rounded-[16px] lg:rounded-[22px] p-3 lg:p-4 shadow-sm border border-gray-200 dark:border-gray-700"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex w-full min-w-0">
+                  {/* Product Image */}
+                  <div className="relative h-[72px] w-[72px] lg:h-[88px] lg:w-[88px] rounded-[16px] lg:rounded-[20px] overflow-hidden mr-3 lg:mr-3 shrink-0">
+                    {item.image ? (
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                        <ShoppingCart className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="flex flex-col justify-between flex-1 min-w-0">
+                    {/* Top row */}
+                    <div className="flex items-start justify-between w-full gap-2 max-w-full min-w-0">
+                      {/* Name and category */}
+                      <div className="flex-1 w-full min-w-0">
+                        {/* Single-line name with ellipsis */}
+                        <h3
+                          className="block truncate text-[14px] lg:text-[15px] leading-tight font-medium text-black dark:text-gray-200"
+                          title={item.name}
+                        >
+                          {item.name}
+                        </h3>
+                        <p className="text-[13px] lg:text-[14px] text-gray-500 dark:text-gray-400 truncate max-w-full">
+                          {item.category ?? item.variant}
+                        </p>
+                      </div>
+
+                      {/* Remove button */}
+                      <button
+                        aria-label="Remove item"
+                        className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0 self-start"
+                        onClick={() => removeFromCart(uid)}
+                      >
+                        <Icon
+                          icon="solar:trash-bin-trash-broken"
+                          className="h-4 w-4 lg:h-5 lg:w-5 text-red-600"
+                        />
+                      </button>
+                    </div>
+
+                    {/* Bottom row */}
+                    <div className="flex items-center justify-between w-full mt-2 lg:mt-0">
+                      {/* Price */}
+                      <p className="text-[15px] lg:text-[16px] font-semibold text-black dark:text-gray-100">
+                        ₹{item.price.toFixed(2)}
+                      </p>
+
+                      {/* Quantity controls */}
+                      <div className="flex items-center gap-1 lg:gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
+                        <button
+                          aria-label="Decrease quantity"
+                          className="w-[24px] h-[24px] lg:w-[26px] lg:h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
+                          onClick={() =>
+                            updateQuantity(uid, Math.max(1, qty - 1))
+                          }
+                        >
+                          <Minus className="h-3 w-3 text-gray-600" />
+                        </button>
+                        <span className="font-medium text-gray-900 dark:text-white min-w-[20px] lg:min-w-[24px] text-center text-[11px] lg:text-[12px]">
+                          {String(qty).padStart(2, "0")}
+                        </span>
+                        <button
+                          aria-label="Increase quantity"
+                          className="w-[24px] h-[24px] lg:w-[26px] lg:h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                          onClick={() => updateQuantity(uid, qty + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const handleUpdateQuantity = (uniqueId: string, quantity: number) => {
+    if (quantity < 1) return;
+    updateQuantity(uniqueId, quantity);
+  };
+
+  const handleClose = () => {
+    router.back();
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F4F4F7] dark:bg-[#202028]">
+      {/* Main Content */}
+      <div className="max-w-[1200px] mx-auto py-6">
+        {/* Cart Items */}
+        <div className="p-4 lg:p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Cart Items
+          </h2>
+          {renderCartItems()}
+        </div>
+
+        {/* Checkout Section - Below Cart Items */}
+        {cart.length > 0 && (
+          <div className="p-4 lg:p-6">
+            <div className="max-w-[360px] ml-auto flex flex-col gap-3 items-end">
+              {/* Estimated Total */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Estimated total
+                </span>
+                <span className="text-lg font-semibold text-black dark:text-white">
+                  ₹
+                  {cart
+                    .reduce(
+                      (total, item) => total + item.price * item.quantity,
+                      0
+                    )
+                    .toFixed(2)}
+                </span>
+              </div>
+
+              {/* Tax Info */}
+              <p className="text-xs w-[300px] text-gray-500 dark:text-gray-400 text-right">
+                Taxes included. Discounts and shipping calculated at checkout.
+              </p>
+
+              {/* Checkout Button */}
+              <Link href="/checkout" className="w-full">
+                <Button className="w-full bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-xl font-medium">
+                  Check out
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
