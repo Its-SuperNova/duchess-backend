@@ -1,20 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import { UserPlus } from "lucide-react";
-import { RiHomeSmile2Fill } from "react-icons/ri";
-import { HiSquares2X2 } from "react-icons/hi2";
-import { PiHeartFill } from "react-icons/pi";
-import { HiUser } from "react-icons/hi2";
-import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import { useCart } from "@/context/cart-context";
-import { getProductById } from "@/lib/actions/products";
-import { getProductPrice, isProductInStock } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart } from "lucide-react";
+import { useCart } from "@/context/cart-context";
+import { useToast } from "@/hooks/use-toast";
 import { useProductSelection } from "@/context/product-selection-context";
 import {
   Drawer,
@@ -30,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+
 // Types for database product
 interface DatabaseProduct {
   id: string;
@@ -79,7 +69,11 @@ interface DatabaseProduct {
   };
 }
 
-function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
+export default function ProductAddToCart({
+  product,
+}: {
+  product: DatabaseProduct;
+}) {
   const {
     selectedWeightOption,
     setSelectedWeightOption,
@@ -200,6 +194,7 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
       setIsAddingToCart(false);
     }
   };
+
   const handleWeightOptionChange = (index: number) => {
     setSelectedWeightOption(index);
     setOrderType("weight");
@@ -245,7 +240,6 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                     onClick={() => setDrawerStep(1)}
                     className="ml-2 h-10 w-10 rounded-full border-gray-300 hover:bg-gray-50"
                   >
-                    {/* You can use a left arrow icon here if you have one, or just 'Back' */}
                     <span className="sr-only">Back</span>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -586,167 +580,6 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
             </div>
           </DrawerContent>
         </Drawer>
-      </div>
-    </>
-  );
-}
-
-export default function BottomNav() {
-  const pathname = usePathname();
-  const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState(pathname);
-  const params = useParams();
-  const [product, setProduct] = useState<DatabaseProduct | null>(null);
-  const [loadingProduct, setLoadingProduct] = useState(false);
-  const { cart } = useCart();
-
-  // Detect if on product detail page
-  const isProductPage = /^\/products\/[\w-]+$/.test(pathname);
-  const productId = isProductPage ? pathname.split("/")[2] : null;
-
-  // Update active tab when pathname changes
-  useEffect(() => {
-    setActiveTab(pathname);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (isProductPage && productId) {
-      setLoadingProduct(true);
-      getProductById(productId).then((prod) => {
-        setProduct(prod);
-        setLoadingProduct(false);
-      });
-    }
-  }, [isProductPage, productId]);
-
-  // Hide bottom nav on login, register, admin pages, and profile edit
-  if (
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname.startsWith("/admin") ||
-    pathname === "/profile/edit"
-  ) {
-    return null;
-  }
-
-  const isAuthenticated = status === "authenticated" && session?.user;
-
-  const navItems = [
-    {
-      name: "Home",
-      href: "/",
-      icon: RiHomeSmile2Fill,
-      isReactIcon: true,
-      isCartButton: false,
-    },
-    {
-      name: "Categories",
-      href: "/categories",
-      icon: HiSquares2X2,
-      isReactIcon: true,
-      isCartButton: false,
-    },
-    {
-      name: "Cart",
-      href: "/cart",
-      icon: ShoppingCart,
-      isReactIcon: false,
-      isCartButton: true,
-    },
-    {
-      name: "Favorites",
-      href: "/favorites",
-      icon: PiHeartFill,
-      isReactIcon: true,
-      isCartButton: false,
-    },
-    {
-      name: isAuthenticated ? "Profile" : "Sign Up",
-      href: isAuthenticated ? "/profile" : "/register",
-      icon: isAuthenticated ? HiUser : UserPlus,
-      isReactIcon: isAuthenticated ? true : false,
-      isCartButton: false,
-    },
-  ];
-
-  // Prevent nav bar flash: hide all nav UI on product page until product is loaded
-  if (isProductPage) {
-    if (!product) {
-      return null;
-    }
-    // Show only the custom Add to Cart bar on product page, hide default nav
-    return <ProductPageBottomNav product={product} />;
-  }
-
-  // Show Add to Cart + Price button above nav on product page
-  return (
-    <>
-      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[60] md:hidden bottom-nav">
-        {/* Animated floating container */}
-        <div
-          className="bg-white backdrop-blur-md rounded-full shadow-md p-2 transition-all duration-300 ease-in-out border border-gray-100"
-          style={{
-            boxShadow:
-              "0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)",
-          }}
-        >
-          {/* Navigation items */}
-          <nav className="relative">
-            <ul className="flex items-center justify-center gap-2">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                const IconComponent = item.icon;
-
-                return (
-                  <li key={item.name} className="relative">
-                    <Link
-                      href={item.href}
-                      className={`flex flex-row items-center justify-center h-12 px-4 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 ${
-                        isActive
-                          ? "bg-[#7A0000] text-white shadow-md"
-                          : "text-black hover:text-gray-800"
-                      }`}
-                      onClick={() => setActiveTab(item.href)}
-                    >
-                      <div className="relative">
-                        {item.isReactIcon ? (
-                          <IconComponent
-                            size={20}
-                            className={`transition-colors duration-200 ${
-                              isActive ? "text-white" : "text-black"
-                            }`}
-                          />
-                        ) : (
-                          <IconComponent
-                            className={`w-[18px] h-[18px] transition-colors duration-200 ${
-                              isActive ? "text-white" : "text-black"
-                            }`}
-                          />
-                        )}
-                        {/* Cart count badge */}
-                        {item.isCartButton && cart.length > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#7A0000] text-white text-[10px] font-semibold flex items-center justify-center">
-                            {cart.length > 9 ? "9+" : cart.length}
-                          </span>
-                        )}
-                      </div>
-                      {isActive && (
-                        <span
-                          className="text-white ml-2 text-md font-medium whitespace-nowrap animate-fade-in"
-                          style={{
-                            animation: "fadeIn 200ms ease-in-out",
-                          }}
-                        >
-                          {item.name}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </div>
       </div>
     </>
   );

@@ -7,49 +7,29 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import BottomNav from "@/components/block/BottomNav";
 
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
-import { LayoutProvider, useLayout } from "@/context/layout-context";
+import { LayoutProvider } from "@/context/layout-context";
 import AuthNotification from "@/components/auth/auth-notification";
 import SplashScreen from "@/components/splashscreen";
 import OnboardingPage from "@/app/onboarding/page";
-import { useIsMobile } from "@/hooks/use-mobile";
 import UserHeader from "@/components/user-header";
 
 // Inner component that can use cart and layout context
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
-  const { isUserSidebarCollapsed } = useLayout();
-
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const isMobile = useIsMobile();
 
   // Route type checks
   const isAdminRoute = pathname?.startsWith("/admin") ?? false;
   const isAuthRoute = pathname === "/login" || pathname === "/register";
   const isHomePage = pathname === "/";
-  const isProfileRoute = pathname.startsWith("/profile");
-  const isFAQPage = pathname === "/faq";
   const isOnboardingPage = pathname === "/onboarding";
-  const isProductPage = pathname.startsWith("/products/");
-  const isCheckoutRoute = pathname.startsWith("/checkout");
 
   // Hide header and user sidebar on all non-admin pages
   const showHeader = !isAdminRoute && !isAuthRoute && !isOnboardingPage;
-  const showSidebar = false;
-  const showBottomNav =
-    !isAdminRoute &&
-    !isFAQPage &&
-    !isAuthRoute &&
-    !isOnboardingPage &&
-    !isCheckoutRoute;
-  const useSidebarLayout = showSidebar;
-
-  // No top padding needed since header is not fixed
-  const topPaddingClass = "";
 
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -139,29 +119,14 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           {showHeader && <UserHeader />}
 
-          <div className="flex w-full">
-            {/* User Sidebar removed */}
-
-            {/* Main Content */}
-            <main
-              className={`${
-                useSidebarLayout
-                  ? `flex-1 transition-all duration-300 ${topPaddingClass} ${
-                      isUserSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
-                    }`
-                  : `flex-1 ${topPaddingClass}`
-              }`}
-            >
-              {isHomePage ? (
-                <div className="mx-auto w-full max-w-[1200px]">{children}</div>
-              ) : (
-                children
-              )}
-            </main>
-          </div>
-
-          {/* Bottom Navigation */}
-          {showBottomNav && !isProductPage && <BottomNav />}
+          {/* Main Content */}
+          <main className="flex-1">
+            {isHomePage ? (
+              <div className="mx-auto w-full max-w-[1200px]">{children}</div>
+            ) : (
+              children
+            )}
+          </main>
 
           {/* Footer */}
           <footer className="w-full border-t border-gray-200 bg-white">

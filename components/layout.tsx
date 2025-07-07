@@ -1,7 +1,6 @@
 import type React from "react";
 import { MobileNav } from "@/components/mobile-nav";
 import { DesktopNav } from "@/components/desktop-nav";
-import BottomNav from "@/components/block/BottomNav";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,7 +14,6 @@ export function Layout({ children }: LayoutProps) {
         <DesktopNav />
         <main className="pb-20 md:pb-6">{children}</main>
       </div>
-      <BottomNav />
     </div>
   );
 }

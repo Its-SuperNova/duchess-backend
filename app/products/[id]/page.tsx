@@ -36,6 +36,7 @@ import ProductSkeleton from "./product-skeleton";
 import { useProductSelection } from "@/context/product-selection-context";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
+import ProductAddToCart from "@/components/block/ProductAddToCart";
 
 // Import Swiper styles
 import "swiper/css";
@@ -817,6 +818,10 @@ export default function ProductPage() {
           <div className="h-24 md:h-0"></div>
         </div>
       </div>
+
+      {/* Mobile Add to Cart Button - Separate from BottomNav */}
+      {product && <ProductAddToCart product={product} />}
+
       <Toaster />
     </>
   );
