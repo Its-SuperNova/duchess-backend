@@ -1162,47 +1162,6 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
               <Separator />
             </>
           )}
-
-          {/* Offers section - Minimalist */}
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-800">Offers</h3>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-green-100 bg-green-50">
-                <Percent className="h-4 w-4 text-green-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-green-800">
-                    10% off on orders above ₹1000
-                  </p>
-                  <p className="text-xs text-green-700">Use code: CAKE10</p>
-                </div>
-                <button
-                  onClick={() => copyCouponCode("CAKE10")}
-                  className="text-xs bg-white text-green-700 border border-green-200 rounded-lg px-2 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors"
-                >
-                  <Copy className="h-3.5 w-3.5 mr-1" />
-                  Copy
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-100 bg-blue-50">
-                <Gift className="h-4 w-4 text-blue-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-800">
-                    Free delivery on your first order
-                  </p>
-                  <p className="text-xs text-blue-700">Use code: FIRSTCAKE</p>
-                </div>
-                <button
-                  onClick={() => copyCouponCode("FIRSTCAKE")}
-                  className="text-xs bg-white text-blue-700 border border-blue-200 rounded-lg px-2 py-1 flex items-center gap-1 hover:bg-blue-50 transition-colors"
-                >
-                  <Copy className="h-3.5 w-3.5 mr-1" />
-                  Copy
-                </button>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { FaStar, FaHeart, FaRegHeart, FaShare } from "react-icons/fa";
-import { BsArrowLeft } from "react-icons/bs";
+
 import { useParams, useRouter } from "next/navigation";
 import type { Product } from "@/context/favorites-context";
 import {
@@ -23,7 +23,6 @@ import {
   RefreshCw,
   Loader2,
 } from "lucide-react";
-import CakeDeliveryCard from "./cake-delivery-card";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { useFavorites } from "@/context/favorites-context";
@@ -178,22 +177,14 @@ export default function ProductPage() {
 
   // Calculate current price and stock
   const getCurrentPriceAndStock = () => {
-    if (!product) return { price: 0, stock: 0, originalPrice: undefined };
+    if (!product) return { price: 0, stock: 0 };
 
     if (orderType === "weight" && product.weight_options?.length > 0) {
       const option = product.weight_options[selectedWeightOption];
       if (option && option.isActive) {
         const price = parseInt(option.price) || 0;
         const stock = parseInt(option.stock) || 0;
-        let originalPrice: number | undefined;
-
-        if (product.has_offer && product.offer_percentage) {
-          originalPrice = Math.round(
-            price / (1 - product.offer_percentage / 100)
-          );
-        }
-
-        return { price, stock, originalPrice };
+        return { price, stock };
       }
     }
 
@@ -202,25 +193,14 @@ export default function ProductPage() {
       if (option && option.isActive) {
         const price = parseInt(option.price) || 0;
         const stock = parseInt(option.stock) || 0;
-        let originalPrice: number | undefined;
-
-        if (product.has_offer && product.offer_percentage) {
-          originalPrice = Math.round(
-            price / (1 - product.offer_percentage / 100)
-          );
-        }
-
         return {
           price: price * pieceQuantity,
           stock,
-          originalPrice: originalPrice
-            ? originalPrice * pieceQuantity
-            : undefined,
         };
       }
     }
 
-    return { price: 0, stock: 0, originalPrice: undefined };
+    return { price: 0, stock: 0 };
   };
 
   const retryFetch = () => {
@@ -415,29 +395,6 @@ export default function ProductPage() {
     <>
       <div className="bg-[#f5f5f5] flex flex-col items-center pt-3">
         <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
-          {/* Header with Back Button and Cart Button */}
-          <div className="mt-2 md:p-8 md:pb-0 flex justify-between items-center">
-            <button
-              onClick={() => router.push("/")}
-              className="w-10 h-10 rounded-[14px] bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm border border-gray-200 transition-colors"
-            >
-              <BsArrowLeft className="text-gray-800" size={20} />
-            </button>
-
-            {/* Cart Button */}
-            <button
-              onClick={() => openCart()}
-              className="relative w-10 h-10 rounded-[14px] bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm border border-gray-200 transition-colors"
-            >
-              <ShoppingCart className="text-gray-800" size={20} />
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#9e210b] text-white text-[8px] rounded-full h-3 w-3 flex items-center justify-center">
-                  {cart.length}
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* Main content: two columns on desktop, one column on mobile */}
           <div className="flex flex-col md:flex-row md:gap-8 md:px-8 md:pt-0 md:pb-8 flex-1">
             {/* Left column */}
@@ -473,13 +430,6 @@ export default function ProductPage() {
                               className="object-cover rounded-2xl"
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             />
-
-                            {/* Offer Badge */}
-                            {product.has_offer && product.offer_percentage && (
-                              <div className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
-                                {product.offer_percentage}% OFF
-                              </div>
-                            )}
                           </div>
                         </SwiperSlide>
                       ))}
@@ -495,13 +445,6 @@ export default function ProductPage() {
                         className="object-cover rounded-2xl"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
-
-                      {/* Offer Badge */}
-                      {product.has_offer && product.offer_percentage && (
-                        <div className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
-                          {product.offer_percentage}% OFF
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -633,11 +576,6 @@ export default function ProductPage() {
                   <h2 className="text-3xl font-bold text-black md:block hidden">
                     ₹{currentPrice}
                   </h2>
-                  {originalPrice && originalPrice > currentPrice && (
-                    <p className="text-gray-400 line-through text-lg md:block hidden">
-                      ₹{originalPrice}
-                    </p>
-                  )}
                 </div>
 
                 {/* Stock Status in Card */}
@@ -873,7 +811,7 @@ export default function ProductPage() {
             </div>
           </div>
 
-          <CakeDeliveryCard stock={currentStock} />
+          {/* Delivery options component removed as requested */}
 
           {/* Mobile bottom padding */}
           <div className="h-24 md:h-0"></div>
