@@ -22,6 +22,8 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -178,14 +180,18 @@ export default function ProductPage() {
 
   // Calculate current price and stock
   const getCurrentPriceAndStock = () => {
-    if (!product) return { price: 0, stock: 0 };
+    if (!product) return { price: 0, stock: 0, originalPrice: undefined };
 
     if (orderType === "weight" && product.weight_options?.length > 0) {
       const option = product.weight_options[selectedWeightOption];
       if (option && option.isActive) {
         const price = parseInt(option.price) || 0;
         const stock = parseInt(option.stock) || 0;
-        return { price, stock };
+        const originalPrice =
+          product.has_offer && product.offer_percentage
+            ? Math.round(price / (1 - product.offer_percentage / 100))
+            : undefined;
+        return { price, stock, originalPrice };
       }
     }
 
@@ -194,14 +200,20 @@ export default function ProductPage() {
       if (option && option.isActive) {
         const price = parseInt(option.price) || 0;
         const stock = parseInt(option.stock) || 0;
+        const totalPrice = price * pieceQuantity;
+        const originalPrice =
+          product.has_offer && product.offer_percentage
+            ? Math.round(totalPrice / (1 - product.offer_percentage / 100))
+            : undefined;
         return {
-          price: price * pieceQuantity,
+          price: totalPrice,
           stock,
+          originalPrice,
         };
       }
     }
 
-    return { price: 0, stock: 0 };
+    return { price: 0, stock: 0, originalPrice: undefined };
   };
 
   const retryFetch = () => {
@@ -240,7 +252,7 @@ export default function ProductPage() {
       isVeg: product.is_veg,
       description: product.short_description || product.long_description || "",
       rating: generateRating(),
-      category: product.category?.name,
+      category: product.categories?.name,
     };
 
     try {
@@ -571,16 +583,21 @@ export default function ProductPage() {
             {/* Right column */}
             <div className="w-full md:w-1/3 flex flex-col gap-5 mt-4">
               {/* Pricing and Order Card - Hidden on Mobile */}
-              <div className="hidden md:flex w-full bg-white rounded-3xl p-7 flex-col gap-5 h-fit shadow-sm">
-                {/* Price display */}
-                <div className="flex items-baseline gap-3 md:flex">
-                  <h2 className="text-3xl font-bold text-black md:block hidden">
-                    ₹{currentPrice}
-                  </h2>
-                </div>
+              <div className="hidden md:flex w-full bg-white rounded-3xl p-7 flex-col gap-4 h-fit shadow-sm">
+                <div className="flex flex-col">
+                  {/* Price display */}
+                  <div className="flex items-baseline gap-3 md:flex">
+                    <h2 className="text-2xl font-bold text-black md:block hidden">
+                      ₹{currentPrice}
+                    </h2>
+                    <span className="text-lg text-red-600 line-through">
+                      ₹{Math.round(currentPrice * 1.2)}
+                    </span>
+                  </div>
 
-                {/* Stock Status in Card */}
-                <div className="hidden md:block">{renderStockStatus()}</div>
+                  {/* Stock Status in Card */}
+                  <div className="hidden md:block">{renderStockStatus()}</div>
+                </div>
 
                 {/* Divider */}
                 <div className="h-px bg-gray-100 w-full"></div>
@@ -635,7 +652,7 @@ export default function ProductPage() {
                                     : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                                 }`}
                               >
-                                {option.weight} Kg
+                                {option.weight}
                               </button>
                             )
                         )}
@@ -647,71 +664,51 @@ export default function ProductPage() {
                   product.piece_options &&
                   product.piece_options.length > 0 && (
                     <div className="hidden md:block">
-                      <h2 className="text-gray-500 text-sm mb-3">
-                        Select Option
-                      </h2>
-                      <div className="space-y-2 mb-4">
-                        {product.piece_options.map(
-                          (option, index) =>
-                            option.isActive && (
-                              <button
-                                key={index}
-                                onClick={() => setSelectedPieceOption(index)}
-                                className={`w-full py-3 px-4 rounded-xl text-sm transition-all text-left ${
-                                  selectedPieceOption === index
-                                    ? "bg-[#560000] text-white font-medium"
-                                    : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                                }`}
-                              >
-                                {option.quantity} - ₹{option.price}
-                              </button>
-                            )
-                        )}
-                      </div>
-                      <h2 className="text-gray-500 text-sm mb-3">Quantity</h2>
-                      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-                        <button
-                          onClick={() =>
-                            setPieceQuantity(Math.max(1, pieceQuantity - 1))
-                          }
-                          className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${
-                            pieceQuantity > 1
-                              ? "bg-[#560000] text-white shadow-sm"
-                              : "text-gray-300 cursor-not-allowed"
-                          }`}
-                          disabled={pieceQuantity <= 1}
-                        >
-                          -
-                        </button>
-                        <span className="text-xl font-medium text-gray-900">
-                          {pieceQuantity}
-                        </span>
-                        <button
-                          onClick={() => setPieceQuantity(pieceQuantity + 1)}
-                          className="w-9 h-9 rounded-lg bg-[#560000] text-white flex items-center justify-center text-lg shadow-sm"
-                        >
-                          +
-                        </button>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h2 className="text-gray-500 text-sm mb-3">
+                            Price per piece
+                          </h2>
+                          <div className="text-lg font-semibold text-gray-900">
+                            ₹
+                            {product.piece_options[selectedPieceOption]
+                              ?.price || 0}
+                          </div>
+                        </div>
+                        <div>
+                          <h2 className="text-gray-500 text-sm mb-3">
+                            Quantity
+                          </h2>
+                          <div className="flex items-center gap-4 bg-[#F5F4F7] rounded-full p-2 w-fit">
+                            <button
+                              onClick={() =>
+                                setPieceQuantity(Math.max(1, pieceQuantity - 1))
+                              }
+                              className={`w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors ${
+                                pieceQuantity > 1
+                                  ? "hover:bg-gray-50"
+                                  : "text-gray-300 cursor-not-allowed"
+                              }`}
+                              disabled={pieceQuantity <= 1}
+                            >
+                              <Minus className="h-5 w-5 text-gray-600" />
+                            </button>
+                            <span className="font-medium text-gray-900 min-w-[20px] lg:min-w-[24px] text-center text-[11px] lg:text-[16px]">
+                              {String(pieceQuantity).padStart(2, "0")}
+                            </span>
+                            <button
+                              onClick={() =>
+                                setPieceQuantity(pieceQuantity + 1)
+                              }
+                              className="w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800 transition-colors"
+                            >
+                              <Plus className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
-
-                {/* Delivery estimate - Hidden on Mobile */}
-                <div className="hidden md:flex items-center gap-3 p-4 rounded-xl bg-gray-50">
-                  <Truck className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-900 font-medium">
-                      {currentStock > 0
-                        ? "Delivery Today"
-                        : "Extended Delivery"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {currentStock > 0
-                        ? "Estimated delivery in 1-2 hrs"
-                        : "Additional time for restocking"}
-                    </p>
-                  </div>
-                </div>
 
                 {/* Add to Cart button */}
                 <button

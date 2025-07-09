@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Minus, Plus } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSelection } from "@/context/product-selection-context";
@@ -297,50 +297,71 @@ export default function ProductAddToCart({
                     product.piece_options &&
                     product.piece_options.length > 0 && (
                       <div className="space-y-3">
-                        {/* Price Section Styled Like Screenshot */}
-                        <div className="flex items-center justify-between border border-[#7A0000] bg-[#7A0000]/5 rounded-xl px-6 py-4 mb-2">
-                          <span className="font-medium text-lg">Total</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-2xl text-gray-900">
-                              ₹{price}
+                        {/* Price and Quantity Section */}
+                        <div className="flex items-end justify-between mb-4">
+                          {/* Total Price - Left Side */}
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm text-gray-600 mb-1">
+                              Total
                             </span>
-                            {originalPrice && originalPrice > price && (
-                              <span className="text-base text-gray-500 line-through">
-                                ₹{originalPrice}
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xl text-gray-900">
+                                ₹{price}
                               </span>
-                            )}
+                              {originalPrice && originalPrice > price && (
+                                <span className="text-sm text-gray-500 line-through">
+                                  ₹{originalPrice}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center w-full justify-between">
-                          <Button
-                            className="bg-[#7A0000] text-white w-10 h-10 rounded-[14px] text-lg shadow-sm"
-                            onClick={() =>
-                              handleQuantityChange(
-                                Math.max(1, pieceQuantity - 1)
-                              )
-                            }
-                            disabled={pieceQuantity <= 1}
-                          >
-                            -
-                          </Button>
-                          <span className="font-medium text-lg min-w-[3rem] text-center">
-                            {pieceQuantity.toString().padStart(2, "0")}
-                          </span>
-                          <Button
-                            className="bg-[#7A0000] text-white w-10 h-10 rounded-[14px] text-lg shadow-sm"
-                            onClick={() =>
-                              handleQuantityChange(pieceQuantity + 1)
-                            }
-                            disabled={
-                              pieceQuantity >=
-                              parseInt(
-                                product.piece_options[selectedPieceOption]
-                                  ?.stock || "0"
-                              )
-                            }
-                          >
-                            +
-                          </Button>
+
+                          {/* Quantity Counter - Right Side */}
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-3 bg-[#F5F4F7] rounded-full p-1">
+                              <button
+                                className={`w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors ${
+                                  pieceQuantity > 1
+                                    ? "hover:bg-gray-50"
+                                    : "text-gray-300 cursor-not-allowed"
+                                }`}
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    Math.max(1, pieceQuantity - 1)
+                                  )
+                                }
+                                disabled={pieceQuantity <= 1}
+                              >
+                                <Minus className="h-4 w-4 text-gray-600" />
+                              </button>
+                              <span className="font-medium text-gray-900 min-w-[20px] text-center text-[14px]">
+                                {pieceQuantity.toString().padStart(2, "0")}
+                              </span>
+                              <button
+                                className={`w-7 h-7 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800 transition-colors ${
+                                  pieceQuantity >=
+                                  parseInt(
+                                    product.piece_options[selectedPieceOption]
+                                      ?.stock || "0"
+                                  )
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  handleQuantityChange(pieceQuantity + 1)
+                                }
+                                disabled={
+                                  pieceQuantity >=
+                                  parseInt(
+                                    product.piece_options[selectedPieceOption]
+                                      ?.stock || "0"
+                                  )
+                                }
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
