@@ -16,9 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 // Types for database product
 interface DatabaseProduct {
@@ -90,13 +87,6 @@ export default function ProductAddToCart({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { addToCart } = useCart();
   const { toast } = useToast();
-  const [addTextOnCake, setAddTextOnCake] = useState(false);
-  const [addCandles, setAddCandles] = useState(false);
-  const [addKnife, setAddKnife] = useState(false);
-  const [addMessageCard, setAddMessageCard] = useState(false);
-  const [drawerStep, setDrawerStep] = useState(1);
-  const [cakeText, setCakeText] = useState("");
-  const [giftCardText, setGiftCardText] = useState("");
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
@@ -142,27 +132,8 @@ export default function ProductAddToCart({
     pieceQuantity,
   ]);
 
-  // Reset to step 1 whenever the drawer is opened
-  useEffect(() => {
-    if (isDrawerOpen) setDrawerStep(1);
-  }, [isDrawerOpen]);
-
-  // Validation for text inputs
-  const isTextInputValid = () => {
-    if (addTextOnCake && orderType !== "piece" && cakeText.trim().length < 4) {
-      return false;
-    }
-    if (addMessageCard && giftCardText.trim().length < 4) {
-      return false;
-    }
-    return true;
-  };
-
   const handleAddToCart = async () => {
     if (!product || !inStock) return;
-
-    // Validate text inputs if they are enabled
-    if (!isTextInputValid()) return;
 
     setIsAddingToCart(true);
 
@@ -178,18 +149,20 @@ export default function ProductAddToCart({
           orderType === "weight"
             ? product.weight_options[selectedWeightOption]?.weight || "Regular"
             : `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`,
-        addTextOnCake,
-        addCandles,
-        addKnife,
-        addMessageCard,
-        cakeText: addTextOnCake ? cakeText : undefined,
-        giftCardText: addMessageCard ? giftCardText : undefined,
+        addTextOnCake: false,
+        addCandles: false,
+        addKnife: false,
+        addMessageCard: false,
         uniqueId: `${Date.now()}-${Math.random()}`,
       });
 
       setIsDrawerOpen(false);
     } catch (error) {
-      // Silent error handling - no toast notification
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsAddingToCart(false);
     }
@@ -227,42 +200,13 @@ export default function ProductAddToCart({
           </DrawerTrigger>
           <DrawerContent className="max-h-[80vh]">
             <DrawerHeader className="text-left">
-              <div className="flex items-center justify-between">
-                <DrawerTitle className="text-lg font-semibold">
-                  {drawerStep === 1
-                    ? "Select the option"
-                    : "Customization option"}
-                </DrawerTitle>
-                {drawerStep === 2 && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setDrawerStep(1)}
-                    className="ml-2 h-10 w-10 rounded-full border-gray-300 hover:bg-gray-50"
-                  >
-                    <span className="sr-only">Back</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15.75 19.5L8.25 12l7.5-7.5"
-                      />
-                    </svg>
-                  </Button>
-                )}
-              </div>
+              <DrawerTitle className="text-lg font-semibold">
+                Select the option
+              </DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-4 space-y-6">
-              {/* Restore Weight/Piece tab switcher for products that support both, only in step 1 */}
-              {drawerStep === 1 &&
-                product.selling_type === "both" &&
+              {/* Weight/Piece tab switcher for products that support both */}
+              {product.selling_type === "both" &&
                 product.weight_options &&
                 product.weight_options.length > 0 &&
                 product.piece_options &&
@@ -290,314 +234,189 @@ export default function ProductAddToCart({
                     </button>
                   </div>
                 )}
-              {/* Step 1: Quantity/Weight selection */}
-              {drawerStep === 1 && (
-                <>
-                  {orderType === "piece" &&
-                    product.piece_options &&
-                    product.piece_options.length > 0 && (
-                      <div className="space-y-3">
-                        {/* Price and Quantity Section */}
-                        <div className="flex items-end justify-between mb-4">
-                          {/* Total Price - Left Side */}
-                          <div className="flex flex-col">
-                            <span className="font-medium text-sm text-gray-600 mb-1">
-                              Total
+
+              {/* Quantity/Weight selection */}
+              {orderType === "piece" &&
+                product.piece_options &&
+                product.piece_options.length > 0 && (
+                  <div className="space-y-3">
+                    {/* Price and Quantity Section */}
+                    <div className="flex items-end justify-between mb-4">
+                      {/* Total Price - Left Side */}
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm text-gray-600 mb-1">
+                          Total
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xl text-gray-900">
+                            ₹{price}
+                          </span>
+                          {originalPrice && originalPrice > price && (
+                            <span className="text-sm text-gray-500 line-through">
+                              ₹{originalPrice}
                             </span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xl text-gray-900">
-                                ₹{price}
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quantity Counter - Right Side */}
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-3 bg-[#F5F4F7] rounded-full p-1">
+                          <button
+                            className={`w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors ${
+                              pieceQuantity > 1
+                                ? "hover:bg-gray-50"
+                                : "text-gray-300 cursor-not-allowed"
+                            }`}
+                            onClick={() =>
+                              handleQuantityChange(
+                                Math.max(1, pieceQuantity - 1)
+                              )
+                            }
+                            disabled={pieceQuantity <= 1}
+                          >
+                            <Minus className="h-4 w-4 text-gray-600" />
+                          </button>
+                          <span className="font-medium text-gray-900 min-w-[20px] text-center text-[14px]">
+                            {pieceQuantity.toString().padStart(2, "0")}
+                          </span>
+                          <button
+                            className={`w-7 h-7 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800 transition-colors ${
+                              pieceQuantity >=
+                              parseInt(
+                                product.piece_options[selectedPieceOption]
+                                  ?.stock || "0"
+                              )
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }`}
+                            onClick={() =>
+                              handleQuantityChange(pieceQuantity + 1)
+                            }
+                            disabled={
+                              pieceQuantity >=
+                              parseInt(
+                                product.piece_options[selectedPieceOption]
+                                  ?.stock || "0"
+                              )
+                            }
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              {orderType === "weight" &&
+                product.weight_options &&
+                product.weight_options.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900">
+                      Weight Options
+                    </h3>
+                    <RadioGroup
+                      value={selectedWeightOption.toString()}
+                      onValueChange={(value) =>
+                        handleWeightOptionChange(parseInt(value))
+                      }
+                    >
+                      {product.weight_options.map((option, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3"
+                        >
+                          <RadioGroupItem
+                            value={index.toString()}
+                            id={`weight-${index}`}
+                            disabled={
+                              !option.isActive || parseInt(option.stock) === 0
+                            }
+                          />
+                          <Label
+                            htmlFor={`weight-${index}`}
+                            className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
+                              selectedWeightOption === index
+                                ? "border-[#7A0000] bg-[#7A0000]/5"
+                                : "border-gray-200"
+                            } ${
+                              !option.isActive || parseInt(option.stock) === 0
+                                ? "opacity-50"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium">
+                                {option.weight}
                               </span>
-                              {originalPrice && originalPrice > price && (
-                                <span className="text-sm text-gray-500 line-through">
-                                  ₹{originalPrice}
-                                </span>
+                              {parseInt(option.stock) <= 3 &&
+                                parseInt(option.stock) > 0 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Only {option.stock} left
+                                  </Badge>
+                                )}
+                              {parseInt(option.stock) === 0 && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  Out of Stock
+                                </Badge>
                               )}
                             </div>
-                          </div>
-
-                          {/* Quantity Counter - Right Side */}
-                          <div className="flex flex-col items-end">
-                            <div className="flex items-center gap-3 bg-[#F5F4F7] rounded-full p-1">
-                              <button
-                                className={`w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors ${
-                                  pieceQuantity > 1
-                                    ? "hover:bg-gray-50"
-                                    : "text-gray-300 cursor-not-allowed"
-                                }`}
-                                onClick={() =>
-                                  handleQuantityChange(
-                                    Math.max(1, pieceQuantity - 1)
-                                  )
-                                }
-                                disabled={pieceQuantity <= 1}
-                              >
-                                <Minus className="h-4 w-4 text-gray-600" />
-                              </button>
-                              <span className="font-medium text-gray-900 min-w-[20px] text-center text-[14px]">
-                                {pieceQuantity.toString().padStart(2, "0")}
-                              </span>
-                              <button
-                                className={`w-7 h-7 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800 transition-colors ${
-                                  pieceQuantity >=
-                                  parseInt(
-                                    product.piece_options[selectedPieceOption]
-                                      ?.stock || "0"
-                                  )
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                                onClick={() =>
-                                  handleQuantityChange(pieceQuantity + 1)
-                                }
-                                disabled={
-                                  pieceQuantity >=
-                                  parseInt(
-                                    product.piece_options[selectedPieceOption]
-                                      ?.stock || "0"
-                                  )
-                                }
-                              >
-                                <Plus className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  {orderType === "weight" &&
-                    product.weight_options &&
-                    product.weight_options.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="font-medium text-gray-900">
-                          Weight Options
-                        </h3>
-                        <RadioGroup
-                          value={selectedWeightOption.toString()}
-                          onValueChange={(value) =>
-                            handleWeightOptionChange(parseInt(value))
-                          }
-                        >
-                          {product.weight_options.map((option, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center space-x-3"
-                            >
-                              <RadioGroupItem
-                                value={index.toString()}
-                                id={`weight-${index}`}
-                                disabled={
-                                  !option.isActive ||
-                                  parseInt(option.stock) === 0
-                                }
-                              />
-                              <Label
-                                htmlFor={`weight-${index}`}
-                                className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
-                                  selectedWeightOption === index
-                                    ? "border-[#7A0000] bg-[#7A0000]/5"
-                                    : "border-gray-200"
-                                } ${
-                                  !option.isActive ||
-                                  parseInt(option.stock) === 0
-                                    ? "opacity-50"
-                                    : ""
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <span className="font-medium">
-                                    {option.weight}
-                                  </span>
-                                  {parseInt(option.stock) <= 3 &&
-                                    parseInt(option.stock) > 0 && (
-                                      <Badge
-                                        variant="secondary"
-                                        className="text-xs"
-                                      >
-                                        Only {option.stock} left
-                                      </Badge>
+                            <div className="text-right">
+                              <div className="font-semibold text-gray-900">
+                                ₹{parseInt(option.price)}
+                              </div>
+                              {product.has_offer &&
+                                product.offer_percentage && (
+                                  <div className="text-sm text-gray-500 line-through">
+                                    ₹
+                                    {Math.round(
+                                      parseInt(option.price) /
+                                        (1 - product.offer_percentage / 100)
                                     )}
-                                  {parseInt(option.stock) === 0 && (
-                                    <Badge
-                                      variant="destructive"
-                                      className="text-xs"
-                                    >
-                                      Out of Stock
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-semibold text-gray-900">
-                                    ₹{parseInt(option.price)}
                                   </div>
-                                  {product.has_offer &&
-                                    product.offer_percentage && (
-                                      <div className="text-sm text-gray-500 line-through">
-                                        ₹
-                                        {Math.round(
-                                          parseInt(option.price) /
-                                            (1 - product.offer_percentage / 100)
-                                        )}
-                                      </div>
-                                    )}
-                                </div>
-                              </Label>
+                                )}
                             </div>
-                          ))}
-                        </RadioGroup>
-                      </div>
-                    )}
-                  {/* Next Button */}
-                  <div className="flex gap-3 pt-4 border-t border-gray-200">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDrawerOpen(false)}
-                      className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => setDrawerStep(2)}
-                      className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white"
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </>
-              )}
-              {/* Step 2: Customization options and Add to Cart */}
-              {drawerStep === 2 && (
-                <>
-                  <div className="space-y-2 pt-2">
-                    {orderType !== "piece" && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Add text on cake</span>
-                        <Switch
-                          checked={addTextOnCake}
-                          onCheckedChange={setAddTextOnCake}
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Add candles</span>
-                      <Switch
-                        checked={addCandles}
-                        onCheckedChange={setAddCandles}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Add knife</span>
-                      <Switch
-                        checked={addKnife}
-                        onCheckedChange={setAddKnife}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Add message card</span>
-                      <Switch
-                        checked={addMessageCard}
-                        onCheckedChange={setAddMessageCard}
-                      />
-                    </div>
-                    {addTextOnCake && orderType !== "piece" && (
-                      <div className="pt-2">
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <Input
-                              value={cakeText}
-                              onChange={(e) => setCakeText(e.target.value)}
-                              placeholder="e.g., Happy Birthday John!"
-                              maxLength={20}
-                              className={`flex-1 ${
-                                addTextOnCake &&
-                                cakeText.trim().length > 0 &&
-                                cakeText.trim().length < 4
-                                  ? "border-red-300 focus-visible:ring-red-500"
-                                  : ""
-                              }`}
-                            />
-                            <span className="ml-2 text-xs text-gray-500 pt-2">
-                              {cakeText.length}/20
-                            </span>
-                          </div>
-                          {addTextOnCake &&
-                            cakeText.trim().length > 0 &&
-                            cakeText.trim().length < 4 && (
-                              <p className="text-xs text-red-500">
-                                Minimum 4 characters required
-                              </p>
-                            )}
+                          </Label>
                         </div>
-                      </div>
-                    )}
-                    {addMessageCard && (
-                      <div className="pt-2">
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <Textarea
-                              value={giftCardText}
-                              onChange={(e) => setGiftCardText(e.target.value)}
-                              placeholder="e.g., Wishing you a wonderful birthday filled with happiness and love!"
-                              maxLength={100}
-                              rows={3}
-                              className={`flex-1 resize-none ${
-                                addMessageCard &&
-                                giftCardText.trim().length > 0 &&
-                                giftCardText.trim().length < 4
-                                  ? "border-red-300 focus-visible:ring-red-500"
-                                  : ""
-                              }`}
-                            />
-                            <span className="ml-2 text-xs text-gray-500 pt-2">
-                              {giftCardText.length}/100
-                            </span>
-                          </div>
-                          {addMessageCard &&
-                            giftCardText.trim().length > 0 &&
-                            giftCardText.trim().length < 4 && (
-                              <p className="text-xs text-red-500">
-                                Minimum 4 characters required
-                              </p>
-                            )}
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </RadioGroup>
                   </div>
-                  {/* Add to Cart Button */}
-                  <div className="flex gap-3 pt-4 border-t border-gray-200">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDrawerOpen(false)}
-                      className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleAddToCart}
-                      disabled={
-                        !inStock || !isTextInputValid() || isAddingToCart
-                      }
-                      className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white disabled:opacity-50"
-                    >
-                      {isAddingToCart ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="h-5 w-5 mr-2" />
-                          {!inStock
-                            ? "Out of Stock"
-                            : !isTextInputValid()
-                            ? "Check Text Inputs"
-                            : "Add to Cart"}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </>
-              )}
+                )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={!inStock || isAddingToCart}
+                  className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white disabled:opacity-50"
+                >
+                  {isAddingToCart ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      {!inStock ? "Out of Stock" : "Add to Cart"}
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </DrawerContent>
         </Drawer>

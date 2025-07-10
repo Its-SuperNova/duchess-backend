@@ -27,6 +27,15 @@ interface CartContextType {
   addToCart: (item: Omit<CartItem, "quantity"> & { quantity: number }) => void;
   removeFromCart: (uniqueId: string) => void;
   updateQuantity: (uniqueId: string, quantity: number) => void;
+  updateCartItemCustomization: (
+    uniqueId: string,
+    customizationOptions: Partial<
+      Pick<
+        CartItem,
+        "addTextOnCake" | "addCandles" | "addKnife" | "addMessageCard"
+      >
+    >
+  ) => void;
   getSubtotal: () => number;
   isLoading: boolean;
   clearCart: () => void;
@@ -273,6 +282,50 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateCartItemCustomization = async (
+    uniqueId: string,
+    customizationOptions: Partial<
+      Pick<
+        CartItem,
+        "addTextOnCake" | "addCandles" | "addKnife" | "addMessageCard"
+      >
+    >
+  ) => {
+    // Optimistic update - update UI immediately for instant feedback
+    const previousCart = [...cart];
+    setCart((prev) =>
+      prev.map((item) =>
+        item.uniqueId === uniqueId ? { ...item, ...customizationOptions } : item
+      )
+    );
+
+    if (session?.user?.email) {
+      // User is authenticated, sync with database in background
+      try {
+        const response = await fetch("/api/cart/update-customization", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uniqueItemId: uniqueId,
+            customizationOptions,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to update customization in database cart");
+          // Revert optimistic update on failure
+          setCart(previousCart);
+        }
+        // Success: keep the optimistic update
+      } catch (error) {
+        console.error("Error updating customization in database cart:", error);
+        // Revert optimistic update on error
+        setCart(previousCart);
+      }
+    }
+    // For non-authenticated users, the optimistic update is already applied
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -280,6 +333,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addToCart,
         removeFromCart,
         updateQuantity,
+        updateCartItemCustomization,
         getSubtotal,
         isLoading,
         clearCart,
@@ -303,6 +357,7 @@ export function useCart() {
       addToCart: () => {},
       removeFromCart: () => {},
       updateQuantity: () => {},
+      updateCartItemCustomization: () => {},
       getSubtotal: () => 0,
       isLoading: false,
     };

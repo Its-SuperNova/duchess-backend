@@ -16,6 +16,7 @@ const Icon = dynamic(() => import("@iconify/react").then((m) => m.Icon), {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Drawer,
   DrawerClose,
@@ -37,7 +38,13 @@ import type { Address as DbAddress } from "@/lib/supabase";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
-  const { cart, getSubtotal, updateQuantity, removeFromCart } = useCart();
+  const {
+    cart,
+    getSubtotal,
+    updateQuantity,
+    removeFromCart,
+    updateCartItemCustomization,
+  } = useCart();
   const [note, setNote] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
   // Load applied coupon code to show update/view UI
@@ -58,6 +65,8 @@ export default function CheckoutClient() {
     }
   }, []);
   const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
+  const [isCustomizationDrawerOpen, setIsCustomizationDrawerOpen] =
+    useState(false);
   // Address change drawer state and address text
   const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
   const [addressText, setAddressText] = useState(
@@ -67,6 +76,57 @@ export default function CheckoutClient() {
   const { data: session } = useSession();
   const [addresses, setAddresses] = useState<DbAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState<boolean>(false);
+
+  // Customization options state
+  const [customizationOptions, setCustomizationOptions] = useState({
+    addTextOnCake: false,
+    addCandles: false,
+    addKnife: false,
+    addMessageCard: false,
+  });
+
+  // Text input states for customization options
+  const [cakeText, setCakeText] = useState("");
+  const [messageCardText, setMessageCardText] = useState("");
+  const [isCakeTextDrawerOpen, setIsCakeTextDrawerOpen] = useState(false);
+  const [isMessageCardDrawerOpen, setIsMessageCardDrawerOpen] = useState(false);
+
+  // Sync customization options from cart items
+  useEffect(() => {
+    if (cart.length > 0) {
+      // Check if any cart item has customization options enabled
+      const hasCustomizations = cart.some(
+        (item) =>
+          item.addTextOnCake ||
+          item.addCandles ||
+          item.addKnife ||
+          item.addMessageCard
+      );
+
+      if (hasCustomizations) {
+        // Aggregate customization options from all cart items
+        const aggregatedOptions = {
+          addTextOnCake: cart.some((item) => item.addTextOnCake),
+          addCandles: cart.some((item) => item.addCandles),
+          addKnife: cart.some((item) => item.addKnife),
+          addMessageCard: cart.some((item) => item.addMessageCard),
+        };
+
+        setCustomizationOptions(aggregatedOptions);
+      }
+    }
+  }, [cart]);
+
+  // Function to update all cart items with new customization options
+  const updateAllCartItemsCustomization = (
+    newOptions: typeof customizationOptions
+  ) => {
+    cart.forEach((item) => {
+      if (item.uniqueId) {
+        updateCartItemCustomization(item.uniqueId, newOptions);
+      }
+    });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -131,12 +191,25 @@ export default function CheckoutClient() {
         note,
         addressText,
         couponCode: selectedCoupon,
+        customizationOptions,
+        cakeText,
+        messageCardText,
       };
       if (typeof window !== "undefined") {
         localStorage.setItem("checkoutContext", JSON.stringify(ctx));
       }
     } catch {}
-  }, [subtotal, discount, deliveryFee, note, addressText, selectedCoupon]);
+  }, [
+    subtotal,
+    discount,
+    deliveryFee,
+    note,
+    addressText,
+    selectedCoupon,
+    customizationOptions,
+    cakeText,
+    messageCardText,
+  ]);
 
   // Redirect to home if cart is empty
   if (cart.length === 0) {
@@ -163,7 +236,7 @@ export default function CheckoutClient() {
     <div className="min-h-screen bg-[#F5F6FB] pb-28">
       {/* Header */}
       <div className="bg-[#F5F6FB]">
-        <div className="max-w-screen-xl mx-auto px-4 py-4">
+        <div className="max-w-[1200px] mx-auto px-4 py-4">
           <div className="flex items-center justify-between md:justify-start md:gap-4">
             <Link href="/">
               <div className="bg-white p-3 md:p-2 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
@@ -178,7 +251,7 @@ export default function CheckoutClient() {
         </div>
       </div>
 
-      <div className="max-w-screen-xl mx-auto py-6">
+      <div className="max-w-[1200px] mx-auto py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Content (below on mobile, left on desktop) */}
           <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
@@ -208,7 +281,7 @@ export default function CheckoutClient() {
                       </div>
                     </button>
                   </DrawerTrigger>
-                  <DrawerContent className="h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
+                  <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
                     <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <div className="flex items-center justify-between w-full">
                         <DrawerTitle className="text-[20px]">
@@ -375,6 +448,440 @@ export default function CheckoutClient() {
                 </button>
               </Link>
             </div>
+
+            {/* Customization Options Section */}
+            <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
+              <div>
+                <Drawer
+                  modal={true}
+                  onOpenChange={setIsCustomizationDrawerOpen}
+                >
+                  <DrawerTrigger asChild>
+                    <button className="w-full flex items-center justify-between text-left">
+                      <div className="flex items-center">
+                        <Icon
+                          icon="solar:settings-broken"
+                          className="h-5 w-5 mr-3 text-black"
+                        />
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {Object.values(customizationOptions).some(
+                            (opt) => opt
+                          )
+                            ? "Customization options selected"
+                            : "Add customization options"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <IoIosArrowForward className="h-5 w-5 text-gray-600" />
+                      </div>
+                    </button>
+                  </DrawerTrigger>
+                  <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] flex flex-col">
+                    <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full flex-shrink-0">
+                      <div className="flex items-center justify-between w-full">
+                        <DrawerTitle className="text-[20px]">
+                          Customization Options
+                        </DrawerTitle>
+                        <DrawerClose asChild>
+                          <button
+                            aria-label="Close"
+                            className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
+                          >
+                            <X className="h-5 w-5 text-gray-700" />
+                          </button>
+                        </DrawerClose>
+                      </div>
+                    </DrawerHeader>
+
+                    {/* Scrollable content area */}
+                    <div className="flex-1 overflow-y-auto scrollbar-hide px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                      <div className="space-y-4 pb-4">
+                        {/* Add Text on Cake */}
+                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Icon
+                                icon="solar:pen-broken"
+                                className="h-5 w-5 text-[#570000]"
+                              />
+                              <div>
+                                <h3 className="font-medium text-gray-800">
+                                  Add Text on Cake
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  Personalize your cake with custom text
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={customizationOptions.addTextOnCake}
+                              onCheckedChange={(checked) => {
+                                const newOptions = {
+                                  ...customizationOptions,
+                                  addTextOnCake: checked,
+                                };
+                                setCustomizationOptions(newOptions);
+                                updateAllCartItemsCustomization(newOptions);
+                              }}
+                            />
+                          </div>
+                          {customizationOptions.addTextOnCake && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <button
+                                onClick={() => setIsCakeTextDrawerOpen(true)}
+                                className="w-full text-left p-3 bg-gray-50 rounded-[12px] hover:bg-gray-100 transition-colors"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">
+                                    {cakeText
+                                      ? cakeText
+                                      : "Click to add cake text"}
+                                  </span>
+                                  <Icon
+                                    icon="solar:pen-broken"
+                                    className="h-4 w-4 text-gray-400"
+                                  />
+                                </div>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Add Candles */}
+                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Icon
+                                icon="majesticons:cake-line"
+                                className="h-5 w-5 text-[#570000]"
+                              />
+                              <div>
+                                <h3 className="font-medium text-gray-800">
+                                  Add Candles
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  Include birthday candles for celebration
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={customizationOptions.addCandles}
+                              onCheckedChange={(checked) => {
+                                const newOptions = {
+                                  ...customizationOptions,
+                                  addCandles: checked,
+                                };
+                                setCustomizationOptions(newOptions);
+                                updateAllCartItemsCustomization(newOptions);
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Add Knife */}
+                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Icon
+                                icon="mdi:silverware-fork-knife"
+                                className="h-5 w-5 text-[#570000]"
+                              />
+                              <div>
+                                <h3 className="font-medium text-gray-800">
+                                  Add Knife
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  Include a cake cutting knife
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={customizationOptions.addKnife}
+                              onCheckedChange={(checked) => {
+                                const newOptions = {
+                                  ...customizationOptions,
+                                  addKnife: checked,
+                                };
+                                setCustomizationOptions(newOptions);
+                                updateAllCartItemsCustomization(newOptions);
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Add Message Card */}
+                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Icon
+                                icon="solar:card-broken"
+                                className="h-5 w-5 text-[#570000]"
+                              />
+                              <div>
+                                <h3 className="font-medium text-gray-800">
+                                  Add Message Card
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  Include a personalized message card
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={customizationOptions.addMessageCard}
+                              onCheckedChange={(checked) => {
+                                const newOptions = {
+                                  ...customizationOptions,
+                                  addMessageCard: checked,
+                                };
+                                setCustomizationOptions(newOptions);
+                                updateAllCartItemsCustomization(newOptions);
+                              }}
+                            />
+                          </div>
+                          {customizationOptions.addMessageCard && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <button
+                                onClick={() => setIsMessageCardDrawerOpen(true)}
+                                className="w-full text-left p-3 bg-gray-50 rounded-[12px] hover:bg-gray-100 transition-colors"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">
+                                    {messageCardText
+                                      ? messageCardText
+                                      : "Click to add message card text"}
+                                  </span>
+                                  <Icon
+                                    icon="solar:card-broken"
+                                    className="h-4 w-4 text-gray-400"
+                                  />
+                                </div>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fixed bottom action buttons */}
+                    <div className="flex-shrink-0 border-t border-gray-200 bg-[#F5F6FB] px-4 py-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                      {/* Desktop action row */}
+                      <div className="hidden lg:flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const clearedOptions = {
+                              addTextOnCake: false,
+                              addCandles: false,
+                              addKnife: false,
+                              addMessageCard: false,
+                            };
+                            setCustomizationOptions(clearedOptions);
+                            updateAllCartItemsCustomization(clearedOptions);
+                          }}
+                          className="h-9 px-5 rounded-[12px]"
+                        >
+                          Clear All
+                        </Button>
+                        <DrawerClose asChild>
+                          <Button size="sm" className="h-9 px-5 rounded-[12px]">
+                            Save
+                          </Button>
+                        </DrawerClose>
+                      </div>
+                      {/* Mobile action row */}
+                      <div className="lg:hidden flex gap-3">
+                        <Button
+                          variant="outline"
+                          size="xl"
+                          onClick={() => {
+                            const clearedOptions = {
+                              addTextOnCake: false,
+                              addCandles: false,
+                              addKnife: false,
+                              addMessageCard: false,
+                            };
+                            setCustomizationOptions(clearedOptions);
+                            updateAllCartItemsCustomization(clearedOptions);
+                          }}
+                          className="flex-1 rounded-[20px] text-[16px]"
+                        >
+                          Clear All
+                        </Button>
+                        <DrawerClose asChild>
+                          <Button
+                            size="xl"
+                            className="flex-1 py-5 rounded-[20px] text-[16px]"
+                          >
+                            Save
+                          </Button>
+                        </DrawerClose>
+                      </div>
+                    </div>
+                  </DrawerContent>
+                </Drawer>
+              </div>
+            </div>
+
+            {/* Cake Text Input Drawer */}
+            <Drawer
+              modal={true}
+              open={isCakeTextDrawerOpen}
+              onOpenChange={setIsCakeTextDrawerOpen}
+            >
+              <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
+                <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <DrawerTitle className="text-[20px]">
+                      Add Text on Cake
+                    </DrawerTitle>
+                    <DrawerClose asChild>
+                      <button
+                        aria-label="Close"
+                        className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
+                      >
+                        <X className="h-5 w-5 text-gray-700" />
+                      </button>
+                    </DrawerClose>
+                  </div>
+                </DrawerHeader>
+                <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <Textarea
+                    placeholder="E.g., Happy Birthday Varun!!"
+                    value={cakeText}
+                    onChange={(e) => setCakeText(e.target.value)}
+                    maxLength={30}
+                    className="min-h-[150px] rounded-[18px] placeholder:text-[#C0C0C0] placeholder:font-normal"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <span
+                      className={`text-sm ${
+                        cakeText.length >= 30 ? "text-red-500" : "text-gray-500"
+                      }`}
+                    >
+                      {cakeText.length}/30 characters
+                    </span>
+                  </div>
+                </div>
+                {/* Desktop action row */}
+                <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCakeText("")}
+                    className="h-9 px-5 rounded-[12px]"
+                  >
+                    Clear
+                  </Button>
+                  <DrawerClose asChild>
+                    <Button size="sm" className="h-9 px-5 rounded-[12px]">
+                      Save
+                    </Button>
+                  </DrawerClose>
+                </div>
+                <DrawerFooter className="pt-2 pb-6 lg:hidden">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="xl"
+                      onClick={() => setCakeText("")}
+                      className="flex-1 rounded-[20px] text-[16px]"
+                    >
+                      Clear
+                    </Button>
+                    <DrawerClose asChild>
+                      <Button
+                        size="xl"
+                        className="flex-1 py-5 rounded-[20px] text-[16px]"
+                      >
+                        Save
+                      </Button>
+                    </DrawerClose>
+                  </div>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+
+            {/* Message Card Text Input Drawer */}
+            <Drawer
+              modal={true}
+              open={isMessageCardDrawerOpen}
+              onOpenChange={setIsMessageCardDrawerOpen}
+            >
+              <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
+                <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <DrawerTitle className="text-[20px]">
+                      Add Message Card Text
+                    </DrawerTitle>
+                    <DrawerClose asChild>
+                      <button
+                        aria-label="Close"
+                        className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
+                      >
+                        <X className="h-5 w-5 text-gray-700" />
+                      </button>
+                    </DrawerClose>
+                  </div>
+                </DrawerHeader>
+                <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <Textarea
+                    placeholder="E.g., Wishing you a wonderful birthday filled with joy and laughter!, May your special day be as amazing as you are!, etc."
+                    value={messageCardText}
+                    onChange={(e) => setMessageCardText(e.target.value)}
+                    maxLength={100}
+                    className="min-h-[150px] rounded-[18px] placeholder:text-[#C0C0C0] placeholder:font-normal"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <span
+                      className={`text-sm ${
+                        messageCardText.length >= 100
+                          ? "text-red-500"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      {messageCardText.length}/100 characters
+                    </span>
+                  </div>
+                </div>
+                {/* Desktop action row */}
+                <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMessageCardText("")}
+                    className="h-9 px-5 rounded-[12px]"
+                  >
+                    Clear
+                  </Button>
+                  <DrawerClose asChild>
+                    <Button size="sm" className="h-9 px-5 rounded-[12px]">
+                      Save
+                    </Button>
+                  </DrawerClose>
+                </div>
+                <DrawerFooter className="pt-2 pb-6 lg:hidden">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="xl"
+                      onClick={() => setMessageCardText("")}
+                      className="flex-1 rounded-[20px] text-[16px]"
+                    >
+                      Clear
+                    </Button>
+                    <DrawerClose asChild>
+                      <Button
+                        size="xl"
+                        className="flex-1 py-5 rounded-[20px] text-[16px]"
+                      >
+                        Save
+                      </Button>
+                    </DrawerClose>
+                  </div>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
 
             {/* Delivery Info */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
@@ -648,7 +1155,7 @@ export default function CheckoutClient() {
         </div>
         {/* Fixed bottom Place Order bar (mobile only) */}
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
-          <div className="mx-auto px-4 py-3 w-full max-w-screen-xl">
+          <div className="mx-auto px-4 py-3 w-full max-w-[1200px]">
             <Link
               href={`/checkout/payment?amount=${total.toFixed(2)}`}
               className="w-full"
