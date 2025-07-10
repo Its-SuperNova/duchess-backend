@@ -93,17 +93,42 @@ export default function HomeClient(props: HomeClientProps) {
 
   // Product skeleton loader component
   const ProductSkeleton = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md">
-      <Skeleton className="h-48 w-full" />
-      <div className="p-4 space-y-3">
-        <div className="flex justify-between items-start">
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-5 w-12" />
+    <div className="bg-white dark:bg-gray-800 rounded-[24px]">
+      {/* Image skeleton */}
+      <div className="relative">
+        <Skeleton className="h-48 w-full rounded-[28px]" />
+      </div>
+
+      {/* Product details skeleton */}
+      <div className="p-4">
+        {/* Category and Product Name row with Veg indicator */}
+        <div className="flex justify-between items-end mb-2">
+          <div className="flex-1">
+            {/* Category skeleton */}
+            <Skeleton className="h-3 w-20 mb-2" />
+            {/* Product name skeleton */}
+            <Skeleton className="h-6 w-3/4 mb-2" />
+          </div>
+
+          {/* Veg indicator skeleton */}
+          <div className="flex justify-end mb-[14px]">
+            <Skeleton className="w-6 h-6 md:w-5 md:h-5 rounded-lg md:rounded-md" />
+          </div>
         </div>
-        <Skeleton className="h-4 w-full" />
+
+        {/* Rating and Price row */}
         <div className="flex justify-between items-center">
-          <Skeleton className="h-6 w-16" />
-          <Skeleton className="h-7 w-20 rounded-full" />
+          {/* Rating skeleton with plain background */}
+          <div className="flex items-center bg-gray-100 px-2 py-1 rounded-full">
+            <Skeleton className="w-4 h-4 mr-1 rounded-full" />
+            <Skeleton className="w-6 h-4" />
+          </div>
+
+          {/* Price skeleton */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="w-12 h-4" />
+            <Skeleton className="w-16 h-6" />
+          </div>
         </div>
       </div>
     </div>

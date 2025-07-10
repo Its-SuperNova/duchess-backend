@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { FaStar, FaHeart, FaRegHeart } from "react-icons/fa";
 import { GrSquare } from "react-icons/gr";
+import { Icon } from "@iconify/react";
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
@@ -101,11 +101,11 @@ export default function ProductCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-[24px] overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-white dark:bg-gray-800 rounded-[24px] ">
       {/* Product Image with Favorite Button and Offer Badge */}
       <div className="relative">
         <Link href={`/products/${id}`}>
-          <div className="relative h-48 w-full">
+          <div className="relative h-48 w-full rounded-[28px] overflow-hidden">
             <Image
               src={imageUrl || "/placeholder.svg"}
               alt={name}
@@ -115,14 +115,6 @@ export default function ProductCard({
             />
           </div>
         </Link>
-
-        {/* Offer Badge */}
-        {hasOffer && offerPercentage && (
-          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
-            {offerPercentage}% OFF
-          </div>
-        )}
-
         {/* Favorite Button */}
         <button
           onClick={handleFavoriteToggle}
@@ -130,52 +122,79 @@ export default function ProductCard({
           aria-label={isLiked ? "Remove from favorites" : "Add to favorites"}
         >
           {isClient && isLiked ? (
-            <FaHeart className="text-red-500" size={16} />
+            <Icon icon="solar:heart-bold" className="h-4 w-4 text-red-500" />
           ) : (
-            <FaRegHeart className="text-gray-600" size={16} />
+            <Icon icon="solar:heart-linear" className="h-4 w-4 text-gray-600" />
           )}
         </button>
       </div>
 
       {/* Product Details */}
       <div className="p-4">
-        <div className="flex justify-between items-start mb-1">
-          <Link href={`/products/${id}`} className="hover:underline">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
-              {name}
-            </h3>
-          </Link>
-          <div className="flex items-center bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
-            <FaStar className="text-amber-500 mr-1" size={12} />
-            <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
+        {/* Left side: Category and Product Name */}
+        <div className="flex justify-between items-end">
+          <div className="flex-1">
+            {/* Category - displayed above product name in small gray text */}
+            {category && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                {category}
+              </p>
+            )}
+
+            {/* Product Name - large bold text */}
+            <Link href={`/products/${id}`} className="hover:underline">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 line-clamp-1 mb-2">
+                {name}
+              </h3>
+            </Link>
+          </div>
+
+          {/* Veg/Non-veg indicator on the right side, above price */}
+          <div className="flex justify-end mb-[14px]">
+            <div className="flex items-center">
+              <div className="w-6 h-6 md:w-5 md:h-5 border-[2px] border-red-500 rounded-lg md:rounded-md flex items-center justify-center">
+                <div
+                  className={`w-3 h-3 md:w-2 md:h-2 rounded-full ${
+                    isVeg ? "bg-red-500" : "bg-red-600"
+                  }`}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rating and Price Row */}
+        <div className="flex justify-between items-center">
+          {/* Rating on the left with gradient background */}
+          <div className="flex items-center bg-gradient-to-r from-amber-100 to-white px-2 py-1 rounded-full">
+            <Icon icon="solar:star-bold" className="text-amber-500 mr-1" />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {rating}
             </span>
           </div>
-        </div>
 
-        <div className="flex items-center mb-2">
-          <GrSquare
-            className={isVeg ? "text-green-600" : "text-red-600"}
-            style={{ width: 16, height: 16, minWidth: 16, minHeight: 16 }}
-            aria-label={isVeg ? "Vegetarian" : "Non-Vegetarian"}
-          />
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 ml-2">
-            {description || "Delicious pastry made with premium ingredients"}
-          </p>
-        </div>
-
-        <div className="flex justify-between items-center mt-3">
+          {/* Price on the right */}
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-gray-900 dark:text-white">
-              ₹{price}
-            </p>
-            {originalPrice && originalPrice > price && (
-              <p className="text-sm text-gray-500 line-through">
-                ₹{originalPrice}
-              </p>
+            {originalPrice ? (
+              <>
+                <p className="text-sm text-red-500 line-through">
+                  ₹{originalPrice}
+                </p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">
+                  ₹{price}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-red-500 line-through">
+                  ₹{Math.round(price * 1.2)}
+                </p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">
+                  ₹{price}
+                </p>
+              </>
             )}
           </div>
-          {/* Removed Add to Cart button */}
         </div>
       </div>
     </div>
