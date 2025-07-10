@@ -173,6 +173,64 @@ export default function CartPage() {
     router.back();
   };
 
+  // Checkout section component
+  const CheckoutSection = ({ isMobile = false }: { isMobile?: boolean }) => {
+    if (cart.length === 0) return null;
+
+    const total = cart.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+
+    return (
+      <div
+        className={`${
+          isMobile
+            ? "fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg"
+            : "p-4 lg:p-6"
+        }`}
+      >
+        <div
+          className={`${
+            isMobile
+              ? "p-4 flex flex-col gap-4"
+              : "max-w-[360px] ml-auto flex flex-col gap-3 items-end"
+          }`}
+        >
+          {/* Estimated Total */}
+          <div
+            className={`flex items-center gap-2 ${
+              isMobile ? "justify-between w-full" : ""
+            }`}
+          >
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Estimated total
+            </span>
+            <span className="text-lg font-semibold text-black dark:text-white">
+              ₹{total.toFixed(2)}
+            </span>
+          </div>
+
+          {/* Tax Info - Show on both mobile and desktop */}
+          <p
+            className={`text-xs text-gray-500 dark:text-gray-400 ${
+              isMobile ? "text-center w-full" : "w-[300px] text-right"
+            }`}
+          >
+            Taxes included. Discounts and shipping calculated at checkout.
+          </p>
+
+          {/* Checkout Button */}
+          <Link href="/checkout" className="w-full">
+            <Button className="w-full bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-xl font-medium">
+              Check out
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F4F7] dark:bg-[#202028]">
       {/* Main Content */}
@@ -185,40 +243,17 @@ export default function CartPage() {
           {renderCartItems()}
         </div>
 
-        {/* Checkout Section - Below Cart Items */}
-        {cart.length > 0 && (
-          <div className="p-4 lg:p-6">
-            <div className="max-w-[360px] ml-auto flex flex-col gap-3 items-end">
-              {/* Estimated Total */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Estimated total
-                </span>
-                <span className="text-lg font-semibold text-black dark:text-white">
-                  ₹
-                  {cart
-                    .reduce(
-                      (total, item) => total + item.price * item.quantity,
-                      0
-                    )
-                    .toFixed(2)}
-                </span>
-              </div>
+        {/* Desktop Checkout Section - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <CheckoutSection />
+        </div>
+      </div>
 
-              {/* Tax Info */}
-              <p className="text-xs w-[300px] text-gray-500 dark:text-gray-400 text-right">
-                Taxes included. Discounts and shipping calculated at checkout.
-              </p>
-
-              {/* Checkout Button */}
-              <Link href="/checkout" className="w-full">
-                <Button className="w-full bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-xl font-medium">
-                  Check out
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
+      {/* Mobile Checkout Section - Fixed at bottom */}
+      <div className="lg:hidden">
+        <CheckoutSection isMobile={true} />
+        {/* Add bottom padding to prevent content from being hidden behind fixed checkout */}
+        <div className="h-32"></div>
       </div>
     </div>
   );
