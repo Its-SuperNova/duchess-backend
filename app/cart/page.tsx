@@ -39,27 +39,30 @@ export default function CartPage() {
   const renderCartItems = () => {
     if (cart.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-8 lg:py-12 text-center px-4">
+        <div className="flex flex-col items-center justify-center text-center px-4 gap-6">
           {animationData ? (
-            <div className="w-24 h-24 lg:w-32 lg:h-32 mb-4 lg:mb-6">
+            <div className="w-[400px] h-[300px] mg:h-[400px] mb-4 lg:mb-6">
               <Lottie animationData={animationData} loop={true} />
             </div>
           ) : (
-            <div className="w-24 h-24 lg:w-32 lg:h-32 mb-4 lg:mb-6 flex items-center justify-center">
+            <div className="w-32 h-32 lg:w-40 lg:h-40 mb-4 lg:mb-6 flex items-center justify-center">
               <ShoppingCart className="w-12 h-12 lg:w-16 lg:h-16 text-gray-400" />
             </div>
           )}
-          <h3 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Your cart is empty
-          </h3>
-          <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mb-6 max-w-sm">
-            Looks like you haven't added any delicious treats to your cart yet.
-          </p>
-          <Link href="/products">
-            <Button className="bg-[#7A0000] hover:bg-[#600000] text-white px-4 lg:px-6 py-2 lg:py-3 rounded-lg text-sm lg:text-base">
-              Start Shopping
-            </Button>
-          </Link>
+          <div className="flex flex-col items-center justify-center">
+            <h3 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Your cart is empty
+            </h3>
+            <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mb-6 max-w-sm">
+              Looks like you haven't added any delicious treats to your cart
+              yet.
+            </p>
+            <Link href="/products">
+              <Button className="bg-[#7A0000] hover:bg-[#600000] text-white px-4 lg:px-6 py-2 lg:py-3 rounded-lg text-sm lg:text-base">
+                Start Shopping
+              </Button>
+            </Link>
+          </div>
         </div>
       );
     }
@@ -237,9 +240,11 @@ export default function CartPage() {
       <div className="max-w-[1200px] mx-auto py-6">
         {/* Cart Items */}
         <div className="p-4 lg:p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Cart Items
-          </h2>
+          {cart.length > 0 && (
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Cart Items
+            </h2>
+          )}
           {renderCartItems()}
         </div>
 

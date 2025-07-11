@@ -131,21 +131,19 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Footer */}
           <footer className="w-full border-t border-gray-200 bg-white">
             <div className="mx-auto w-full max-w-[1200px] px-4 py-3">
-              <div className="text-xs text-gray-600 whitespace-nowrap overflow-x-auto flex justify-center">
-                <span>&copy; {new Date().getFullYear()} duchess pastry</span>
-                <span className="mx-2">•</span>
+              <div className="text-xs text-gray-600 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 text-center items-center">
+                <span className="col-span-2 sm:col-span-3 lg:col-span-1">
+                  &copy; {new Date().getFullYear()} duchess pastry
+                </span>
                 <Link href="#" className="hover:underline">
                   Privacy Policy
                 </Link>
-                <span className="mx-2">•</span>
                 <Link href="#" className="hover:underline">
                   Terms & Conditions
                 </Link>
-                <span className="mx-2">•</span>
                 <Link href="#" className="hover:underline">
                   Refund & Cancellation
                 </Link>
-                <span className="mx-2">•</span>
                 <Link href="#" className="hover:underline">
                   Shipping & Delivery
                 </Link>
