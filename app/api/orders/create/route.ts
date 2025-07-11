@@ -20,7 +20,19 @@ export async function POST(request: NextRequest) {
       note,
       addressText,
       couponCode,
+      contactInfo,
     } = body || {};
+
+    console.log("Extracted order data:", {
+      subtotalAmount,
+      discountAmount,
+      deliveryFee,
+      totalAmount,
+      note,
+      addressText,
+      couponCode,
+      contactInfo,
+    });
 
     // Get user id
     const { data: user, error: userError } = await supabase
@@ -117,6 +129,12 @@ export async function POST(request: NextRequest) {
         delivery_address: {
           address: addressText || "Default address",
           type: "home",
+          contact: contactInfo
+            ? {
+                name: contactInfo.name,
+                phone: contactInfo.phone,
+              }
+            : null,
         },
       })
       .select("id")

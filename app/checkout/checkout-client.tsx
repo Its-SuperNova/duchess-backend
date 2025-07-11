@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 const Icon = dynamic(() => import("@iconify/react").then((m) => m.Icon), {
   ssr: false,
 }) as any;
+import Lottie from "lottie-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,32 @@ export default function CheckoutClient() {
   const [messageCardText, setMessageCardText] = useState("");
   const [isCakeTextDrawerOpen, setIsCakeTextDrawerOpen] = useState(false);
   const [isMessageCardDrawerOpen, setIsMessageCardDrawerOpen] = useState(false);
+
+  // Contact information state
+  const [contactInfo, setContactInfo] = useState({
+    name: "Ashwin C S",
+    phone: "+91-8248669086",
+  });
+  const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
+  const [tempContactInfo, setTempContactInfo] = useState(contactInfo);
+
+  // Lottie animation state for payment section
+  const [paymentAnimationData, setPaymentAnimationData] = useState(null);
+
+  // Load payment animation data
+  useEffect(() => {
+    const loadPaymentAnimation = async () => {
+      try {
+        const response = await fetch("/Lottie/Digital Payment.json");
+        const data = await response.json();
+        setPaymentAnimationData(data);
+      } catch (error) {
+        console.error("Failed to load payment animation:", error);
+      }
+    };
+
+    loadPaymentAnimation();
+  }, []);
 
   // Sync customization options from cart items
   useEffect(() => {
@@ -194,6 +221,7 @@ export default function CheckoutClient() {
         customizationOptions,
         cakeText,
         messageCardText,
+        contactInfo,
       };
       if (typeof window !== "undefined") {
         localStorage.setItem("checkoutContext", JSON.stringify(ctx));
@@ -209,6 +237,7 @@ export default function CheckoutClient() {
     customizationOptions,
     cakeText,
     messageCardText,
+    contactInfo,
   ]);
 
   // Redirect to home if cart is empty
@@ -883,6 +912,116 @@ export default function CheckoutClient() {
               </DrawerContent>
             </Drawer>
 
+            {/* Contact Edit Drawer */}
+            <Drawer
+              modal={true}
+              open={isContactDrawerOpen}
+              onOpenChange={setIsContactDrawerOpen}
+            >
+              <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
+                <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <DrawerTitle className="text-[20px]">
+                      Edit Contact Information
+                    </DrawerTitle>
+                    <DrawerClose asChild>
+                      <button
+                        aria-label="Close"
+                        className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
+                      >
+                        <X className="h-5 w-5 text-gray-700" />
+                      </button>
+                    </DrawerClose>
+                  </div>
+                </DrawerHeader>
+                <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <div className="space-y-4">
+                    <div>
+                      <label
+                        htmlFor="contact-name"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Full Name
+                      </label>
+                      <Input
+                        id="contact-name"
+                        placeholder="Enter your full name"
+                        value={tempContactInfo.name}
+                        onChange={(e) =>
+                          setTempContactInfo((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                        className="rounded-[12px] placeholder:text-[#C0C0C0]"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="contact-phone"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Phone Number
+                      </label>
+                      <Input
+                        id="contact-phone"
+                        placeholder="Enter your phone number"
+                        value={tempContactInfo.phone}
+                        onChange={(e) =>
+                          setTempContactInfo((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
+                        className="rounded-[12px] placeholder:text-[#C0C0C0]"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* Desktop action row */}
+                <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTempContactInfo(contactInfo)}
+                    className="h-9 px-5 rounded-[12px]"
+                  >
+                    Reset
+                  </Button>
+                  <DrawerClose asChild>
+                    <Button
+                      size="sm"
+                      className="h-9 px-5 rounded-[12px]"
+                      onClick={() => setContactInfo(tempContactInfo)}
+                    >
+                      Save
+                    </Button>
+                  </DrawerClose>
+                </div>
+                <DrawerFooter className="pt-2 pb-6 lg:hidden">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="xl"
+                      onClick={() => setTempContactInfo(contactInfo)}
+                      className="flex-1 rounded-[20px] text-[16px]"
+                    >
+                      Reset
+                    </Button>
+                    <DrawerClose asChild>
+                      <Button
+                        size="xl"
+                        className="flex-1 py-5 rounded-[20px] text-[16px]"
+                        onClick={() => setContactInfo(tempContactInfo)}
+                      >
+                        Save
+                      </Button>
+                    </DrawerClose>
+                  </div>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+
             {/* Delivery Info */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
               <div className="flex items-start mb-4">
@@ -914,13 +1053,14 @@ export default function CheckoutClient() {
                       {addressText}
                     </p>
                     <button
-                      className="text-sm text-[#2664eb] hover:underline shrink-0"
+                      className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
                       onClick={() => {
                         setTempAddress(addressText);
                         setIsAddressDrawerOpen(true);
                       }}
+                      aria-label="Change delivery address"
                     >
-                      Change
+                      <Icon icon="solar:pen-broken" className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -931,62 +1071,60 @@ export default function CheckoutClient() {
                   icon="solar:phone-broken"
                   className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
                 />
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Contact
                   </h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Ashwin C S, +91-8248669086
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop cancellation policy under delivery info */}
-            <div className="hidden lg:block mx-4 mt-4 text-[#9AA3C7]">
-              <h4 className="uppercase tracking-wide font-semibold text-[14px]">
-                Cancellation Policy
-              </h4>
-              <p className="mt-2 text-sm">
-                Once your order is placed, it cannot be cancelled or modified.
-                We do not offer refunds for cancelled orders under any
-                circumstances.
-              </p>
-            </div>
-
-            {/* Bill Details (mobile-only, strictly at bottom below delivery info) */}
-            <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600 lg:hidden">
-              <div className="flex items-center mb-3 gap-2">
-                <Icon
-                  icon="solar:bill-list-broken"
-                  className="h-5 w-5 text-[#570000]"
-                />
-                <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                  Bill Details
-                </h3>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                  <span>Item Total</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
-                </div>
-                {/* GST & Taxes removed per request */}
-                {discount > 0 && (
-                  <div className="flex justify-between text-green-600 text-sm">
-                    <span>Discount</span>
-                    <span>-₹{discount.toFixed(2)}</span>
+                  <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm truncate min-w-0">
+                      {contactInfo.name}, {contactInfo.phone}
+                    </p>
+                    <button
+                      className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
+                      onClick={() => {
+                        setTempContactInfo(contactInfo);
+                        setIsContactDrawerOpen(true);
+                      }}
+                      aria-label="Edit contact information"
+                    >
+                      <Icon icon="solar:pen-broken" className="h-4 w-4" />
+                    </button>
                   </div>
-                )}
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                  <span>Delivery Fee</span>
-                  <span>₹{deliveryFee.toFixed(2)}</span>
                 </div>
-                <div className="pt-2 mt-2">
-                  <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
-                  <div className="flex justify-between font-semibold text-gray-800 dark:text-gray-200 mt-2">
-                    <span>To Pay</span>
-                    <span>₹{total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment Section - Desktop (below Delivery Info) */}
+            <div className="hidden lg:block mx-4 mt-4">
+              <div className="bg-white p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
+                <div className="flex items-start gap-6">
+                  {/* Lottie animation on the left */}
+                  <div className="flex-1">
+                    {paymentAnimationData && (
+                      <Lottie
+                        animationData={paymentAnimationData}
+                        loop={true}
+                        style={{ width: "100%", height: "200px" }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Content on the right */}
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
+                      Payment
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                      All transactions are secure and encrypted
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      After clicking "Pay now", you will be redirected to{" "}
+                      <span className="font-medium text-[#2664eb]">
+                        Razorpay Secure
+                      </span>{" "}
+                      (UPI, Cards, Wallets, NetBanking) to complete your
+                      purchase securely.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1139,20 +1277,97 @@ export default function CheckoutClient() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Cancellation Policy - Desktop (below Bill Details) */}
+                <div className="mx-4 mt-4 text-[#9AA3C7]">
+                  <h4 className="uppercase tracking-wide font-semibold text-[14px]">
+                    Cancellation Policy
+                  </h4>
+                  <p className="mt-2 text-sm">
+                    Once your order is placed, it cannot be cancelled or
+                    modified. We do not offer refunds for cancelled orders under
+                    any circumstances.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        {/* Disclaimer (mobile-only at page bottom) */}
-        <div className="mx-4 lg:hidden mt-6 text-[#9AA3C7]">
-          <h4 className="uppercase tracking-wide font-semibold text-[14px]">
-            Cancellation Policy
-          </h4>
-          <p className="mt-2 text-sm">
-            Once your order is placed, it cannot be cancelled or modified. We do
-            not offer refunds for cancelled orders under any circumstances.
-          </p>
+        {/* Mobile Bill Details and Payment Sections - At bottom */}
+        <div className="lg:hidden space-y-4 mt-6">
+          {/* Bill Details - Mobile */}
+          <div className="bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
+            <div className="flex items-center mb-3 gap-2">
+              <Icon
+                icon="solar:bill-list-broken"
+                className="h-5 w-5 text-[#570000]"
+              />
+              <h3 className="font-medium text-gray-800 dark:text-gray-200">
+                Bill Details
+              </h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>Item Total</span>
+                <span>₹{subtotal}</span>
+              </div>
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>Discount</span>
+                <span className="text-[#15A05A]">-₹{discount}</span>
+              </div>
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>Delivery Fee</span>
+                <span>₹{deliveryFee}</span>
+              </div>
+              <div className="flex justify-between text-[#570000] font-semibold pt-2 border-t border-gray-200 dark:border-gray-600">
+                <span>To Pay</span>
+                <span>₹{subtotal - discount + deliveryFee}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Section - Mobile */}
+          <div className="bg-white mx-4 p-4 pb-6 rounded-[22px] border border-gray-200 dark:border-gray-600">
+            <div>
+              <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
+                Payment
+              </h3>
+              {/* Lottie animation below the title */}
+              <div className="mt-3">
+                {paymentAnimationData && (
+                  <Lottie
+                    animationData={paymentAnimationData}
+                    loop={true}
+                    style={{ width: "100%", height: "250px" }}
+                  />
+                )}
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-4">
+                All transactions are secure and encrypted
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
+                After clicking "Pay now", you will be redirected to{" "}
+                <span className="font-medium text-[#2664eb]">
+                  Razorpay Secure
+                </span>{" "}
+                (UPI, Cards, Wallets, NetBanking) to complete your purchase
+                securely.
+              </p>
+            </div>
+          </div>
+
+          {/* Cancellation Policy - Mobile (moved below Payment) */}
+          <div className="mx-4 px-4 text-[#9AA3C7]">
+            <h4 className="uppercase tracking-wide font-semibold text-[14px]">
+              Cancellation Policy
+            </h4>
+            <p className="mt-2 text-sm">
+              Once your order is placed, it cannot be cancelled or modified. We
+              do not offer refunds for cancelled orders under any circumstances.
+            </p>
+          </div>
         </div>
+
         {/* Fixed bottom Place Order bar (mobile only) */}
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
           <div className="mx-auto px-4 py-3 w-full max-w-[1200px]">

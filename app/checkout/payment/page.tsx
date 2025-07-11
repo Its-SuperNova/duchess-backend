@@ -41,6 +41,7 @@ function PaymentPageContent() {
         note: checkoutCtx.note,
         addressText: checkoutCtx.addressText,
         couponCode: checkoutCtx.couponCode,
+        contactInfo: checkoutCtx.contactInfo,
       });
 
       const response = await fetch("/api/orders/create", {
