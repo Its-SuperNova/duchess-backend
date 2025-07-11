@@ -9,7 +9,8 @@ import { useFavorites } from "@/context/favorites-context";
 import { User } from "lucide-react";
 import { Icon } from "@iconify/react";
 import { IoCloseOutline } from "react-icons/io5";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { isUserAdmin } from "@/lib/auth-utils";
 
 export default function UserHeader() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function UserHeader() {
   const { favorites } = useFavorites();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalFavorites = favorites.length;
@@ -48,6 +50,26 @@ export default function UserHeader() {
       setIsSearchExpanded(false);
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    async function checkAdmin() {
+      try {
+        if (session?.user?.email) {
+          const hasAdminAccess = await isUserAdmin(session.user.email);
+          if (isMounted) setIsAdmin(!!hasAdminAccess);
+        } else {
+          if (isMounted) setIsAdmin(false);
+        }
+      } catch {
+        if (isMounted) setIsAdmin(false);
+      }
+    }
+    checkAdmin();
+    return () => {
+      isMounted = false;
+    };
+  }, [session]);
 
   return (
     <>
@@ -82,6 +104,26 @@ export default function UserHeader() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
+              {/* Admin - Only for Admin users */}
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/admin"
+                    aria-label="Admin"
+                    className="hidden md:inline-flex h-8 px-3 items-center justify-center rounded-full bg-white border border-gray-300 text-black hover:bg-gray-50 gap-2"
+                  >
+                    <Icon icon="solar:shield-user-broken" className="h-5 w-5" />
+                    <span className="text-sm font-medium">Admin</span>
+                  </Link>
+                  <Link
+                    href="/admin"
+                    aria-label="Admin"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-gray-300 text-black md:hidden hover:bg-gray-50"
+                  >
+                    <Icon icon="solar:shield-user-broken" className="h-5 w-5" />
+                  </Link>
+                </>
+              )}
               {/* Desktop Search - Hidden on Mobile */}
               <div
                 className={`relative transition-all duration-300 ease-in-out hidden md:block ${
