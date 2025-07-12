@@ -135,16 +135,25 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                 <span className="col-span-2 sm:col-span-3 lg:col-span-1">
                   &copy; {new Date().getFullYear()} duchess pastry
                 </span>
-                <Link href="#" className="hover:underline">
+                <Link href="/legal/privacy-policy" className="hover:underline">
                   Privacy Policy
                 </Link>
-                <Link href="#" className="hover:underline">
+                <Link
+                  href="/legal/terms-conditions"
+                  className="hover:underline"
+                >
                   Terms & Conditions
                 </Link>
-                <Link href="#" className="hover:underline">
+                <Link
+                  href="/legal/refund-cancellation"
+                  className="hover:underline"
+                >
                   Refund & Cancellation
                 </Link>
-                <Link href="#" className="hover:underline">
+                <Link
+                  href="/legal/shipping-delivery"
+                  className="hover:underline"
+                >
                   Shipping & Delivery
                 </Link>
               </div>
