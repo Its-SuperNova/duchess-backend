@@ -145,7 +145,7 @@ const Hero = () => {
   const CategorySkeleton = ({ count }: { count: number }) => (
     <>
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="flex flex-col items-center">
+        <div key={index} className="flex flex-col items-center flex-shrink-0">
           <Skeleton className="w-16 h-16 lg:w-20 lg:h-20 rounded-[20px] lg:rounded-[24px]" />
           <Skeleton className="w-12 h-4 mt-2 lg:mt-3" />
         </div>
@@ -296,17 +296,17 @@ const Hero = () => {
                   href={`/products?category=${category.id}`}
                   key={category.id}
                 >
-                  <div className="flex flex-col items-center group cursor-pointer flex-shrink-0 w-24">
-                    <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
+                  <div className="flex flex-col items-center cursor-pointer flex-shrink-0 w-24 group">
+                    <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
                       <Image
-                        src={getCategoryImage(category)}
+                        src={getCategoryImage(category) || "/placeholder.svg"}
                         alt={category.name}
                         width={80}
                         height={80}
-                        className="object-cover w-full h-full"
+                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
                       />
                     </div>
-                    <p className="text-sm font-medium mt-3 text-center group-hover:text-[#d48926de] transition-colors">
+                    <p className="text-sm font-medium mt-3 text-center">
                       {category.name}
                     </p>
                   </div>
@@ -318,7 +318,7 @@ const Hero = () => {
       </div>
 
       {/* Mobile/Tablet Content - Hidden on lg screens and up */}
-      <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[30px] overflow-x-hidden">
+      <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[30px]">
         {/* Banner Slider for Mobile */}
         <div className="w-full max-w-md mx-auto mb-2">
           <BannerSlider />
@@ -329,94 +329,39 @@ const Hero = () => {
           <h2 className="text-lg md:text-xl font-medium">Categories</h2>
         </div>
 
-        {/* Categories Grid - Responsive based on specific breakpoints */}
-        <div className="w-full mt-2 overflow-x-auto">
+        {/* Categories Horizontal Scroll - Show all categories */}
+        <div className="w-full mt-2">
           {isLoadingCategories ? (
-            <div className="flex flex-nowrap gap-4 min-w-full">
-              <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-7 gap-4 w-full">
-                <CategorySkeleton count={7} />
-              </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <CategorySkeleton count={6} />
             </div>
           ) : categoriesError ? (
             <CategoriesError />
           ) : categories.length === 0 ? (
             <CategoriesEmpty />
           ) : (
-            <div className="flex flex-nowrap gap-4 min-w-full">
-              {/* Show all categories between 800px-1023px */}
-              <div className="hidden sm:grid sm:grid-cols-7 md:hidden gap-4 w-full">
-                {categories.slice(0, 7).map((category) => (
-                  <Link
-                    href={`/products?category=${category.id}`}
-                    key={category.id}
-                  >
-                    <div className="flex flex-col items-center group cursor-pointer">
-                      <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
-                        <Image
-                          src={getCategoryImage(category)}
-                          alt={category.name}
-                          width={64}
-                          height={64}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <p className="text-sm mt-2 text-center group-hover:text-[#d48926de] transition-colors line-clamp-2">
-                        {category.name}
-                      </p>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {categories.map((category) => (
+                <Link
+                  href={`/products?category=${category.id}`}
+                  key={category.id}
+                >
+                  <div className="flex flex-col items-center cursor-pointer flex-shrink-0 min-w-[72px] group">
+                    <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-[20px] shadow-sm overflow-hidden flex items-center justify-center">
+                      <Image
+                        src={getCategoryImage(category) || "/placeholder.svg"}
+                        alt={category.name}
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+                      />
                     </div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Show all categories between 520px-799px */}
-              <div className="hidden xs:grid xs:grid-cols-5 sm:hidden gap-4 w-full">
-                {categories.slice(0, 5).map((category) => (
-                  <Link
-                    href={`/products?category=${category.id}`}
-                    key={category.id}
-                  >
-                    <div className="flex flex-col items-center group cursor-pointer">
-                      <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
-                        <Image
-                          src={getCategoryImage(category)}
-                          alt={category.name}
-                          width={64}
-                          height={64}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <p className="text-sm mt-2 text-center group-hover:text-[#d48926de] transition-colors line-clamp-2">
-                        {category.name}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Show all categories below 520px */}
-              <div className="grid grid-cols-4 xs:hidden gap-4 w-full">
-                {categories.slice(0, 4).map((category) => (
-                  <Link
-                    href={`/products?category=${category.id}`}
-                    key={category.id}
-                  >
-                    <div className="flex flex-col items-center group cursor-pointer">
-                      <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-[20px] shadow-sm overflow-hidden flex items-center justify-center group-hover:shadow-md transition-shadow">
-                        <Image
-                          src={getCategoryImage(category)}
-                          alt={category.name}
-                          width={64}
-                          height={64}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <p className="text-sm mt-2 text-center group-hover:text-[#d48926de] transition-colors line-clamp-2">
-                        {category.name}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    <p className="text-sm mt-2 text-center line-clamp-2 max-w-[72px]">
+                      {category.name}
+                    </p>
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
         </div>
