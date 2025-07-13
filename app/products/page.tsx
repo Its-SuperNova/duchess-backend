@@ -6,6 +6,7 @@ import { processProductForHomepage } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import {
   ChevronDown,
+  ChevronRight,
   X,
   Filter,
   Check,
@@ -18,6 +19,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Icon } from "@iconify/react";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 
 export default function ProductsPage({
   searchParams,
@@ -26,6 +35,10 @@ export default function ProductsPage({
 }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isDietaryOpen, setIsDietaryOpen] = useState(true);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -107,17 +120,6 @@ export default function ProductsPage({
       });
     }
 
-    // Filter by flavor
-    if (selectedFlavor) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name?.toLowerCase().includes(selectedFlavor.toLowerCase()) ||
-          product.description
-            ?.toLowerCase()
-            .includes(selectedFlavor.toLowerCase())
-      );
-    }
-
     // Apply sorting
     if (selectedSort) {
       filtered = [...filtered].sort((a, b) => {
@@ -137,13 +139,7 @@ export default function ProductsPage({
     }
 
     setFilteredProducts(filtered);
-  }, [
-    products,
-    selectedCategory,
-    selectedVegFilter,
-    selectedFlavor,
-    selectedSort,
-  ]);
+  }, [products, selectedCategory, selectedVegFilter, selectedSort]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -165,15 +161,13 @@ export default function ProductsPage({
   const clearFilters = () => {
     setSelectedCategory("");
     setSelectedVegFilter("");
-    setSelectedFlavor("");
   };
 
   const clearSort = () => {
     setSelectedSort("");
   };
 
-  const hasActiveFilters =
-    selectedCategory || selectedVegFilter || selectedFlavor;
+  const hasActiveFilters = selectedCategory || selectedVegFilter;
 
   const hasActiveSort = selectedSort;
 
@@ -206,7 +200,8 @@ export default function ProductsPage({
           <h1 className="text-3xl font-bold">
             {categoryId ? "Products in this Category" : "All Products"}
           </h1>
-          <div className="flex gap-3">
+          {/* Desktop Sort/Filter - Hidden on mobile */}
+          <div className="hidden md:flex gap-3">
             <div className="relative">
               <button
                 onClick={() => setIsSortOpen(!isSortOpen)}
@@ -421,11 +416,8 @@ export default function ProductsPage({
                     className="ml-1 px-1.5 py-0.5 text-xs"
                   >
                     {
-                      [
-                        selectedCategory,
-                        selectedVegFilter,
-                        selectedFlavor,
-                      ].filter(Boolean).length
+                      [selectedCategory, selectedVegFilter].filter(Boolean)
+                        .length
                     }
                   </Badge>
                 )}
@@ -457,7 +449,7 @@ export default function ProductsPage({
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-6">
+                      <div className="grid grid-cols-2 gap-6">
                         {/* Category Filter */}
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
@@ -554,60 +546,6 @@ export default function ProductsPage({
                             ))}
                           </div>
                         </div>
-
-                        {/* Flavor Filter */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Icon
-                              icon="majesticons:cup"
-                              className="w-4 h-4 text-primary"
-                            />
-                            <label className="text-sm font-medium text-foreground">
-                              Flavor
-                            </label>
-                          </div>
-                          <div className="grid grid-cols-1 gap-2">
-                            <Button
-                              variant={
-                                selectedFlavor === "" ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => setSelectedFlavor("")}
-                              className={`justify-start h-9 ${
-                                selectedFlavor === ""
-                                  ? "bg-primary text-white hover:bg-primary/90"
-                                  : ""
-                              }`}
-                            >
-                              {selectedFlavor === "" && (
-                                <Check className="w-4 h-4 mr-2" />
-                              )}
-                              All Flavors
-                            </Button>
-                            {flavors.map((flavor) => (
-                              <Button
-                                key={flavor}
-                                variant={
-                                  selectedFlavor === flavor
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setSelectedFlavor(flavor)}
-                                className={`justify-start h-9 ${
-                                  selectedFlavor === flavor
-                                    ? "bg-primary text-white hover:bg-primary/90"
-                                    : ""
-                                }`}
-                              >
-                                {selectedFlavor === flavor && (
-                                  <Check className="w-4 h-4 mr-2" />
-                                )}
-                                {flavor}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
                       </div>
 
                       {/* Clear Filters Button */}
@@ -650,8 +588,37 @@ export default function ProductsPage({
           </div>
         </div>
 
+        {/* Mobile Sort/Filter Bottom Buttons */}
+        <div className="md:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="flex gap-3 bg-primary rounded-[16px] shadow-lg px-2 py-1">
+            <button
+              onClick={() => setIsMobileSortOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-white"
+            >
+              <Icon icon="solar:sort-broken" className="w-4 h-4 text-white" />
+              Sort
+            </button>
+            <div className="w-px bg-white/20 my-1"></div>
+            <button
+              onClick={() => setIsMobileFilterOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-white"
+            >
+              <Icon icon="solar:filter-broken" className="w-4 h-4 text-white" />
+              Filter
+              {hasActiveFilters && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 px-1.5 py-0.5 text-xs bg-white text-primary"
+                >
+                  {[selectedCategory, selectedVegFilter].filter(Boolean).length}
+                </Badge>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-20 md:mb-0">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} {...product} />
           ))}
@@ -696,6 +663,314 @@ export default function ProductsPage({
             </div>
           )}
       </div>
+
+      {/* Mobile Sort Drawer */}
+      <Drawer open={isMobileSortOpen} onOpenChange={setIsMobileSortOpen}>
+        <DrawerContent
+          className="max-h-[80vh]"
+          style={{ backgroundColor: "#F5F6FB" }}
+        >
+          <DrawerHeader className="">
+            <div className="flex items-center justify-between px-1">
+              <DrawerTitle className="flex items-center gap-2 text-[20px]">
+                Sort options
+              </DrawerTitle>
+              <button
+                onClick={() => setIsMobileSortOpen(false)}
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-50"
+              >
+                <X className="w-5 h-5 text-black" />
+              </button>
+            </div>
+          </DrawerHeader>
+          <div className="p-4 overflow-y-auto">
+            <div className="space-y-6">
+              {/* Price Sorting */}
+              <div className="space-y-3 bg-white rounded-[16px] p-4">
+                <div className="flex items-center gap-2">
+                  <Icon
+                    icon="solar:sort-broken"
+                    className="w-5 h-5 text-primary"
+                  />
+                  <label className="text-lg font-medium text-foreground">
+                    Price
+                  </label>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      setSelectedSort("price-low");
+                      setIsMobileSortOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                      selectedSort === "price-low"
+                        ? "bg-primary text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Low to High</span>
+                      {selectedSort === "price-low" && (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedSort("price-high");
+                      setIsMobileSortOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                      selectedSort === "price-high"
+                        ? "bg-primary text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>High to Low</span>
+                      {selectedSort === "price-high" && (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Name Sorting */}
+              <div className="space-y-3 bg-white rounded-[16px] p-4">
+                <div className="flex items-center gap-2">
+                  <Icon
+                    icon="solar:sort-broken"
+                    className="w-5 h-5 text-primary"
+                  />
+                  <label className="text-lg font-medium text-foreground">
+                    Name
+                  </label>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      setSelectedSort("name-asc");
+                      setIsMobileSortOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                      selectedSort === "name-asc"
+                        ? "bg-primary text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>A to Z</span>
+                      {selectedSort === "name-asc" && (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedSort("name-desc");
+                      setIsMobileSortOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                      selectedSort === "name-desc"
+                        ? "bg-primary text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Z to A</span>
+                      {selectedSort === "name-desc" && (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DrawerFooter className="border-t border-gray-100 bg-white">
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsMobileSortOpen(false)}
+                className="flex-1 h-[48px] rounded-[16px]"
+              >
+                Cancel
+              </Button>
+              {selectedSort && (
+                <Button
+                  onClick={() => {
+                    setSelectedSort("");
+                    setIsMobileSortOpen(false);
+                  }}
+                  className="flex-1 h-[48px] rounded-[16px] bg-primary hover:bg-primary/90"
+                >
+                  Clear Sort
+                </Button>
+              )}
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Mobile Filter Drawer */}
+      <Drawer open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <DrawerContent
+          className="max-h-[80vh]"
+          style={{ backgroundColor: "#F5F6FB" }}
+        >
+          <DrawerHeader className="">
+            <div className="flex items-center justify-between px-1">
+              <DrawerTitle className="flex items-center gap-2 text-[20px]">
+                Filter options
+              </DrawerTitle>
+              <button
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-50"
+              >
+                <X className="w-5 h-5 text-black" />
+              </button>
+            </div>
+          </DrawerHeader>
+          <div className="p-4 pt-1 overflow-y-auto">
+            <div className="space-y-3">
+              {/* Dietary Preference Dropdown */}
+              <div className="bg-white rounded-[16px]">
+                <button
+                  onClick={() => setIsDietaryOpen(!isDietaryOpen)}
+                  className="w-full px-4 py-4 flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon icon="bx:bxs-leaf" className="w-5 h-5 text-primary" />
+                    <span className="font-medium text-gray-800">
+                      Dietary Preference
+                    </span>
+                  </div>
+                  <ChevronRight
+                    className={`w-5 h-5 text-gray-500 transition-transform ${
+                      isDietaryOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+                {isDietaryOpen && (
+                  <div className="px-4 pb-4 space-y-2">
+                    {[
+                      { value: "", label: "All" },
+                      { value: "veg", label: "Vegetarian" },
+                      { value: "non-veg", label: "Non-Vegetarian" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSelectedVegFilter(option.value);
+                          setIsDietaryOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-[16px] transition-all ${
+                          selectedVegFilter === option.value
+                            ? "bg-primary text-white"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option.label}</span>
+                          {selectedVegFilter === option.value && (
+                            <Check className="w-4 h-4" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Category Dropdown */}
+              <div className="bg-white rounded-[16px]">
+                <button
+                  onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                  className="w-full px-4 py-4 flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      icon="ph:fork-knife-fill"
+                      className="w-5 h-5 text-primary"
+                    />
+                    <span className="font-medium text-gray-800">Category</span>
+                  </div>
+                  <ChevronRight
+                    className={`w-5 h-5 text-gray-500 transition-transform ${
+                      isCategoryOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+                {isCategoryOpen && (
+                  <div className="px-4 pb-4 space-y-2">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory("");
+                        setIsCategoryOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-[16px] transition-all ${
+                        selectedCategory === ""
+                          ? "bg-primary text-white"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>All Categories</span>
+                        {selectedCategory === "" && (
+                          <Check className="w-4 h-4" />
+                        )}
+                      </div>
+                    </button>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.id);
+                          setIsCategoryOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-[16px] transition-all ${
+                          selectedCategory === cat.id
+                            ? "bg-primary text-white"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{cat.name}</span>
+                          {selectedCategory === cat.id && (
+                            <Check className="w-4 h-4" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DrawerFooter className="border-t border-gray-100 bg-white">
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="flex-1 h-[48px] rounded-[16px]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setSelectedCategory("");
+                  setSelectedVegFilter("");
+                  setIsMobileFilterOpen(false);
+                }}
+                className="flex-1 bg-primary h-[48px] rounded-[16px] hover:bg-primary/90"
+              >
+                Apply
+              </Button>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
