@@ -32,48 +32,7 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--duchess-primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--duchess-secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        // Duchess Pastries specific colors
-        duchess: {
-          primary: "hsl(var(--duchess-primary))",
-          secondary: "hsl(var(--duchess-secondary))",
-          accent: "hsl(var(--duchess-accent))",
-          "accent-light": "hsl(var(--duchess-accent-light))",
-          pink: "hsl(var(--duchess-pink))",
-          "pink-light": "hsl(var(--duchess-pink-light))",
-          gray: "hsl(var(--duchess-gray))",
-          "gray-light": "hsl(var(--duchess-gray-light))",
-          "text-primary": "hsl(var(--duchess-text-primary))",
-          "text-secondary": "hsl(var(--duchess-text-secondary))",
-          border: "hsl(var(--duchess-border))",
-        },
+        primary: "#523435",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -152,10 +152,14 @@ export default function ProductCard({
           {/* Veg/Non-veg indicator on the right side, above price */}
           <div className="flex justify-end mb-[14px]">
             <div className="flex items-center">
-              <div className="w-6 h-6 md:w-5 md:h-5 border-[2px] border-red-500 rounded-lg md:rounded-md flex items-center justify-center">
+              <div
+                className={`w-6 h-6 md:w-5 md:h-5 border-[2px] rounded-lg md:rounded-md flex items-center justify-center ${
+                  isVeg ? "border-green-500" : "border-red-500"
+                }`}
+              >
                 <div
                   className={`w-3 h-3 md:w-2 md:h-2 rounded-full ${
-                    isVeg ? "bg-red-500" : "bg-red-600"
+                    isVeg ? "bg-green-500" : "bg-red-500"
                   }`}
                 ></div>
               </div>

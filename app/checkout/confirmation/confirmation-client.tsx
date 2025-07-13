@@ -351,7 +351,7 @@ export default function ConfirmationClient() {
             <Button asChild variant="outline" className="flex-1">
               <Link href="/products">Continue Shopping</Link>
             </Button>
-            <Button asChild className="bg-[#361C1C] hover:bg-[#4a2a2a] flex-1">
+            <Button asChild className="bg-[#523435] hover:bg-[#4a2a2a] flex-1">
               <Link href="/profile/orders">View All Orders</Link>
             </Button>
           </div>

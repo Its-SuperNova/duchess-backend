@@ -102,7 +102,7 @@ export default function SearchClient({ categories }: SearchClientProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search for pastries, cakes, etc."
-            className="w-full pl-10 pr-10 py-3 rounded-full bg-[#F0F4F8] border-none focus:outline-none focus:ring-1 focus:ring-[#361C1C]"
+            className="w-full pl-10 pr-10 py-3 rounded-full bg-[#F0F4F8] border-none focus:outline-none focus:ring-1 focus:ring-[#523435]"
           />
           {searchQuery && (
             <button
@@ -155,14 +155,14 @@ export default function SearchClient({ categories }: SearchClientProps) {
                             } rounded-full`}
                           ></div>
                         </div>
-                        <p className="font-semibold text-[#361C1C]">
+                        <p className="font-semibold text-[#523435]">
                           ₹{item.price}
                         </p>
                       </div>
                     </div>
 
                     {/* Add button */}
-                    <button className="ml-2 bg-[#361C1C] text-white text-xs px-3 py-1 rounded-full">
+                    <button className="ml-2 bg-[#523435] text-white text-xs px-3 py-1 rounded-full">
                       Add
                     </button>
                   </div>
@@ -177,7 +177,7 @@ export default function SearchClient({ categories }: SearchClientProps) {
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-medium">Recent Searches</h2>
                 {recentSearches.length > 0 && (
-                  <button className="text-[#361C1C] text-sm font-medium">
+                  <button className="text-[#523435] text-sm font-medium">
                     Clear All
                   </button>
                 )}
