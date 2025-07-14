@@ -49,10 +49,21 @@ export async function GET(request: NextRequest) {
       category: fav.product_category,
     }));
 
-    return NextResponse.json({
-      success: true,
-      favorites: transformedFavorites,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        favorites: transformedFavorites,
+      },
+      {
+        headers: {
+          // Cache favorites for 2 minutes to reduce database calls
+          // Use private cache since favorites are user-specific
+          "Cache-Control": "private, max-age=120, stale-while-revalidate=600",
+          // Add ETag for conditional requests
+          ETag: `"favorites-${user.id}-${Date.now()}"`,
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching favorites:", error);
     return NextResponse.json(

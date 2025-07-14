@@ -9,7 +9,7 @@ export async function getCategories() {
     return await withRetry(async () => {
       const { data: categories, error } = await supabaseAdmin
         .from("categories")
-        .select("*")
+        .select("id, name, image, description, is_active")
         .order("name", { ascending: true });
 
       if (error) {

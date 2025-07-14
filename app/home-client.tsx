@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
-import { getActiveProducts } from "@/lib/actions/products";
+import { useProducts } from "@/hooks/use-products";
 import {
   processProductForHomepage,
   isProductInStock,
@@ -21,9 +21,13 @@ interface HomeClientProps {
 }
 
 export default function HomeClient(props: HomeClientProps) {
-  const [products, setProducts] = useState<ProcessedProduct[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [productsError, setProductsError] = useState<string | null>(null);
+  // Use cached products data with SWR
+  const {
+    products: rawProducts,
+    isLoading: isLoadingProducts,
+    error: productsError,
+    refresh,
+  } = useProducts();
 
   // Get layout information for responsive padding
   let getLayoutClasses = () => ({
@@ -45,52 +49,24 @@ export default function HomeClient(props: HomeClientProps) {
     return isVeryCompact ? "px-2" : isCompact ? "px-4" : "";
   }, [isVeryCompact, isCompact]);
 
-  // Memoize the expensive product processing function
-  const processProducts = useCallback((dbProducts: any[]) => {
-    return dbProducts
+  // Process and filter products from cached data
+  const products = useMemo(() => {
+    if (!rawProducts) return [];
+
+    return rawProducts
       .filter((product) => isProductInStock(product))
       .map((product) => processProductForHomepage(product));
-  }, []);
+  }, [rawProducts]);
 
-  // Fetch products on component mount
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoadingProducts(true);
-        setProductsError(null);
-
-        const dbProducts = await getActiveProducts();
-        const processedProducts = processProducts(dbProducts);
-        setProducts(processedProducts);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setProductsError("Failed to load products");
-        toast.error("Failed to load products");
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
-
-    fetchProducts();
-  }, [processProducts]);
-
-  const retryFetchProducts = useCallback(async () => {
-    setIsLoadingProducts(true);
-    setProductsError(null);
-
+  const retryFetchProducts = async () => {
     try {
-      const dbProducts = await getActiveProducts();
-      const processedProducts = processProducts(dbProducts);
-      setProducts(processedProducts);
+      await refresh();
       toast.success("Products loaded successfully");
     } catch (error) {
-      console.error("Error fetching products:", error);
-      setProductsError("Failed to load products");
+      console.error("Error refreshing products:", error);
       toast.error("Failed to load products");
-    } finally {
-      setIsLoadingProducts(false);
     }
-  }, [processProducts]);
+  };
 
   // Product skeleton loader component
   const ProductSkeleton = () => (

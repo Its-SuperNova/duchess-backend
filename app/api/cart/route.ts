@@ -90,10 +90,21 @@ export async function GET(request: NextRequest) {
       uniqueId: item.unique_item_id, // Include the unique identifier
     }));
 
-    return NextResponse.json({
-      cart: transformedItems,
-      cartId: cart.id,
-    });
+    return NextResponse.json(
+      {
+        cart: transformedItems,
+        cartId: cart.id,
+      },
+      {
+        headers: {
+          // Cache cart data for 1 minute to reduce database calls
+          // Use private cache since cart is user-specific
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+          // Add ETag for conditional requests
+          ETag: `"cart-${cart.id}-${Date.now()}"`,
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching cart:", error);
     return NextResponse.json(

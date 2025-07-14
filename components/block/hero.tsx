@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { isUserAdmin } from "@/lib/auth-utils";
-import { getCategories } from "@/lib/actions/categories";
+import { useCategories } from "@/hooks/use-categories";
 import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
 import BannerSlider from "./banner-slider";
@@ -46,6 +46,14 @@ const Hero = memo(() => {
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Use cached categories data
+  const {
+    categories,
+    isLoading: isLoadingCategories,
+    error: categoriesError,
+    refresh: refreshCategories,
+  } = useCategories();
+
   // Try to get layout context, with fallback
   let getCategoryGridConfig = () => ({
     columns: 8,
@@ -59,11 +67,6 @@ const Hero = memo(() => {
     // Layout context not available, use default values
   }
 
-  // Categories state
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
-
   // Get category grid configuration
   const { columns, maxCategories, gridClasses } = getCategoryGridConfig();
 
@@ -76,56 +79,19 @@ const Hero = memo(() => {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch categories on component mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setIsLoadingCategories(true);
-        setCategoriesError(null);
-
-        const fetchedCategories = await getCategories();
-
-        // Filter only active categories
-        const activeCategories = fetchedCategories.filter(
-          (category: Category) => category.is_active
-        );
-
-        setCategories(activeCategories);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        setCategoriesError("Failed to load categories");
-        toast.error("Failed to load categories");
-      } finally {
-        setIsLoadingCategories(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
   const goToSlide = useCallback((index: number) => {
     setCurrentSlide(index);
   }, []);
 
   const retryFetchCategories = useCallback(async () => {
-    setIsLoadingCategories(true);
-    setCategoriesError(null);
-
     try {
-      const fetchedCategories = await getCategories();
-      const activeCategories = fetchedCategories.filter(
-        (category: Category) => category.is_active
-      );
-      setCategories(activeCategories);
+      await refreshCategories();
       toast.success("Categories loaded successfully");
     } catch (error) {
-      console.error("Error fetching categories:", error);
-      setCategoriesError("Failed to load categories");
+      console.error("Error refreshing categories:", error);
       toast.error("Failed to load categories");
-    } finally {
-      setIsLoadingCategories(false);
     }
-  }, []);
+  }, [refreshCategories]);
 
   const isAuthenticated = status === "authenticated" && session?.user;
 

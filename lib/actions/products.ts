@@ -326,7 +326,17 @@ export async function getActiveProducts() {
           .from("products")
           .select(
             `
-          *,
+          id,
+          name,
+          banner_image,
+          is_veg,
+          short_description,
+          has_offer,
+          offer_percentage,
+          weight_options,
+          piece_options,
+          selling_type,
+          created_at,
           categories (
             id,
             name,
@@ -336,7 +346,7 @@ export async function getActiveProducts() {
           )
           .eq("is_active", true)
           .order("created_at", { ascending: false })
-          .limit(20); // Limit to 20 products for homepage
+          .limit(24); // Increase to 24 for better grid layout
 
         if (error) {
           console.error("Error fetching active products:", error);

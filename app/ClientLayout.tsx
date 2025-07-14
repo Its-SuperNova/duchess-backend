@@ -13,6 +13,7 @@ import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { LayoutProvider } from "@/context/layout-context";
 import AuthNotification from "@/components/auth/auth-notification";
+import SWRProvider from "@/components/providers/swr-provider";
 import SplashScreen from "@/components/splashscreen";
 import OnboardingPage from "@/app/onboarding/page";
 import UserHeader from "@/components/user-header";
@@ -174,14 +175,16 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider>
-      <FavoritesProvider>
-        <CartProvider>
-          <LayoutProvider>
-            <ClientLayoutInner>{children}</ClientLayoutInner>
-          </LayoutProvider>
-        </CartProvider>
-      </FavoritesProvider>
-    </ThemeProvider>
+    <SWRProvider>
+      <ThemeProvider>
+        <FavoritesProvider>
+          <CartProvider>
+            <LayoutProvider>
+              <ClientLayoutInner>{children}</ClientLayoutInner>
+            </LayoutProvider>
+          </CartProvider>
+        </FavoritesProvider>
+      </ThemeProvider>
+    </SWRProvider>
   );
 }
