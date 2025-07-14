@@ -178,26 +178,10 @@ export default function ProductCard({
           </div>
 
           {/* Price on the right */}
-          <div className="flex items-center gap-2">
-            {originalPrice ? (
-              <>
-                <p className="text-sm text-red-500 line-through">
-                  ₹{originalPrice}
-                </p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">
-                  ₹{price}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-red-500 line-through">
-                  ₹{Math.round(price * 1.2)}
-                </p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">
-                  ₹{price}
-                </p>
-              </>
-            )}
+          <div className="flex items-center">
+            <p className="font-bold text-lg text-gray-900 dark:text-white">
+              ₹{price}
+            </p>
           </div>
         </div>
       </div>

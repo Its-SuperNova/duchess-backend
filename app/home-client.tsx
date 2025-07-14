@@ -93,10 +93,10 @@ export default function HomeClient(props: HomeClientProps) {
 
   // Product skeleton loader component
   const ProductSkeleton = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-[24px]">
+    <div className="bg-white rounded-[24px]">
       {/* Image skeleton */}
       <div className="relative">
-        <Skeleton className="h-48 w-full rounded-[28px]" />
+        <div className="h-48 w-full bg-gray-200 animate-pulse rounded-[28px]" />
       </div>
 
       {/* Product details skeleton */}
@@ -105,29 +105,28 @@ export default function HomeClient(props: HomeClientProps) {
         <div className="flex justify-between items-end mb-2">
           <div className="flex-1">
             {/* Category skeleton */}
-            <Skeleton className="h-3 w-20 mb-2" />
+            <div className="h-3 w-20 bg-gray-200 animate-pulse rounded mb-2" />
             {/* Product name skeleton */}
-            <Skeleton className="h-6 w-3/4 mb-2" />
+            <div className="h-6 w-3/4 bg-gray-200 animate-pulse rounded mb-2" />
           </div>
 
           {/* Veg indicator skeleton */}
           <div className="flex justify-end mb-[14px]">
-            <Skeleton className="w-6 h-6 md:w-5 md:h-5 rounded-lg md:rounded-md" />
+            <div className="w-6 h-6 md:w-5 md:h-5 bg-gray-200 animate-pulse rounded-lg md:rounded-md" />
           </div>
         </div>
 
         {/* Rating and Price row */}
         <div className="flex justify-between items-center">
-          {/* Rating skeleton with plain background */}
+          {/* Rating skeleton */}
           <div className="flex items-center bg-gray-100 px-2 py-1 rounded-full">
-            <Skeleton className="w-4 h-4 mr-1 rounded-full" />
-            <Skeleton className="w-6 h-4" />
+            <div className="w-4 h-4 bg-gray-200 animate-pulse rounded-full mr-1" />
+            <div className="w-6 h-4 bg-gray-200 animate-pulse rounded" />
           </div>
 
-          {/* Price skeleton */}
-          <div className="flex items-center gap-2">
-            <Skeleton className="w-12 h-4" />
-            <Skeleton className="w-16 h-6" />
+          {/* Price skeleton - simplified to single price */}
+          <div className="flex items-center">
+            <div className="w-16 h-6 bg-gray-200 animate-pulse rounded" />
           </div>
         </div>
       </div>
@@ -215,42 +214,51 @@ export default function HomeClient(props: HomeClientProps) {
       {/* Products Section */}
       <div className="w-full">
         <section className="px-4 py-8 pt-0 md:pt-8 md:px-6 lg:px-8 w-full">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-              Popular Products
-            </h2>
-          </div>
-
           {/* Products Grid with Loading States */}
           {isLoadingProducts ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <ProductSkeleton key={index} />
-              ))}
-            </div>
-          ) : productsError ? (
-            <ProductsError />
-          ) : products.length === 0 ? (
-            <ProductsEmpty />
+            <>
+              {/* Loading state for section title */}
+              <div className="flex justify-between items-center mb-6">
+                <div className="h-8 w-48 bg-gray-200 animate-pulse rounded" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <ProductSkeleton key={index} />
+                ))}
+              </div>
+            </>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  rating={product.rating}
-                  imageUrl={product.imageUrl}
-                  price={product.price}
-                  originalPrice={product.originalPrice}
-                  isVeg={product.isVeg}
-                  description={product.description}
-                  category={product.category}
-                  hasOffer={product.hasOffer}
-                  offerPercentage={product.offerPercentage}
-                />
-              ))}
-            </div>
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                  Popular Products
+                </h2>
+              </div>
+              {productsError ? (
+                <ProductsError />
+              ) : products.length === 0 ? (
+                <ProductsEmpty />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+                  {products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      id={product.id}
+                      name={product.name}
+                      rating={product.rating}
+                      imageUrl={product.imageUrl}
+                      price={product.price}
+                      originalPrice={product.originalPrice}
+                      isVeg={product.isVeg}
+                      description={product.description}
+                      category={product.category}
+                      hasOffer={product.hasOffer}
+                      offerPercentage={product.offerPercentage}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
 

@@ -146,8 +146,8 @@ const Hero = () => {
     <>
       {Array.from({ length: count }).map((_, index) => (
         <div key={index} className="flex flex-col items-center flex-shrink-0">
-          <Skeleton className="w-16 h-16 lg:w-20 lg:h-20 rounded-[20px] lg:rounded-[24px]" />
-          <Skeleton className="w-12 h-4 mt-2 lg:mt-3" />
+          <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gray-200 animate-pulse rounded-[20px] lg:rounded-[24px]" />
+          <div className="w-12 h-4 bg-gray-200 animate-pulse rounded mt-2 lg:mt-3" />
         </div>
       ))}
     </>

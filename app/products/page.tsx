@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Icon } from "@iconify/react";
 import {
@@ -72,10 +73,14 @@ export default function ProductsPage({
           processProductForHomepage
         );
 
-        // Extract unique categories
-        const uniqueCategories = Array.from(
-          new Set(processedProducts.map((p) => p.category).filter(Boolean))
-        ).map((name) => ({ id: name, name }));
+        // Extract unique categories with their IDs
+        const categoriesMap = new Map();
+        processedProducts.forEach((product) => {
+          if (product.categories) {
+            categoriesMap.set(product.categories.id, product.categories);
+          }
+        });
+        const uniqueCategories = Array.from(categoriesMap.values());
 
         setCategories(uniqueCategories);
         setProducts(processedProducts);
@@ -86,7 +91,13 @@ export default function ProductsPage({
             (product) => product.categories?.id === categoryId
           );
           setFilteredProducts(filtered);
-          setSelectedCategory(categoryId);
+          // Set the selected category to the category name for UI consistency
+          const categoryName = processedProducts.find(
+            (p) => p.categories?.id === categoryId
+          )?.categories?.name;
+          if (categoryName) {
+            setSelectedCategory(categoryName);
+          }
         } else {
           setFilteredProducts(processedProducts);
         }
@@ -181,16 +192,85 @@ export default function ProductsPage({
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white py-8">
-        <div className="max-w-[1200px] mx-auto px-4">
-          <div className="flex justify-center items-center py-20">
-            <div className="text-lg">Loading products...</div>
+  // Product skeleton loader component
+  const ProductSkeleton = () => (
+    <div className="bg-white rounded-[24px]">
+      {/* Image skeleton */}
+      <div className="relative">
+        <div className="h-48 w-full bg-gray-200 animate-pulse rounded-[28px]" />
+      </div>
+
+      {/* Product details skeleton */}
+      <div className="p-4">
+        {/* Category and Product Name row with Veg indicator */}
+        <div className="flex justify-between items-end mb-2">
+          <div className="flex-1">
+            {/* Category skeleton */}
+            <div className="h-3 w-20 bg-gray-200 animate-pulse rounded mb-2" />
+            {/* Product name skeleton */}
+            <div className="h-6 w-3/4 bg-gray-200 animate-pulse rounded mb-2" />
+          </div>
+
+          {/* Veg indicator skeleton */}
+          <div className="flex justify-end mb-[14px]">
+            <div className="w-6 h-6 md:w-5 md:h-5 bg-gray-200 animate-pulse rounded-lg md:rounded-md" />
+          </div>
+        </div>
+
+        {/* Rating and Price row */}
+        <div className="flex justify-between items-center">
+          {/* Rating skeleton */}
+          <div className="flex items-center bg-gray-100 px-2 py-1 rounded-full">
+            <div className="w-4 h-4 bg-gray-200 animate-pulse rounded-full mr-1" />
+            <div className="w-6 h-4 bg-gray-200 animate-pulse rounded" />
+          </div>
+
+          {/* Price skeleton */}
+          <div className="flex items-center">
+            <div className="w-16 h-6 bg-gray-200 animate-pulse rounded" />
           </div>
         </div>
       </div>
-    );
+    </div>
+  );
+
+  // Page skeleton loader for initial loading
+  const PageSkeleton = () => (
+    <div className="min-h-screen bg-white py-8">
+      <div className="max-w-[1200px] mx-auto px-4">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-center mb-6">
+          {/* Title skeleton */}
+          <div className="h-9 w-48 bg-gray-200 animate-pulse rounded" />
+
+          {/* Sort/Filter buttons skeleton - Desktop only */}
+          <div className="hidden md:flex gap-3">
+            <div className="h-10 w-20 bg-gray-200 animate-pulse rounded-lg" />
+            <div className="h-10 w-20 bg-gray-200 animate-pulse rounded-lg" />
+          </div>
+        </div>
+
+        {/* Products Grid skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-20 md:mb-0">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <ProductSkeleton key={index} />
+          ))}
+        </div>
+
+        {/* Mobile Sort/Filter buttons skeleton */}
+        <div className="md:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="flex gap-3 bg-gray-200 animate-pulse rounded-[16px] shadow-lg px-2 py-1">
+            <div className="h-10 w-16 bg-gray-300 animate-pulse rounded" />
+            <div className="w-px bg-gray-400 my-1" />
+            <div className="h-10 w-16 bg-gray-300 animate-pulse rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return <PageSkeleton />;
   }
 
   return (
@@ -198,7 +278,9 @@ export default function ProductsPage({
       <div className="max-w-[1200px] mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">
-            {categoryId ? "Products in this Category" : "All Products"}
+            {categoryId && selectedCategory
+              ? `${selectedCategory} Products`
+              : "All Products"}
           </h1>
           {/* Desktop Sort/Filter - Hidden on mobile */}
           <div className="hidden md:flex gap-3">
@@ -926,18 +1008,18 @@ export default function ProductsPage({
                       <button
                         key={cat.id}
                         onClick={() => {
-                          setSelectedCategory(cat.id);
+                          setSelectedCategory(cat.name);
                           setIsCategoryOpen(false);
                         }}
                         className={`w-full text-left px-4 py-3 rounded-[16px] transition-all ${
-                          selectedCategory === cat.id
+                          selectedCategory === cat.name
                             ? "bg-primary text-white"
                             : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span>{cat.name}</span>
-                          {selectedCategory === cat.id && (
+                          {selectedCategory === cat.name && (
                             <Check className="w-4 h-4" />
                           )}
                         </div>
