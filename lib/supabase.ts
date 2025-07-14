@@ -1,15 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Debug: Log environment variables to help troubleshoot
-console.log("Environment variables check:");
-console.log(
-  "NEXT_PUBLIC_SUPABASE_URL:",
-  process.env.NEXT_PUBLIC_SUPABASE_URL ? "Set" : "Not set"
-);
-console.log(
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY:",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Set" : "Not set"
-);
+// Environment variables validation (removed debug logs for production security)
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -251,8 +242,24 @@ export interface Database {
       };
       coupons: {
         Row: Coupon;
-        Insert: Omit<Coupon, "id" | "created_at" | "updated_at" | "total_redemptions" | "total_revenue">;
-        Update: Partial<Omit<Coupon, "id" | "created_at" | "updated_at" | "total_redemptions" | "total_revenue">>;
+        Insert: Omit<
+          Coupon,
+          | "id"
+          | "created_at"
+          | "updated_at"
+          | "total_redemptions"
+          | "total_revenue"
+        >;
+        Update: Partial<
+          Omit<
+            Coupon,
+            | "id"
+            | "created_at"
+            | "updated_at"
+            | "total_redemptions"
+            | "total_revenue"
+          >
+        >;
       };
     };
   };

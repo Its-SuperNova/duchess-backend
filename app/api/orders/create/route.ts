@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     console.log("User lookup result:", { user, userError });
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     let { data: cart, error: cartError } = await supabase
       .from("carts")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .single();
 
     console.log("Cart lookup result:", { cart, cartError });
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const { data: cartItems, error: itemsError } = await supabase
       .from("cart_items")
       .select("*")
-      .eq("cart_id", cart.id)
+      .eq("cart_id", (cart as any)?.id)
       .order("created_at", { ascending: false });
 
     console.log("Cart items lookup result:", {
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     const { error: clearError } = await supabase
       .from("cart_items")
       .delete()
-      .eq("cart_id", cart.id);
+      .eq("cart_id", (cart as any)?.id);
 
     if (clearError) {
       // Non-fatal: order created but cart not cleared

@@ -9,11 +9,7 @@ import DesktopOnboarding from "./desktop-onboarding";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-interface OnboardingPageProps {
-  onOnboardingComplete?: () => void;
-}
-
-export default function Page({ onOnboardingComplete }: OnboardingPageProps) {
+export default function Page() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [imageOpacity, setImageOpacity] = useState(1);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -93,9 +89,6 @@ export default function Page({ onOnboardingComplete }: OnboardingPageProps) {
   };
 
   const handleOnboardingComplete = () => {
-    if (onOnboardingComplete) {
-      onOnboardingComplete();
-    }
     // Redirect to login page
     router.push("/login");
   };

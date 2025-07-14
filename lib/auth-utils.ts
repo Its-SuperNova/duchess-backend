@@ -24,7 +24,7 @@ export async function upsertUser(userData: AuthUserData): Promise<User | null> {
           provider: userData.provider,
           provider_id: userData.provider_id,
           updated_at: new Date().toISOString(),
-        },
+        } as any,
         {
           onConflict: "email",
           ignoreDuplicates: false,
@@ -38,7 +38,7 @@ export async function upsertUser(userData: AuthUserData): Promise<User | null> {
       return null;
     }
 
-    return data;
+    return data as any;
   } catch (error) {
     console.error("Error in upsertUser:", error);
     return null;
@@ -51,7 +51,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
-      .eq("email", email)
+      .eq("email", email as any)
       .single();
 
     if (error) {
@@ -59,7 +59,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       return null;
     }
 
-    return data;
+    return data as any;
   } catch (error) {
     console.error("Error in getUserByEmail:", error);
     return null;
@@ -92,8 +92,8 @@ export async function updateUserProfile(
       .update({
         ...cleanProfileData,
         updated_at: new Date().toISOString(),
-      })
-      .eq("email", email)
+      } as any)
+      .eq("email", email as any)
       .select()
       .single();
 
@@ -113,7 +113,7 @@ export async function updateUserProfile(
     }
 
     console.log("Profile updated successfully:", data);
-    return data;
+    return data as any;
   } catch (error) {
     console.error("Error in updateUserProfile:", error);
     if (error instanceof Error) {
@@ -132,7 +132,7 @@ export async function getUserRole(
     const { data, error } = await supabaseAdmin
       .from("users")
       .select("role")
-      .eq("email", email)
+      .eq("email", email as any)
       .single();
 
     if (error) {
@@ -140,7 +140,7 @@ export async function getUserRole(
       return null;
     }
 
-    return data.role;
+    return (data as any).role;
   } catch (error) {
     console.error("Error in getUserRole:", error);
     return null;
@@ -172,8 +172,8 @@ export async function updateUserRole(
       .update({
         role,
         updated_at: new Date().toISOString(),
-      })
-      .eq("email", email)
+      } as any)
+      .eq("email", email as any)
       .select()
       .single();
 
@@ -189,7 +189,7 @@ export async function updateUserRole(
     }
 
     console.log("Role updated successfully:", data);
-    return data;
+    return data as any;
   } catch (error) {
     console.error("Error in updateUserRole:", error);
     return null;

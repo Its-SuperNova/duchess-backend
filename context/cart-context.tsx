@@ -396,6 +396,7 @@ export function useCart() {
       updateCartItemCustomization: () => {},
       getSubtotal: () => 0,
       isLoading: false,
+      clearCart: () => {},
     };
   }
 

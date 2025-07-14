@@ -8,7 +8,7 @@ export async function GET() {
     const { data: coupons, error } = await supabaseAdmin
       .from("coupons")
       .select("*")
-      .eq("is_active", true)
+      .eq("is_active", true as any)
       .lte("valid_from", now)
       .gte("valid_until", now)
       .order("created_at", { ascending: false });

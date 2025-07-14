@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     if (userError || !user) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     let { data: cart, error: cartError } = await supabase
       .from("carts")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .single();
 
     if (cartError && cartError.code === "PGRST116") {
@@ -83,28 +83,27 @@ export async function POST(request: NextRequest) {
     // Add all local cart items as new entries (following new uniqueness behavior)
     for (const localItem of localCartItems) {
       // Always add as new item - each local item gets a new database entry
-      const itemUniqueId = localItem.uniqueId || `${Date.now()}-${Math.random()}`;
-      
-      const { error: insertError } = await supabase
-        .from("cart_items")
-        .insert({
-          cart_id: cart.id,
-          product_id: localItem.id.toString(),
-          quantity: localItem.quantity,
-          variant: localItem.variant || "Regular",
-          price: localItem.price,
-          product_name: localItem.name,
-          product_image: localItem.image || "/placeholder.svg",
-          category: localItem.category || "Product",
-          add_text_on_cake: localItem.addTextOnCake || false,
-          add_candles: localItem.addCandles || false,
-          add_knife: localItem.addKnife || false,
-          add_message_card: localItem.addMessageCard || false,
-          cake_text: localItem.cakeText || null,
-          gift_card_text: localItem.giftCardText || null,
-          order_type: localItem.orderType || "weight",
-          unique_item_id: itemUniqueId,
-        });
+      const itemUniqueId =
+        localItem.uniqueId || `${Date.now()}-${Math.random()}`;
+
+      const { error: insertError } = await supabase.from("cart_items").insert({
+        cart_id: cart.id,
+        product_id: localItem.id.toString(),
+        quantity: localItem.quantity,
+        variant: localItem.variant || "Regular",
+        price: localItem.price,
+        product_name: localItem.name,
+        product_image: localItem.image || "/placeholder.svg",
+        category: localItem.category || "Product",
+        add_text_on_cake: localItem.addTextOnCake || false,
+        add_candles: localItem.addCandles || false,
+        add_knife: localItem.addKnife || false,
+        add_message_card: localItem.addMessageCard || false,
+        cake_text: localItem.cakeText || null,
+        gift_card_text: localItem.giftCardText || null,
+        order_type: localItem.orderType || "weight",
+        unique_item_id: itemUniqueId,
+      });
 
       if (insertError) {
         console.error("Failed to insert cart item:", insertError);

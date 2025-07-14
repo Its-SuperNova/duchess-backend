@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     const { data: coupon, error } = await supabaseAdmin
       .from("coupons")
-      .insert(couponData)
+      .insert(couponData as any)
       .select()
       .single();
 

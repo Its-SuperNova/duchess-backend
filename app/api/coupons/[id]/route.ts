@@ -3,13 +3,14 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { data: coupon, error } = await supabaseAdmin
       .from("coupons")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", id as any)
       .single();
 
     if (error) {
@@ -29,9 +30,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
 
     // Validate required fields
@@ -52,8 +54,8 @@ export async function PUT(
     const { data: existingCoupon } = await supabaseAdmin
       .from("coupons")
       .select("id")
-      .eq("code", body.code)
-      .neq("id", params.id)
+      .eq("code", body.code as any)
+      .neq("id", id as any)
       .single();
 
     if (existingCoupon) {
@@ -80,8 +82,8 @@ export async function PUT(
 
     const { data: coupon, error } = await supabaseAdmin
       .from("coupons")
-      .update(couponData)
-      .eq("id", params.id)
+      .update(couponData as any)
+      .eq("id", id as any)
       .select()
       .single();
 
@@ -105,9 +107,10 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
 
     // Only allow specific fields for partial updates (start with is_active toggle)
@@ -129,8 +132,8 @@ export async function PATCH(
 
     const { data: coupon, error } = await supabaseAdmin
       .from("coupons")
-      .update(updates)
-      .eq("id", params.id)
+      .update(updates as any)
+      .eq("id", id as any)
       .select()
       .single();
 
@@ -154,13 +157,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { error } = await supabaseAdmin
       .from("coupons")
       .delete()
-      .eq("id", params.id);
+      .eq("id", id as any);
 
     if (error) {
       console.error("Error deleting coupon:", error);

@@ -43,7 +43,7 @@ import {
 export default function ProductsPage({
   searchParams,
 }: {
-  searchParams?: { category?: string };
+  searchParams?: Promise<{ category?: string }>;
 }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -59,9 +59,16 @@ export default function ProductsPage({
   const [selectedSort, setSelectedSort] = useState<string>("");
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
 
-  // Get categoryId from query params
-  const categoryId = searchParams?.category;
+  // Handle async searchParams
+  useEffect(() => {
+    if (searchParams) {
+      searchParams.then((resolvedParams) => {
+        setCategoryId(resolvedParams.category);
+      });
+    }
+  }, [searchParams]);
 
   // Flavors for filtering
   const flavors = [

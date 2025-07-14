@@ -41,6 +41,7 @@ export default function EditProductPage() {
     category: "",
     isVeg: true,
     hasOffer: false,
+    offer: "",
     offerPercentage: "",
     offerUpToPrice: "",
     price: "",
@@ -93,6 +94,48 @@ export default function EditProductPage() {
     loadCategories();
   }, []);
 
+  // Type guard function to check if product is valid
+  const isValidProduct = (
+    product: any
+  ): product is {
+    name: string;
+    short_description: string;
+    long_description: string;
+    category_id: string;
+    is_veg: boolean;
+    has_offer: boolean;
+    offer_percentage: number;
+    offer_up_to_price: number;
+    weight_options: any[];
+    piece_options: any[];
+    selling_type: string;
+    calories: number;
+    net_weight: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+    sugars: number;
+    fiber: number;
+    sodium: number;
+    banner_image: string;
+    additional_images: string[];
+    highlights: string[];
+    ingredients: string[];
+    delivery_option: string;
+    add_text_on_cake: boolean;
+    add_candles: boolean;
+    add_knife: boolean;
+    add_message_card: boolean;
+  } => {
+    return (
+      product &&
+      typeof product === "object" &&
+      "name" in product &&
+      "category_id" in product &&
+      "short_description" in product
+    );
+  };
+
   // Load product data from database
   useEffect(() => {
     const loadProduct = async () => {
@@ -100,7 +143,7 @@ export default function EditProductPage() {
         setLoading(true);
         const product = await getProductById(productId);
 
-        if (product) {
+        if (isValidProduct(product)) {
           // Find the category name from the category_id
           const productCategory = categories.find(
             (cat) => cat.id === product.category_id
@@ -113,6 +156,7 @@ export default function EditProductPage() {
             category: productCategory?.name || "",
             isVeg: product.is_veg ?? true,
             hasOffer: product.has_offer ?? false,
+            offer: "",
             offerPercentage: product.offer_percentage?.toString() || "",
             offerUpToPrice: product.offer_up_to_price?.toString() || "",
             price: "",
@@ -163,9 +207,7 @@ export default function EditProductPage() {
 
   // Handle form input changes
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | React.ChangeEvent<HTMLTextAreaElement>
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData({
@@ -408,7 +450,7 @@ export default function EditProductPage() {
       // Validate decimal precision for nutrition fields (max 999.99)
       const decimalFields = ["protein", "fats", "carbs", "sugars", "fiber"];
       for (const fieldName of decimalFields) {
-        const value = productData[fieldName];
+        const value = (productData as any)[fieldName];
         if (value !== null && (value > 999.99 || value < 0)) {
           toast.error(`${fieldName} must be between 0 and 999.99`);
           return;

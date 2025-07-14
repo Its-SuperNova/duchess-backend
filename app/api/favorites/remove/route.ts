@@ -30,7 +30,7 @@ export async function DELETE(request: NextRequest) {
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     if (userError || !user) {
@@ -38,13 +38,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    console.log("User found:", { userId: user.id });
+    console.log("User found:", { userId: (user as any)?.id });
 
     // Convert productId to string for querying (consistent with add operation)
     const productIdString = productId.toString();
 
     console.log("Attempting to delete favorite:", {
-      userId: user.id,
+      userId: (user as any)?.id,
       productId,
       productIdString,
     });
@@ -53,7 +53,7 @@ export async function DELETE(request: NextRequest) {
     const { data: existingFavorites, error: checkError } = await supabaseAdmin
       .from("favorites")
       .select("id, product_id")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .eq("product_id", productIdString);
 
     if (checkError) {
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest) {
     const { data: deletedData, error: deleteError } = await supabaseAdmin
       .from("favorites")
       .delete()
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .eq("product_id", productIdString)
       .select();
 

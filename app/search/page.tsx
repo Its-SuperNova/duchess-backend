@@ -8,10 +8,10 @@ export default async function SearchPage() {
     const dbCategories = await getCategories();
     // Filter only active categories and transform the data structure
     categories = dbCategories
-      .filter((category) => category.is_active)
-      .map((category) => ({
-        name: category.name,
-        image: category.image || "/images/categories/sweets-bowl.png", // fallback image
+      .filter((category: any) => (category as any).is_active)
+      .map((category: any) => ({
+        name: (category as any).name,
+        image: (category as any).image || "/images/categories/sweets-bowl.png", // fallback image
       }));
   } catch (error) {
     console.error("Failed to fetch categories:", error);
