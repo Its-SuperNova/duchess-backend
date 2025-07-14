@@ -3,8 +3,36 @@
 import type React from "react";
 import "./styles.css";
 import { useState, useEffect } from "react";
-import Sidebar from "./components/Sidebar";
-import Topbar from "./components/Topbar";
+import dynamic from "next/dynamic";
+
+// Dynamically import admin components to reduce initial bundle size
+const Sidebar = dynamic(() => import("./components/Sidebar"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-16 lg:w-64 bg-gray-100 h-screen animate-pulse">
+      <div className="p-4">
+        <div className="h-8 bg-gray-200 rounded mb-4"></div>
+        <div className="space-y-2">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-10 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  ),
+});
+
+const Topbar = dynamic(() => import("./components/Topbar"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-16 bg-gray-100 border-b animate-pulse">
+      <div className="h-full flex items-center justify-between px-4">
+        <div className="h-6 w-32 bg-gray-200 rounded"></div>
+        <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+      </div>
+    </div>
+  ),
+});
 import { ThemeProvider } from "@/components/theme-provider";
 import RoleGuard from "@/components/auth/role-guard";
 

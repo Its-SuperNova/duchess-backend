@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
 import Image from "next/image";
@@ -40,8 +40,17 @@ export default function HomeClient(props: HomeClientProps) {
 
   const { isCompact, isVeryCompact } = getLayoutClasses();
 
-  // Calculate responsive padding for home page
-  const homePadding = isVeryCompact ? "px-2" : isCompact ? "px-4" : "";
+  // Memoize responsive padding calculation
+  const homePadding = useMemo(() => {
+    return isVeryCompact ? "px-2" : isCompact ? "px-4" : "";
+  }, [isVeryCompact, isCompact]);
+
+  // Memoize the expensive product processing function
+  const processProducts = useCallback((dbProducts: any[]) => {
+    return dbProducts
+      .filter((product) => isProductInStock(product))
+      .map((product) => processProductForHomepage(product));
+  }, []);
 
   // Fetch products on component mount
   useEffect(() => {
@@ -51,12 +60,7 @@ export default function HomeClient(props: HomeClientProps) {
         setProductsError(null);
 
         const dbProducts = await getActiveProducts();
-
-        // Filter out products that are not in stock and process them for display
-        const processedProducts = dbProducts
-          .filter((product) => isProductInStock(product))
-          .map((product) => processProductForHomepage(product));
-
+        const processedProducts = processProducts(dbProducts);
         setProducts(processedProducts);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -68,18 +72,15 @@ export default function HomeClient(props: HomeClientProps) {
     };
 
     fetchProducts();
-  }, []);
+  }, [processProducts]);
 
-  const retryFetchProducts = async () => {
+  const retryFetchProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     setProductsError(null);
 
     try {
       const dbProducts = await getActiveProducts();
-      const processedProducts = dbProducts
-        .filter((product) => isProductInStock(product))
-        .map((product) => processProductForHomepage(product));
-
+      const processedProducts = processProducts(dbProducts);
       setProducts(processedProducts);
       toast.success("Products loaded successfully");
     } catch (error) {
@@ -89,7 +90,7 @@ export default function HomeClient(props: HomeClientProps) {
     } finally {
       setIsLoadingProducts(false);
     }
-  };
+  }, [processProducts]);
 
   // Product skeleton loader component
   const ProductSkeleton = () => (

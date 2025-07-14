@@ -19,7 +19,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Icon } from "@iconify/react";
+import dynamic from "next/dynamic";
+
+// Dynamically import Icon to reduce initial bundle size
+const Icon = dynamic(
+  () => import("@iconify/react").then((m) => ({ default: m.Icon })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-4 h-4 bg-gray-200 animate-pulse rounded"></div>
+    ),
+  }
+) as any;
 import {
   Drawer,
   DrawerContent,

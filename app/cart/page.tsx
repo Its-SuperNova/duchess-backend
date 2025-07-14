@@ -5,10 +5,29 @@ import { Plus, Minus, ShoppingCart, ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import Lottie from "lottie-react";
+import dynamic from "next/dynamic";
+
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-32 h-32 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
 import { useCart } from "@/context/cart-context";
 import { useRouter } from "next/navigation";
-import { Icon } from "@iconify/react";
+// Dynamically import Icon to reduce initial bundle size
+const Icon = dynamic(
+  () => import("@iconify/react").then((m) => ({ default: m.Icon })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-4 h-4 bg-gray-200 animate-pulse rounded"></div>
+    ),
+  }
+) as any;
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart } = useCart();

@@ -36,13 +36,68 @@ import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
 import ProductSkeleton from "./product-skeleton";
 import { useProductSelection } from "@/context/product-selection-context";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Autoplay } from "swiper/modules";
 import ProductAddToCart from "@/components/block/ProductAddToCart";
+import dynamic from "next/dynamic";
 
-// Import Swiper styles
-import "swiper/css";
-import "swiper/css/pagination";
+// Create a wrapper component for Swiper with modules
+const SwiperGallery = dynamic(
+  () =>
+    Promise.all([
+      import("swiper/react"),
+      import("swiper/modules"),
+      import("swiper/css"),
+      import("swiper/css/pagination"),
+    ]).then(([swiperReact, swiperModules]) => {
+      const { Swiper, SwiperSlide } = swiperReact;
+      const { Pagination, Autoplay } = swiperModules;
+
+      return {
+        default: ({
+          images,
+          productName,
+        }: {
+          images: string[];
+          productName: string;
+        }) => (
+          <Swiper
+            loop={true}
+            autoplay={{
+              delay: 5000,
+              disableOnInteraction: false,
+            }}
+            pagination={{
+              clickable: true,
+            }}
+            modules={[Autoplay, Pagination]}
+            className="mySwiper w-full h-full"
+          >
+            {images.map((image, index) => (
+              <SwiperSlide key={index} className="w-full h-full">
+                <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                  <Image
+                    src={image || "/placeholder.svg"}
+                    alt={`${productName} ${index + 1}`}
+                    fill
+                    priority={index === 0}
+                    className="object-cover rounded-2xl"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        ),
+      };
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-gray-100 animate-pulse rounded-2xl flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
 
 // Types for database product
 interface DatabaseProduct {
@@ -417,36 +472,7 @@ export default function ProductPage() {
                 {/* Hero Image Carousel */}
                 <div className="relative h-[350px] lg:h-[450px] w-full rounded-2xl overflow-hidden">
                   {images.length > 0 ? (
-                    <Swiper
-                      loop={true}
-                      autoplay={{
-                        delay: 5000,
-                        disableOnInteraction: false,
-                      }}
-                      pagination={{
-                        clickable: true,
-                      }}
-                      modules={[Autoplay, Pagination]}
-                      className="mySwiper w-full h-full"
-                      style={{ width: "100%", height: "100%" }}
-                      spaceBetween={16}
-                      slidesPerView={1}
-                    >
-                      {images.map((image, index) => (
-                        <SwiperSlide key={index} className="w-full h-full">
-                          <div className="relative w-full h-full rounded-2xl overflow-hidden">
-                            <Image
-                              src={image || "/placeholder.svg"}
-                              alt={`${product.name} ${index + 1}`}
-                              fill
-                              priority={index === 0}
-                              className="object-cover rounded-2xl"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            />
-                          </div>
-                        </SwiperSlide>
-                      ))}
-                    </Swiper>
+                    <SwiperGallery images={images} productName={product.name} />
                   ) : (
                     // Fallback single image if no images available
                     <div className="relative w-full h-full rounded-2xl overflow-hidden">

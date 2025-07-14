@@ -13,7 +13,15 @@ import dynamic from "next/dynamic";
 const Icon = dynamic(() => import("@iconify/react").then((m) => m.Icon), {
   ssr: false,
 }) as any;
-import Lottie from "lottie-react";
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-24 h-24 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";

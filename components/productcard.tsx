@@ -1,10 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GrSquare } from "react-icons/gr";
-import { Icon } from "@iconify/react";
+import dynamic from "next/dynamic";
+
+// Dynamically import Icon to reduce initial bundle size
+const Icon = dynamic(
+  () => import("@iconify/react").then((m) => ({ default: m.Icon })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-4 h-4 bg-gray-200 animate-pulse rounded"></div>
+    ),
+  }
+) as any;
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +34,7 @@ interface ProductCardProps {
   offerPercentage?: number;
 }
 
-export default function ProductCard({
+const ProductCard = memo(function ProductCard({
   id,
   name,
   rating,
@@ -52,7 +63,36 @@ export default function ProductCard({
     setIsLiked(isFavorite(numericId));
   });
 
-  const handleFavoriteToggle = async () => {
+  // Memoize the favorite product object to prevent recreation on every render
+  const favoriteProduct = useMemo(
+    () => ({
+      id: numericId,
+      name,
+      price,
+      image: imageUrl,
+      isVeg,
+      description,
+      rating,
+      category,
+    }),
+    [numericId, name, price, imageUrl, isVeg, description, rating, category]
+  );
+
+  // Memoize the cart item object to prevent recreation on every render
+  const cartItem = useMemo(
+    () => ({
+      id: numericId,
+      name,
+      price,
+      image: imageUrl,
+      quantity: 1,
+      category: category || "Pastry",
+      variant: "Regular",
+    }),
+    [numericId, name, price, imageUrl, category]
+  );
+
+  const handleFavoriteToggle = useCallback(async () => {
     if (!isClient) return;
 
     try {
@@ -60,16 +100,7 @@ export default function ProductCard({
         await removeFromFavorites(numericId);
         setIsLiked(false);
       } else {
-        await addToFavorites({
-          id: numericId,
-          name,
-          price,
-          image: imageUrl,
-          isVeg,
-          description,
-          rating,
-          category,
-        });
+        await addToFavorites(favoriteProduct);
         setIsLiked(true);
       }
     } catch (error) {
@@ -84,21 +115,20 @@ export default function ProductCard({
         variant: "destructive",
       });
     }
-  };
+  }, [
+    isClient,
+    isLiked,
+    numericId,
+    removeFromFavorites,
+    addToFavorites,
+    favoriteProduct,
+    toast,
+  ]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
     if (!isClient) return;
-
-    addToCart({
-      id: numericId,
-      name,
-      price,
-      image: imageUrl,
-      quantity: 1,
-      category: category || "Pastry",
-      variant: "Regular",
-    });
-  };
+    addToCart(cartItem);
+  }, [isClient, addToCart, cartItem]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-[24px] ">
@@ -187,4 +217,6 @@ export default function ProductCard({
       </div>
     </div>
   );
-}
+});
+
+export default ProductCard;

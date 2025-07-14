@@ -7,7 +7,18 @@ import { useSession } from "next-auth/react";
 import { useCart } from "@/context/cart-context";
 import { useFavorites } from "@/context/favorites-context";
 import { User } from "lucide-react";
-import { Icon } from "@iconify/react";
+import dynamic from "next/dynamic";
+
+// Dynamically import Icon to reduce initial bundle size
+const Icon = dynamic(
+  () => import("@iconify/react").then((m) => ({ default: m.Icon })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-4 h-4 bg-gray-200 animate-pulse rounded"></div>
+    ),
+  }
+) as any;
 import { IoCloseOutline } from "react-icons/io5";
 import { useState, useEffect } from "react";
 import { isUserAdmin } from "@/lib/auth-utils";

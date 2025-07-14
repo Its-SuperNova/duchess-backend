@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback, useMemo } from "react";
 
 import { IoFilter } from "react-icons/io5";
 import { Shield, RefreshCw } from "lucide-react";
@@ -41,7 +41,7 @@ const mobileSlides = [
   },
 ];
 
-const Hero = () => {
+const Hero = memo(() => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -103,11 +103,11 @@ const Hero = () => {
     fetchCategories();
   }, []);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     setCurrentSlide(index);
-  };
+  }, []);
 
-  const retryFetchCategories = async () => {
+  const retryFetchCategories = useCallback(async () => {
     setIsLoadingCategories(true);
     setCategoriesError(null);
 
@@ -125,7 +125,7 @@ const Hero = () => {
     } finally {
       setIsLoadingCategories(false);
     }
-  };
+  }, []);
 
   const isAuthenticated = status === "authenticated" && session?.user;
 
@@ -232,14 +232,9 @@ const Hero = () => {
     </div>
   );
 
-  // Function to get fallback image for categories
-  const getCategoryImage = (category: Category) => {
-    if (category.image) {
-      return category.image;
-    }
-
-    // Map category names to default images
-    const categoryImageMap: { [key: string]: string } = {
+  // Memoize the category image mapping to prevent recreation on every render
+  const categoryImageMap = useMemo(
+    () => ({
       cakes: "/images/categories/cake.png",
       cupcakes: "/images/categories/cupcake.png",
       cookies: "/images/categories/cookies.png",
@@ -254,13 +249,25 @@ const Hero = () => {
       muffins: "/images/categories/muffin.png",
       sweets: "/images/categories/sweets-bowl.png",
       chocolates: "/images/categories/chocolate-bar.png",
-    };
+    }),
+    []
+  );
 
-    const categoryKey = category.name.toLowerCase();
-    return (
-      categoryImageMap[categoryKey] || "/images/categories/sweets-bowl.png"
-    );
-  };
+  // Function to get fallback image for categories
+  const getCategoryImage = useCallback(
+    (category: Category) => {
+      if (category.image) {
+        return category.image;
+      }
+
+      const categoryKey = category.name.toLowerCase();
+      return (
+        categoryImageMap[categoryKey as keyof typeof categoryImageMap] ||
+        "/images/categories/sweets-bowl.png"
+      );
+    },
+    [categoryImageMap]
+  );
 
   return (
     <div className="w-full">
@@ -368,6 +375,6 @@ const Hero = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Hero;

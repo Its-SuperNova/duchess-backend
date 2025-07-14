@@ -15,7 +15,6 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-    unoptimized: true,
   },
   // Disable static generation for pages that use client-side data
   experimental: {

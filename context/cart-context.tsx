@@ -1,7 +1,14 @@
 "use client";
 
 import type React from "react";
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useSession } from "next-auth/react";
 
 interface CartItem {
@@ -86,7 +93,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cart, isClient, session?.user?.email]);
 
-  const loadCartFromLocalStorage = () => {
+  const loadCartFromLocalStorage = useCallback(() => {
     const storedCart = localStorage.getItem("cart");
     if (storedCart) {
       try {
@@ -95,9 +102,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error("Failed to parse cart from localStorage:", error);
       }
     }
-  };
+  }, []);
 
-  const loadCartFromDatabase = async () => {
+  const loadCartFromDatabase = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch("/api/cart");
@@ -116,7 +123,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [loadCartFromLocalStorage]);
 
   const syncCartOnLogin = async () => {
     const localCart = localStorage.getItem("cart");
@@ -150,197 +157,226 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addToCart = async (item: CartItem) => {
-    // Generate unique ID for the item
-    const uniqueId = item.uniqueId || `${Date.now()}-${Math.random()}`;
-    const itemWithUniqueId = { ...item, uniqueId };
+  const addToCart = useCallback(
+    async (item: CartItem) => {
+      // Generate unique ID for the item
+      const uniqueId = item.uniqueId || `${Date.now()}-${Math.random()}`;
+      const itemWithUniqueId = { ...item, uniqueId };
 
-    // Optimistic update - add item immediately for instant feedback
-    const previousCart = [...cart];
-    setCart((prev) => {
-      // If uniqueId is present, always add as a new item
-      if (itemWithUniqueId.uniqueId) {
-        return [...prev, itemWithUniqueId];
+      // Optimistic update - add item immediately for instant feedback
+      const previousCart = [...cart];
+      setCart((prev) => {
+        // If uniqueId is present, always add as a new item
+        if (itemWithUniqueId.uniqueId) {
+          return [...prev, itemWithUniqueId];
+        }
+        // Fallback to old logic for legacy items
+        const existingItemIndex = prev.findIndex(
+          (cartItem) =>
+            cartItem.id === itemWithUniqueId.id &&
+            cartItem.variant === itemWithUniqueId.variant
+        );
+
+        if (existingItemIndex !== -1) {
+          const updatedCart = [...prev];
+          updatedCart[existingItemIndex] = {
+            ...updatedCart[existingItemIndex],
+            quantity:
+              updatedCart[existingItemIndex].quantity +
+              itemWithUniqueId.quantity,
+          };
+          return updatedCart;
+        } else {
+          return [...prev, itemWithUniqueId];
+        }
+      });
+
+      if (session?.user?.email) {
+        // User is authenticated, sync with database in background
+        try {
+          setIsLoading(true);
+          const response = await fetch("/api/cart/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(itemWithUniqueId),
+          });
+
+          if (!response.ok) {
+            console.error("Failed to add item to database cart");
+            // Revert optimistic update on failure
+            setCart(previousCart);
+          }
+          // Success: keep the optimistic update (item stays in cart)
+        } catch (error) {
+          console.error("Error adding to database cart:", error);
+          // Revert optimistic update on error
+          setCart(previousCart);
+        } finally {
+          setIsLoading(false);
+        }
       }
-      // Fallback to old logic for legacy items
-      const existingItemIndex = prev.findIndex(
-        (cartItem) =>
-          cartItem.id === itemWithUniqueId.id &&
-          cartItem.variant === itemWithUniqueId.variant
+      // For non-authenticated users, the optimistic update is already applied
+    },
+    [session?.user?.email, cart]
+  );
+
+  const removeFromCart = useCallback(
+    async (uniqueId: string) => {
+      // Optimistic update - remove item immediately for instant feedback
+      const previousCart = [...cart];
+      setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
+
+      if (session?.user?.email) {
+        // User is authenticated, sync with database in background
+        try {
+          const response = await fetch("/api/cart/remove", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uniqueItemId: uniqueId }),
+          });
+
+          if (!response.ok) {
+            console.error("Failed to remove item from database cart");
+            // Revert optimistic update on failure
+            setCart(previousCart);
+          }
+          // Success: keep the optimistic update (item stays removed)
+        } catch (error) {
+          console.error("Error removing from database cart:", error);
+          // Revert optimistic update on error
+          setCart(previousCart);
+        }
+      }
+      // For non-authenticated users, the optimistic update is already applied
+    },
+    [session?.user?.email, cart]
+  );
+
+  const updateQuantity = useCallback(
+    async (uniqueId: string, quantity: number) => {
+      // Optimistic update - update UI immediately for instant feedback
+      const previousCart = [...cart];
+      setCart((prev) =>
+        prev.map((item) =>
+          item.uniqueId === uniqueId ? { ...item, quantity } : item
+        )
       );
 
-      if (existingItemIndex !== -1) {
-        const updatedCart = [...prev];
-        updatedCart[existingItemIndex] = {
-          ...updatedCart[existingItemIndex],
-          quantity:
-            updatedCart[existingItemIndex].quantity + itemWithUniqueId.quantity,
-        };
-        return updatedCart;
-      } else {
-        return [...prev, itemWithUniqueId];
-      }
-    });
+      if (session?.user?.email) {
+        // User is authenticated, sync with database in background
+        try {
+          const response = await fetch("/api/cart/update", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uniqueItemId: uniqueId, quantity }),
+          });
 
-    if (session?.user?.email) {
-      // User is authenticated, sync with database in background
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/cart/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(itemWithUniqueId),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to add item to database cart");
-          // Revert optimistic update on failure
+          if (!response.ok) {
+            console.error("Failed to update quantity in database cart");
+            // Revert optimistic update on failure
+            setCart(previousCart);
+          }
+          // Success: keep the optimistic update (no need to reload from database)
+        } catch (error) {
+          console.error("Error updating quantity in database cart:", error);
+          // Revert optimistic update on error
           setCart(previousCart);
         }
-        // Success: keep the optimistic update (item stays in cart)
-      } catch (error) {
-        console.error("Error adding to database cart:", error);
-        // Revert optimistic update on error
-        setCart(previousCart);
-      } finally {
-        setIsLoading(false);
       }
-    }
-    // For non-authenticated users, the optimistic update is already applied
-  };
+      // For non-authenticated users, the optimistic update is already applied
+    },
+    [session?.user?.email, cart]
+  );
 
-  const removeFromCart = async (uniqueId: string) => {
-    // Optimistic update - remove item immediately for instant feedback
-    const previousCart = [...cart];
-    setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
-
-    if (session?.user?.email) {
-      // User is authenticated, sync with database in background
-      try {
-        const response = await fetch("/api/cart/remove", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uniqueItemId: uniqueId }),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to remove item from database cart");
-          // Revert optimistic update on failure
-          setCart(previousCart);
-        }
-        // Success: keep the optimistic update (item stays removed)
-      } catch (error) {
-        console.error("Error removing from database cart:", error);
-        // Revert optimistic update on error
-        setCart(previousCart);
-      }
-    }
-    // For non-authenticated users, the optimistic update is already applied
-  };
-
-  const updateQuantity = async (uniqueId: string, quantity: number) => {
-    // Optimistic update - update UI immediately for instant feedback
-    const previousCart = [...cart];
-    setCart((prev) =>
-      prev.map((item) =>
-        item.uniqueId === uniqueId ? { ...item, quantity } : item
-      )
-    );
-
-    if (session?.user?.email) {
-      // User is authenticated, sync with database in background
-      try {
-        const response = await fetch("/api/cart/update", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uniqueItemId: uniqueId, quantity }),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to update quantity in database cart");
-          // Revert optimistic update on failure
-          setCart(previousCart);
-        }
-        // Success: keep the optimistic update (no need to reload from database)
-      } catch (error) {
-        console.error("Error updating quantity in database cart:", error);
-        // Revert optimistic update on error
-        setCart(previousCart);
-      }
-    }
-    // For non-authenticated users, the optimistic update is already applied
-  };
-
-  const getSubtotal = () => {
+  const getSubtotal = useCallback(() => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  };
+  }, [cart]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem("cart");
     }
-  };
+  }, []);
 
-  const updateCartItemCustomization = async (
-    uniqueId: string,
-    customizationOptions: Partial<
-      Pick<
-        CartItem,
-        "addTextOnCake" | "addCandles" | "addKnife" | "addMessageCard"
+  const updateCartItemCustomization = useCallback(
+    async (
+      uniqueId: string,
+      customizationOptions: Partial<
+        Pick<
+          CartItem,
+          "addTextOnCake" | "addCandles" | "addKnife" | "addMessageCard"
+        >
       >
-    >
-  ) => {
-    // Optimistic update - update UI immediately for instant feedback
-    const previousCart = [...cart];
-    setCart((prev) =>
-      prev.map((item) =>
-        item.uniqueId === uniqueId ? { ...item, ...customizationOptions } : item
-      )
-    );
+    ) => {
+      // Optimistic update - update UI immediately for instant feedback
+      const previousCart = [...cart];
+      setCart((prev) =>
+        prev.map((item) =>
+          item.uniqueId === uniqueId
+            ? { ...item, ...customizationOptions }
+            : item
+        )
+      );
 
-    if (session?.user?.email) {
-      // User is authenticated, sync with database in background
-      try {
-        const response = await fetch("/api/cart/update-customization", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uniqueItemId: uniqueId,
-            customizationOptions,
-          }),
-        });
+      if (session?.user?.email) {
+        // User is authenticated, sync with database in background
+        try {
+          const response = await fetch("/api/cart/update-customization", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              uniqueItemId: uniqueId,
+              customizationOptions,
+            }),
+          });
 
-        if (!response.ok) {
-          console.error("Failed to update customization in database cart");
-          // Revert optimistic update on failure
+          if (!response.ok) {
+            console.error("Failed to update customization in database cart");
+            // Revert optimistic update on failure
+            setCart(previousCart);
+          }
+          // Success: keep the optimistic update
+        } catch (error) {
+          console.error(
+            "Error updating customization in database cart:",
+            error
+          );
+          // Revert optimistic update on error
           setCart(previousCart);
         }
-        // Success: keep the optimistic update
-      } catch (error) {
-        console.error("Error updating customization in database cart:", error);
-        // Revert optimistic update on error
-        setCart(previousCart);
       }
-    }
-    // For non-authenticated users, the optimistic update is already applied
-  };
+      // For non-authenticated users, the optimistic update is already applied
+    },
+    [session?.user?.email, cart]
+  );
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      updateCartItemCustomization,
+      getSubtotal,
+      isLoading,
+      clearCart,
+    }),
+    [
+      cart,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      updateCartItemCustomization,
+      getSubtotal,
+      isLoading,
+      clearCart,
+    ]
+  );
 
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        updateCartItemCustomization,
-        getSubtotal,
-        isLoading,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
   );
 }
 

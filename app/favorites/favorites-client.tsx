@@ -4,7 +4,17 @@ import Image from "next/image";
 import { Trash2, ShoppingBag } from "lucide-react";
 import { IoIosArrowBack } from "react-icons/io";
 import { useState, useEffect } from "react";
-import Lottie from "lottie-react";
+import dynamic from "next/dynamic";
+
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-32 h-32 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useIsMobile } from "@/hooks/use-mobile";
