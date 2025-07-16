@@ -970,145 +970,149 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
 
           <Separator />
 
-          {/* Customization - Enhanced with Input Fields */}
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-800">
-              Customization
-            </h3>
+          {/* Customization - Enhanced with Input Fields - Hidden on Mobile */}
+          {!isMobile && (
+            <>
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-gray-800">
+                  Customization
+                </h3>
 
-            <div className="grid grid-cols-2 gap-2">
-              {getCustomizationOptions().map((option) => (
-                <Dialog
-                  key={option.id}
-                  open={dialogType === option.id}
-                  onOpenChange={(open) => {
-                    if (open) {
-                      if (!selectedCustomizations.includes(option.id)) {
-                        toggleCustomization(option.id);
-                      }
-                      setDialogType(option.id as "text" | "card");
-                      if (option.id === "text") setTempCakeText(cakeText);
-                      if (option.id === "card")
-                        setTempMessageCardText(messageCardText);
-                    } else {
-                      setDialogType(null);
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <button
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
-                        selectedCustomizations.includes(option.id)
-                          ? "border-gray-400 bg-gray-100"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <span
-                        className={
-                          selectedCustomizations.includes(option.id)
-                            ? "text-black"
-                            : "text-gray-500"
-                        }
-                      >
-                        {option.icon}
-                      </span>
-                      <span
-                        className={`${
-                          selectedCustomizations.includes(option.id)
-                            ? "text-black"
-                            : "text-gray-700"
-                        } truncate`}
-                      >
-                        {option.label}
-                      </span>
-                      {selectedCustomizations.includes(option.id) && (
-                        <Check className="h-3.5 w-3.5 ml-auto text-black" />
-                      )}
-                    </button>
-                  </DialogTrigger>
-                  {(option.id === "text" || option.id === "card") && (
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>
-                          {option.id === "text"
-                            ? "Text on Cake"
-                            : "Message Card"}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {option.id === "text"
-                            ? "This will be written on the cake. Max 30 characters."
-                            : "This message will be printed on a card."}
-                        </DialogDescription>
-                      </DialogHeader>
-                      {option.id === "text" ? (
-                        <>
-                          <Input
-                            value={tempCakeText}
-                            onChange={(e) =>
-                              setTempCakeText(e.target.value.slice(0, 30))
-                            }
-                            placeholder="Happy Birthday John!"
-                            className="bg-white text-sm mb-2 focus-visible:ring-primary"
-                            maxLength={30}
-                          />
-                          <div className="flex justify-between text-xs text-gray-500 mb-4">
-                            <span></span>
-                            <span>{tempCakeText.length}/30</span>
-                          </div>
-                        </>
-                      ) : (
-                        <Textarea
-                          value={tempMessageCardText}
-                          onChange={(e) =>
-                            setTempMessageCardText(e.target.value)
+                <div className="grid grid-cols-2 gap-2">
+                  {getCustomizationOptions().map((option) => (
+                    <Dialog
+                      key={option.id}
+                      open={dialogType === option.id}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          if (!selectedCustomizations.includes(option.id)) {
+                            toggleCustomization(option.id);
                           }
-                          placeholder="Write your special message here..."
-                          className="bg-white text-sm resize-none mb-2 focus-visible:ring-primary"
-                          rows={3}
-                        />
+                          setDialogType(option.id as "text" | "card");
+                          if (option.id === "text") setTempCakeText(cakeText);
+                          if (option.id === "card")
+                            setTempMessageCardText(messageCardText);
+                        } else {
+                          setDialogType(null);
+                        }
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <button
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                            selectedCustomizations.includes(option.id)
+                              ? "border-gray-400 bg-gray-100"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={
+                              selectedCustomizations.includes(option.id)
+                                ? "text-black"
+                                : "text-gray-500"
+                            }
+                          >
+                            {option.icon}
+                          </span>
+                          <span
+                            className={`${
+                              selectedCustomizations.includes(option.id)
+                                ? "text-black"
+                                : "text-gray-700"
+                            } truncate`}
+                          >
+                            {option.label}
+                          </span>
+                          {selectedCustomizations.includes(option.id) && (
+                            <Check className="h-3.5 w-3.5 ml-auto text-black" />
+                          )}
+                        </button>
+                      </DialogTrigger>
+                      {(option.id === "text" || option.id === "card") && (
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>
+                              {option.id === "text"
+                                ? "Text on Cake"
+                                : "Message Card"}
+                            </DialogTitle>
+                            <DialogDescription>
+                              {option.id === "text"
+                                ? "This will be written on the cake. Max 30 characters."
+                                : "This message will be printed on a card."}
+                            </DialogDescription>
+                          </DialogHeader>
+                          {option.id === "text" ? (
+                            <>
+                              <Input
+                                value={tempCakeText}
+                                onChange={(e) =>
+                                  setTempCakeText(e.target.value.slice(0, 30))
+                                }
+                                placeholder="Happy Birthday John!"
+                                className="bg-white text-sm mb-2 focus-visible:ring-primary"
+                                maxLength={30}
+                              />
+                              <div className="flex justify-between text-xs text-gray-500 mb-4">
+                                <span></span>
+                                <span>{tempCakeText.length}/30</span>
+                              </div>
+                            </>
+                          ) : (
+                            <Textarea
+                              value={tempMessageCardText}
+                              onChange={(e) =>
+                                setTempMessageCardText(e.target.value)
+                              }
+                              placeholder="Write your special message here..."
+                              className="bg-white text-sm resize-none mb-2 focus-visible:ring-primary"
+                              rows={3}
+                            />
+                          )}
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <button
+                                className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                                onClick={() => setDialogType(null)}
+                              >
+                                Cancel
+                              </button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                              <button
+                                className="px-4 py-2 rounded-lg border border-primary bg-primary text-white font-semibold hover:bg-primary/90"
+                                onClick={() => {
+                                  if (option.id === "text")
+                                    setCakeText(tempCakeText);
+                                  if (option.id === "card")
+                                    setMessageCardText(tempMessageCardText);
+                                  setDialogType(null);
+                                }}
+                              >
+                                Save
+                              </button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
                       )}
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <button
-                            className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                            onClick={() => setDialogType(null)}
-                          >
-                            Cancel
-                          </button>
-                        </DialogClose>
-                        <DialogClose asChild>
-                          <button
-                            className="px-4 py-2 rounded-lg border border-primary bg-primary text-white font-semibold hover:bg-primary/90"
-                            onClick={() => {
-                              if (option.id === "text")
-                                setCakeText(tempCakeText);
-                              if (option.id === "card")
-                                setMessageCardText(tempMessageCardText);
-                              setDialogType(null);
-                            }}
-                          >
-                            Save
-                          </button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  )}
-                </Dialog>
-              ))}
-            </div>
+                    </Dialog>
+                  ))}
+                </div>
 
-            {/* Selected Customizations Summary */}
-            {selectedCustomizations.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs text-gray-500">
-                  * All customizations will be added to your order when you
-                  click "Add to Cart"
-                </p>
+                {/* Selected Customizations Summary */}
+                {selectedCustomizations.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500">
+                      * All customizations will be added to your order when you
+                      click "Add to Cart"
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <Separator />
+              <Separator />
+            </>
+          )}
 
           {/* Offers section - Minimalist */}
           <div className="space-y-3">

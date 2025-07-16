@@ -72,6 +72,13 @@ export async function GET(request: NextRequest) {
       quantity: item.quantity,
       category: item.category,
       variant: item.variant,
+      addTextOnCake: item.add_text_on_cake || false,
+      addCandles: item.add_candles || false,
+      addKnife: item.add_knife || false,
+      addMessageCard: item.add_message_card || false,
+      cakeText: item.cake_text || undefined,
+      giftCardText: item.gift_card_text || undefined,
+      orderType: item.order_type || "weight",
     }));
 
     return NextResponse.json({

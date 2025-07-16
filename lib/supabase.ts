@@ -151,6 +151,15 @@ export interface CartItemDB {
   product_name: string;
   product_image: string;
   category: string;
+  // Customization fields
+  add_text_on_cake: boolean;
+  add_candles: boolean;
+  add_knife: boolean;
+  add_message_card: boolean;
+  cake_text: string | null;
+  gift_card_text: string | null;
+  // Order type (weight/piece)
+  order_type: "weight" | "piece";
   created_at: string;
   updated_at: string;
 }

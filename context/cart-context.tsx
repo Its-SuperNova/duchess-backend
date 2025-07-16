@@ -12,6 +12,12 @@ interface CartItem {
   quantity: number;
   category: string;
   variant: string;
+  addTextOnCake?: boolean;
+  addCandles?: boolean;
+  addKnife?: boolean;
+  addMessageCard?: boolean;
+  cakeText?: string;
+  giftCardText?: string;
 }
 
 interface CartContextType {

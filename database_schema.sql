@@ -99,6 +99,15 @@ CREATE TABLE IF NOT EXISTS public.cart_items (
     product_name VARCHAR(255) NOT NULL,
     product_image TEXT,
     category VARCHAR(255),
+    -- Customization fields
+    add_text_on_cake BOOLEAN DEFAULT FALSE,
+    add_candles BOOLEAN DEFAULT FALSE,
+    add_knife BOOLEAN DEFAULT FALSE,
+    add_message_card BOOLEAN DEFAULT FALSE,
+    cake_text TEXT,
+    gift_card_text TEXT,
+    -- Order type (weight/piece)
+    order_type VARCHAR(20) DEFAULT 'weight' CHECK (order_type IN ('weight', 'piece')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -430,3 +439,4 @@ WHERE NOT EXISTS (
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres;
+

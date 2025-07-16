@@ -122,6 +122,46 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             <p className="font-semibold mt-1 text-gray-900 dark:text-white">
               ₹{item.price.toFixed(2)}
             </p>
+            {/* Customization details */}
+            {(item.addTextOnCake ||
+              item.addCandles ||
+              item.addKnife ||
+              item.addMessageCard) && (
+              <div className="mt-2 space-y-1">
+                <div className="flex flex-wrap gap-1">
+                  {item.addTextOnCake && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      Text on Cake
+                    </span>
+                  )}
+                  {item.addCandles && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                      Candles
+                    </span>
+                  )}
+                  {item.addKnife && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      Knife
+                    </span>
+                  )}
+                  {item.addMessageCard && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                      Message Card
+                    </span>
+                  )}
+                </div>
+                {item.cakeText && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Cake text: "{item.cakeText}"
+                  </p>
+                )}
+                {item.giftCardText && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Gift card: "{item.giftCardText}"
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Quantity controls */}
@@ -204,6 +244,50 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     ₹{item.price.toFixed(2)} × {item.quantity}
                   </p>
+                  {/* Customization details in checkout */}
+                  {(item.addTextOnCake ||
+                    item.addCandles ||
+                    item.addKnife ||
+                    item.addMessageCard) && (
+                    <div className="mt-1">
+                      <div className="flex flex-wrap gap-1">
+                        {item.addTextOnCake && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Text
+                          </span>
+                        )}
+                        {item.addCandles && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            Candles
+                          </span>
+                        )}
+                        {item.addKnife && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Knife
+                          </span>
+                        )}
+                        {item.addMessageCard && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            Card
+                          </span>
+                        )}
+                      </div>
+                      {(item.cakeText || item.giftCardText) && (
+                        <div className="mt-1 space-y-0.5">
+                          {item.cakeText && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Cake: "{item.cakeText}"
+                            </p>
+                          )}
+                          {item.giftCardText && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Card: "{item.giftCardText}"
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="font-medium text-sm">

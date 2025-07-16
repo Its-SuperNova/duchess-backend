@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 // Types for database product
 interface DatabaseProduct {
   id: string;
@@ -91,6 +93,13 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
   const [inStock, setInStock] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { addToCart } = useCart();
+  const [addTextOnCake, setAddTextOnCake] = useState(false);
+  const [addCandles, setAddCandles] = useState(false);
+  const [addKnife, setAddKnife] = useState(false);
+  const [addMessageCard, setAddMessageCard] = useState(false);
+  const [drawerStep, setDrawerStep] = useState(1);
+  const [cakeText, setCakeText] = useState("");
+  const [giftCardText, setGiftCardText] = useState("");
 
   useEffect(() => {
     // Compute price and originalPrice based on selected option and orderType
@@ -135,6 +144,11 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
     pieceQuantity,
   ]);
 
+  // Reset to step 1 whenever the drawer is opened
+  useEffect(() => {
+    if (isDrawerOpen) setDrawerStep(1);
+  }, [isDrawerOpen]);
+
   const handleAddToCart = () => {
     if (!product || !inStock) return;
     addToCart({
@@ -148,10 +162,15 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
         orderType === "weight"
           ? product.weight_options[selectedWeightOption]?.weight || "Regular"
           : `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`,
+      addTextOnCake,
+      addCandles,
+      addKnife,
+      addMessageCard,
+      cakeText: addTextOnCake ? cakeText : undefined,
+      giftCardText: addMessageCard ? giftCardText : undefined,
     });
     setIsDrawerOpen(false);
   };
-
   const handleWeightOptionChange = (index: number) => {
     setSelectedWeightOption(index);
     setOrderType("weight");
@@ -184,19 +203,48 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
           </DrawerTrigger>
           <DrawerContent className="max-h-[80vh]">
             <DrawerHeader className="text-left">
-              <DrawerTitle className="text-lg font-semibold">
-                Select Options
-              </DrawerTitle>
+              <div className="flex items-center justify-between">
+                <DrawerTitle className="text-lg font-semibold">
+                  {drawerStep === 1
+                    ? "Select the option"
+                    : "Customization option"}
+                </DrawerTitle>
+                {drawerStep === 2 && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setDrawerStep(1)}
+                    className="ml-2 h-10 w-10 rounded-full border-gray-300 hover:bg-gray-50"
+                  >
+                    {/* You can use a left arrow icon here if you have one, or just 'Back' */}
+                    <span className="sr-only">Back</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.75 19.5L8.25 12l7.5-7.5"
+                      />
+                    </svg>
+                  </Button>
+                )}
+              </div>
             </DrawerHeader>
-
             <div className="px-4 pb-4 space-y-6">
-              {/* Tabs for Weight/Piece selection when both are available */}
-              {product.selling_type === "both" &&
+              {/* Restore Weight/Piece tab switcher for products that support both, only in step 1 */}
+              {drawerStep === 1 &&
+                product.selling_type === "both" &&
                 product.weight_options &&
                 product.weight_options.length > 0 &&
                 product.piece_options &&
                 product.piece_options.length > 0 && (
-                  <div className="flex bg-gray-100 rounded-lg p-1">
+                  <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
                     <button
                       onClick={() => setOrderType("weight")}
                       className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -219,218 +267,237 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                     </button>
                   </div>
                 )}
-
-              {/* Weight Options - Show only if selling_type is "weight" or "both" */}
-              {(product.selling_type === "weight" ||
-                product.selling_type === "both") &&
-                product.weight_options &&
-                product.weight_options.length > 0 &&
-                (product.selling_type === "weight" ||
-                  orderType === "weight") && (
-                  <div className="space-y-3">
-                    <h3 className="font-medium text-gray-900">
-                      Weight Options
-                    </h3>
-                    <RadioGroup
-                      value={selectedWeightOption.toString()}
-                      onValueChange={(value) =>
-                        handleWeightOptionChange(parseInt(value))
-                      }
-                    >
-                      {product.weight_options.map((option, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3"
-                        >
-                          <RadioGroupItem
-                            value={index.toString()}
-                            id={`weight-${index}`}
-                            disabled={!option.isActive}
-                          />
-                          <Label
-                            htmlFor={`weight-${index}`}
-                            className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
-                              selectedWeightOption === index
-                                ? "border-[#7A0000] bg-[#7A0000]/5"
-                                : "border-gray-200"
-                            } ${!option.isActive ? "opacity-50" : ""}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium">
-                                {option.weight}
+              {/* Step 1: Quantity/Weight selection */}
+              {drawerStep === 1 && (
+                <>
+                  {orderType === "piece" &&
+                    product.piece_options &&
+                    product.piece_options.length > 0 && (
+                      <div className="space-y-3">
+                        {/* Price Section Styled Like Screenshot */}
+                        <div className="flex items-center justify-between border border-[#7A0000] bg-[#7A0000]/5 rounded-xl px-6 py-4 mb-2">
+                          <span className="font-medium text-lg">Total</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-2xl text-gray-900">
+                              ₹{price}
+                            </span>
+                            {originalPrice && originalPrice > price && (
+                              <span className="text-base text-gray-500 line-through">
+                                ₹{originalPrice}
                               </span>
-                              {parseInt(option.stock) <= 3 &&
-                                parseInt(option.stock) > 0 && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    Only {option.stock} left
-                                  </Badge>
-                                )}
-                              {parseInt(option.stock) === 0 && (
-                                <Badge
-                                  variant="destructive"
-                                  className="text-xs"
-                                >
-                                  Out of Stock
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold text-gray-900">
-                                ₹{parseInt(option.price)}
-                              </div>
-                              {product.has_offer &&
-                                product.offer_percentage && (
-                                  <div className="text-sm text-gray-500 line-through">
-                                    ₹
-                                    {Math.round(
-                                      parseInt(option.price) /
-                                        (1 - product.offer_percentage / 100)
-                                    )}
-                                  </div>
-                                )}
-                            </div>
-                          </Label>
+                            )}
+                          </div>
                         </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-                )}
-
-              {/* Piece Options - Show only if selling_type is "piece" or "both" */}
-              {(product.selling_type === "piece" ||
-                product.selling_type === "both") &&
-                product.piece_options &&
-                product.piece_options.length > 0 &&
-                (product.selling_type === "piece" || orderType === "piece") && (
-                  <div className="space-y-3">
-                    <h3 className="font-medium text-gray-900">Piece Options</h3>
-                    <RadioGroup
-                      value={selectedPieceOption.toString()}
-                      onValueChange={(value) =>
-                        handlePieceOptionChange(parseInt(value))
-                      }
-                    >
-                      {product.piece_options.map((option, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3"
-                        >
-                          <RadioGroupItem
-                            value={index.toString()}
-                            id={`piece-${index}`}
-                            disabled={!option.isActive}
-                          />
-                          <Label
-                            htmlFor={`piece-${index}`}
-                            className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
-                              selectedPieceOption === index
-                                ? "border-[#7A0000] bg-[#7A0000]/5"
-                                : "border-gray-200"
-                            } ${!option.isActive ? "opacity-50" : ""}`}
+                        <div className="flex items-center w-full justify-between">
+                          <Button
+                            className="bg-[#7A0000] text-white w-10 h-10 rounded-[14px] text-lg shadow-sm"
+                            onClick={() =>
+                              handleQuantityChange(
+                                Math.max(1, pieceQuantity - 1)
+                              )
+                            }
+                            disabled={pieceQuantity <= 1}
                           >
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium">
-                                {option.quantity}
-                              </span>
-                              {parseInt(option.stock) <= 3 &&
-                                parseInt(option.stock) > 0 && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    Only {option.stock} left
-                                  </Badge>
-                                )}
-                              {parseInt(option.stock) === 0 && (
-                                <Badge
-                                  variant="destructive"
-                                  className="text-xs"
-                                >
-                                  Out of Stock
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold text-gray-900">
-                                ₹{parseInt(option.price)}
-                              </div>
-                              {product.has_offer &&
-                                product.offer_percentage && (
-                                  <div className="text-sm text-gray-500 line-through">
-                                    ₹
-                                    {Math.round(
-                                      parseInt(option.price) /
-                                        (1 - product.offer_percentage / 100)
-                                    )}
-                                  </div>
-                                )}
-                            </div>
-                          </Label>
+                            -
+                          </Button>
+                          <span className="font-medium text-lg min-w-[3rem] text-center">
+                            {pieceQuantity.toString().padStart(2, "0")}
+                          </span>
+                          <Button
+                            className="bg-[#7A0000] text-white w-10 h-10 rounded-[14px] text-lg shadow-sm"
+                            onClick={() =>
+                              handleQuantityChange(pieceQuantity + 1)
+                            }
+                            disabled={
+                              pieceQuantity >=
+                              parseInt(
+                                product.piece_options[selectedPieceOption]
+                                  ?.stock || "0"
+                              )
+                            }
+                          >
+                            +
+                          </Button>
                         </div>
-                      ))}
-                    </RadioGroup>
+                      </div>
+                    )}
+                  {orderType === "weight" &&
+                    product.weight_options &&
+                    product.weight_options.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="font-medium text-gray-900">
+                          Weight Options
+                        </h3>
+                        <RadioGroup
+                          value={selectedWeightOption.toString()}
+                          onValueChange={(value) =>
+                            handleWeightOptionChange(parseInt(value))
+                          }
+                        >
+                          {product.weight_options.map((option, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center space-x-3"
+                            >
+                              <RadioGroupItem
+                                value={index.toString()}
+                                id={`weight-${index}`}
+                                disabled={!option.isActive}
+                              />
+                              <Label
+                                htmlFor={`weight-${index}`}
+                                className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
+                                  selectedWeightOption === index
+                                    ? "border-[#7A0000] bg-[#7A0000]/5"
+                                    : "border-gray-200"
+                                } ${!option.isActive ? "opacity-50" : ""}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="font-medium">
+                                    {option.weight}
+                                  </span>
+                                  {parseInt(option.stock) <= 3 &&
+                                    parseInt(option.stock) > 0 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs"
+                                      >
+                                        Only {option.stock} left
+                                      </Badge>
+                                    )}
+                                  {parseInt(option.stock) === 0 && (
+                                    <Badge
+                                      variant="destructive"
+                                      className="text-xs"
+                                    >
+                                      Out of Stock
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-semibold text-gray-900">
+                                    ₹{parseInt(option.price)}
+                                  </div>
+                                  {product.has_offer &&
+                                    product.offer_percentage && (
+                                      <div className="text-sm text-gray-500 line-through">
+                                        ₹
+                                        {Math.round(
+                                          parseInt(option.price) /
+                                            (1 - product.offer_percentage / 100)
+                                        )}
+                                      </div>
+                                    )}
+                                </div>
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+                    )}
+                  {/* Next Button */}
+                  <div className="flex gap-3 pt-4 border-t border-gray-200">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDrawerOpen(false)}
+                      className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => setDrawerStep(2)}
+                      className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white"
+                    >
+                      Next
+                    </Button>
                   </div>
-                )}
-
-              {/* Quantity Selector for Piece Orders */}
-              {orderType === "piece" &&
-                product.piece_options &&
-                product.piece_options.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-medium text-gray-900">Quantity</h3>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          handleQuantityChange(Math.max(1, pieceQuantity - 1))
-                        }
-                        disabled={pieceQuantity <= 1}
-                      >
-                        -
-                      </Button>
-                      <span className="font-medium text-lg min-w-[3rem] text-center">
-                        {pieceQuantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(pieceQuantity + 1)}
-                        disabled={
-                          pieceQuantity >=
-                          parseInt(
-                            product.piece_options[selectedPieceOption]?.stock ||
-                              "0"
-                          )
-                        }
-                      >
-                        +
-                      </Button>
+                </>
+              )}
+              {/* Step 2: Customization options and Add to Cart */}
+              {drawerStep === 2 && (
+                <>
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Add text on cake</span>
+                      <Switch
+                        checked={addTextOnCake}
+                        onCheckedChange={setAddTextOnCake}
+                      />
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Add candles</span>
+                      <Switch
+                        checked={addCandles}
+                        onCheckedChange={setAddCandles}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Add knife</span>
+                      <Switch
+                        checked={addKnife}
+                        onCheckedChange={setAddKnife}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Add message card</span>
+                      <Switch
+                        checked={addMessageCard}
+                        onCheckedChange={setAddMessageCard}
+                      />
+                    </div>
+                    {addTextOnCake && (
+                      <div className="pt-2">
+                        <div className="flex items-center justify-between">
+                          <Input
+                            value={cakeText}
+                            onChange={(e) => setCakeText(e.target.value)}
+                            placeholder="Enter text for cake..."
+                            maxLength={20}
+                            className="flex-1"
+                          />
+                          <span className="ml-2 text-xs text-gray-500">
+                            {cakeText.length}/20
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {addMessageCard && (
+                      <div className="pt-2">
+                        <div className="flex items-center justify-between">
+                          <Input
+                            value={giftCardText}
+                            onChange={(e) => setGiftCardText(e.target.value)}
+                            placeholder="Enter message for gift card..."
+                            maxLength={100}
+                            className="flex-1"
+                          />
+                          <span className="ml-2 text-xs text-gray-500">
+                            {giftCardText.length}/100
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-              {/* Bottom Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddToCart}
-                  disabled={!inStock}
-                  className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white"
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  {inStock ? "Add to Cart" : "Out of Stock"}
-                </Button>
-              </div>
+                  {/* Add to Cart Button */}
+                  <div className="flex gap-3 pt-4 border-t border-gray-200">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDrawerOpen(false)}
+                      className="flex-1 h-12 rounded-xl border-gray-300 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddToCart}
+                      disabled={!inStock}
+                      className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white"
+                    >
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      {inStock ? "Add to Cart" : "Out of Stock"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </DrawerContent>
         </Drawer>

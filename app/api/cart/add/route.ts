@@ -11,7 +11,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, price, image, quantity, category, variant } = body;
+    const { 
+      id, 
+      name, 
+      price, 
+      image, 
+      quantity, 
+      category, 
+      variant,
+      addTextOnCake,
+      addCandles,
+      addKnife,
+      addMessageCard,
+      cakeText,
+      giftCardText,
+      orderType
+    } = body;
 
     if (!id || !name || !price || !quantity) {
       return NextResponse.json(
@@ -112,6 +127,13 @@ export async function POST(request: NextRequest) {
           product_name: name,
           product_image: image || "/placeholder.svg",
           category: category || "Product",
+          add_text_on_cake: addTextOnCake || false,
+          add_candles: addCandles || false,
+          add_knife: addKnife || false,
+          add_message_card: addMessageCard || false,
+          cake_text: cakeText || null,
+          gift_card_text: giftCardText || null,
+          order_type: orderType || "weight",
         })
         .select()
         .single();

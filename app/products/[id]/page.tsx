@@ -303,6 +303,7 @@ export default function ProductPage() {
       quantity: orderType === "piece" ? pieceQuantity : 1,
       category: product.categories?.name || "Product",
       variant: variant,
+      orderType: orderType,
     };
 
     addToCart(cartItem);
@@ -588,8 +589,8 @@ export default function ProductPage() {
 
             {/* Right column */}
             <div className="w-full md:w-1/3 flex flex-col gap-5 mt-4">
-              {/* Pricing and Order Card */}
-              <div className="w-full bg-white rounded-3xl p-7 flex flex-col gap-5 h-fit shadow-sm">
+              {/* Pricing and Order Card - Hidden on Mobile */}
+              <div className="hidden md:flex w-full bg-white rounded-3xl p-7 flex-col gap-5 h-fit shadow-sm">
                 {/* Price display */}
                 <div className="flex items-baseline gap-3 md:flex">
                   <h2 className="text-3xl font-bold text-black md:block hidden">
@@ -608,9 +609,9 @@ export default function ProductPage() {
                 {/* Divider */}
                 <div className="h-px bg-gray-100 w-full"></div>
 
-                {/* Order Type Selection */}
+                {/* Order Type Selection - Hidden on Mobile */}
                 {product.selling_type === "both" && (
-                  <div>
+                  <div className="hidden md:block">
                     <h2 className="text-gray-500 text-sm mb-3">Order Type</h2>
                     <div className="flex gap-3 p-1 bg-gray-100 rounded-xl">
                       <button
@@ -637,11 +638,11 @@ export default function ProductPage() {
                   </div>
                 )}
 
-                {/* Weight/Piece Selection */}
+                {/* Weight/Piece Selection - Hidden on Mobile */}
                 {orderType === "weight" &&
                   product.weight_options &&
                   product.weight_options.length > 0 && (
-                    <div>
+                    <div className="hidden md:block">
                       <h2 className="text-gray-500 text-sm mb-3">
                         Select Weight
                       </h2>
@@ -669,7 +670,7 @@ export default function ProductPage() {
                 {orderType === "piece" &&
                   product.piece_options &&
                   product.piece_options.length > 0 && (
-                    <div>
+                    <div className="hidden md:block">
                       <h2 className="text-gray-500 text-sm mb-3">
                         Select Option
                       </h2>
@@ -719,8 +720,8 @@ export default function ProductPage() {
                     </div>
                   )}
 
-                {/* Delivery estimate */}
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50">
+                {/* Delivery estimate - Hidden on Mobile */}
+                <div className="hidden md:flex items-center gap-3 p-4 rounded-xl bg-gray-50">
                   <Truck className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-900 font-medium">

@@ -107,6 +107,13 @@ export async function POST(request: NextRequest) {
             product_name: localItem.name,
             product_image: localItem.image || "/placeholder.svg",
             category: localItem.category || "Product",
+            add_text_on_cake: localItem.addTextOnCake || false,
+            add_candles: localItem.addCandles || false,
+            add_knife: localItem.addKnife || false,
+            add_message_card: localItem.addMessageCard || false,
+            cake_text: localItem.cakeText || null,
+            gift_card_text: localItem.giftCardText || null,
+            order_type: localItem.orderType || "weight",
           });
 
         if (insertError) {
@@ -137,6 +144,13 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
       category: item.category,
       variant: item.variant,
+      addTextOnCake: item.add_text_on_cake || false,
+      addCandles: item.add_candles || false,
+      addKnife: item.add_knife || false,
+      addMessageCard: item.add_message_card || false,
+      cakeText: item.cake_text || undefined,
+      giftCardText: item.gift_card_text || undefined,
+      orderType: item.order_type || "weight",
     }));
 
     return NextResponse.json({

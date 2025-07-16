@@ -59,3 +59,22 @@ ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items DISABLE ROW LEVEL SECURITY;
 -- Note: This approach prioritizes getting your app working over strict security
 -- You can re-enable and configure proper RLS policies later when the app is functional
+-- Migration to add customization fields to cart_items table
+-- Run this in your Supabase SQL editor
+-- Add new columns to cart_items table
+ALTER TABLE public.cart_items
+ADD COLUMN IF NOT EXISTS add_text_on_cake BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS add_candles BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS add_knife BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS add_message_card BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS cake_text TEXT,
+    ADD COLUMN IF NOT EXISTS gift_card_text TEXT,
+    ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'weight' CHECK (order_type IN ('weight', 'piece'));
+-- Update existing cart_items to have default values
+UPDATE public.cart_items
+SET add_text_on_cake = FALSE,
+    add_candles = FALSE,
+    add_knife = FALSE,
+    add_message_card = FALSE,
+    order_type = 'weight'
+WHERE add_text_on_cake IS NULL;
