@@ -11,13 +11,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      id, 
-      name, 
-      price, 
-      image, 
-      quantity, 
-      category, 
+    const {
+      id,
+      name,
+      price,
+      image,
+      quantity,
+      category,
       variant,
       addTextOnCake,
       addCandles,
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       addMessageCard,
       cakeText,
       giftCardText,
-      orderType
+      orderType,
     } = body;
 
     if (!id || !name || !price || !quantity) {
@@ -76,6 +76,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if item already exists in cart (same product and variant)
+    if (!cart) {
+      return NextResponse.json(
+        { error: "Cart not available" },
+        { status: 500 }
+      );
+    }
+
     const { data: existingItem, error: existingError } = await supabase
       .from("cart_items")
       .select("*")
@@ -116,35 +123,50 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Add new item to cart
+      const insertData = {
+        cart_id: cart!.id,
+        product_id: id.toString(),
+        quantity,
+        variant: variant || "Regular",
+        price,
+        product_name: name,
+        product_image: image || "/placeholder.svg",
+        category: category || "Product",
+        add_text_on_cake: addTextOnCake || false,
+        add_candles: addCandles || false,
+        add_knife: addKnife || false,
+        add_message_card: addMessageCard || false,
+        cake_text: cakeText || null,
+        gift_card_text: giftCardText || null,
+        order_type: orderType || "weight",
+      };
+
+      console.log("Attempting to insert cart item:", insertData);
+
       const { data: newItem, error: insertError } = await supabase
         .from("cart_items")
-        .insert({
-          cart_id: cart.id,
-          product_id: id.toString(),
-          quantity,
-          variant: variant || "Regular",
-          price,
-          product_name: name,
-          product_image: image || "/placeholder.svg",
-          category: category || "Product",
-          add_text_on_cake: addTextOnCake || false,
-          add_candles: addCandles || false,
-          add_knife: addKnife || false,
-          add_message_card: addMessageCard || false,
-          cake_text: cakeText || null,
-          gift_card_text: giftCardText || null,
-          order_type: orderType || "weight",
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (insertError) {
         console.error("Insert error:", insertError);
+        console.error("Error details:", {
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code,
+        });
         return NextResponse.json(
-          { error: "Failed to add item to cart" },
+          { error: "Failed to add item to cart", details: insertError.message },
           { status: 500 }
         );
       }
+
+      return NextResponse.json({
+        message: "Item added to cart",
+        item: newItem,
+      });
 
       return NextResponse.json({
         message: "Item added to cart",
