@@ -50,11 +50,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!cart) {
+      return NextResponse.json(
+        { error: "Cart not available" },
+        { status: 500 }
+      );
+    }
+
     // Get cart items
     const { data: cartItems, error: itemsError } = await supabase
       .from("cart_items")
       .select("*")
-      .eq("cart_id", cart.id);
+      .eq("cart_id", cart.id)
+      .order("created_at", { ascending: false });
 
     if (itemsError) {
       return NextResponse.json(
@@ -68,17 +76,17 @@ export async function GET(request: NextRequest) {
       id: parseInt(item.product_id) || 0,
       name: item.product_name,
       price: item.price,
-      image: item.product_image,
+      image: item.product_image || "/placeholder.svg",
       quantity: item.quantity,
-      category: item.category,
+      category: item.category || "Product",
       variant: item.variant,
-      addTextOnCake: item.add_text_on_cake || false,
-      addCandles: item.add_candles || false,
-      addKnife: item.add_knife || false,
-      addMessageCard: item.add_message_card || false,
-      cakeText: item.cake_text || undefined,
-      giftCardText: item.gift_card_text || undefined,
-      orderType: item.order_type || "weight",
+      addTextOnCake: item.add_text_on_cake,
+      addCandles: item.add_candles,
+      addKnife: item.add_knife,
+      addMessageCard: item.add_message_card,
+      cakeText: item.cake_text,
+      giftCardText: item.gift_card_text,
+      orderType: item.order_type,
     }));
 
     return NextResponse.json({

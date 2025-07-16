@@ -11,7 +11,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId } = body;
+    const { productId, variant, orderType } = body;
 
     if (!productId) {
       return NextResponse.json(
@@ -47,7 +47,9 @@ export async function DELETE(request: NextRequest) {
       .from("cart_items")
       .delete()
       .eq("cart_id", cart.id)
-      .eq("product_id", productId.toString());
+      .eq("product_id", productId.toString())
+      .eq("variant", variant || "Regular")
+      .eq("order_type", orderType || "weight");
 
     if (deleteError) {
       return NextResponse.json(

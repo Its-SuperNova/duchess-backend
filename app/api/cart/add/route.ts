@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if item already exists in cart (same product and variant)
     if (!cart) {
       return NextResponse.json(
         { error: "Cart not available" },
@@ -83,12 +82,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if item already exists in cart (same product, variant, and order type)
     const { data: existingItem, error: existingError } = await supabase
       .from("cart_items")
       .select("*")
       .eq("cart_id", cart.id)
       .eq("product_id", id.toString())
       .eq("variant", variant || "Regular")
+      .eq("order_type", orderType || "weight")
       .single();
 
     if (existingError && existingError.code !== "PGRST116") {
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Add new item to cart
       const insertData = {
-        cart_id: cart!.id,
+        cart_id: cart.id,
         product_id: id.toString(),
         quantity,
         variant: variant || "Regular",
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
         order_type: orderType || "weight",
       };
 
-      console.log("Attempting to insert cart item:", insertData);
+      console.log("Adding item to cart:", insertData);
 
       const { data: newItem, error: insertError } = await supabase
         .from("cart_items")
@@ -151,22 +152,11 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         console.error("Insert error:", insertError);
-        console.error("Error details:", {
-          message: insertError.message,
-          details: insertError.details,
-          hint: insertError.hint,
-          code: insertError.code,
-        });
         return NextResponse.json(
           { error: "Failed to add item to cart", details: insertError.message },
           { status: 500 }
         );
       }
-
-      return NextResponse.json({
-        message: "Item added to cart",
-        item: newItem,
-      });
 
       return NextResponse.json({
         message: "Item added to cart",

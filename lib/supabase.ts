@@ -141,25 +141,33 @@ export interface Cart {
   updated_at: string;
 }
 
-export interface CartItemDB {
+export interface CartItem {
   id: string;
   cart_id: string;
+
+  // Product information
   product_id: string;
-  quantity: number;
-  variant: string;
-  price: number;
   product_name: string;
-  product_image: string;
-  category: string;
-  // Customization fields
+  product_image: string | null;
+  category: string | null;
+
+  // Order details
+  quantity: number;
+  price: number;
+  variant: string;
+  order_type: "weight" | "piece";
+
+  // Customization options
   add_text_on_cake: boolean;
   add_candles: boolean;
   add_knife: boolean;
   add_message_card: boolean;
+
+  // Custom text fields
   cake_text: string | null;
   gift_card_text: string | null;
-  // Order type (weight/piece)
-  order_type: "weight" | "piece";
+
+  // Timestamps
   created_at: string;
   updated_at: string;
 }
@@ -198,9 +206,9 @@ export interface Database {
         Update: Partial<Omit<Cart, "id" | "created_at" | "updated_at">>;
       };
       cart_items: {
-        Row: CartItemDB;
-        Insert: Omit<CartItemDB, "id" | "created_at" | "updated_at">;
-        Update: Partial<Omit<CartItemDB, "id" | "created_at" | "updated_at">>;
+        Row: CartItem;
+        Insert: Omit<CartItem, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<CartItem, "id" | "created_at" | "updated_at">>;
       };
     };
   };

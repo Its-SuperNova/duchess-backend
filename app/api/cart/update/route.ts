@@ -11,7 +11,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, quantity } = body;
+    const { productId, quantity, variant, orderType } = body;
 
     if (!productId || quantity === undefined) {
       return NextResponse.json(
@@ -55,7 +55,9 @@ export async function PUT(request: NextRequest) {
         .from("cart_items")
         .delete()
         .eq("cart_id", cart.id)
-        .eq("product_id", productId.toString());
+        .eq("product_id", productId.toString())
+        .eq("variant", variant || "Regular")
+        .eq("order_type", orderType || "weight");
 
       if (deleteError) {
         return NextResponse.json(
@@ -75,6 +77,8 @@ export async function PUT(request: NextRequest) {
         })
         .eq("cart_id", cart.id)
         .eq("product_id", productId.toString())
+        .eq("variant", variant || "Regular")
+        .eq("order_type", orderType || "weight")
         .select()
         .single();
 
