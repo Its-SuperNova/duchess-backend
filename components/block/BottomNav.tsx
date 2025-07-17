@@ -168,6 +168,7 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
       addMessageCard,
       cakeText: addTextOnCake ? cakeText : undefined,
       giftCardText: addMessageCard ? giftCardText : undefined,
+      uniqueId: `${Date.now()}-${Math.random()}`,
     });
     setIsDrawerOpen(false);
   };
@@ -417,13 +418,15 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
               {drawerStep === 2 && (
                 <>
                   <div className="space-y-2 pt-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Add text on cake</span>
-                      <Switch
-                        checked={addTextOnCake}
-                        onCheckedChange={setAddTextOnCake}
-                      />
-                    </div>
+                    {orderType !== "piece" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Add text on cake</span>
+                        <Switch
+                          checked={addTextOnCake}
+                          onCheckedChange={setAddTextOnCake}
+                        />
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Add candles</span>
                       <Switch
@@ -445,7 +448,7 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                         onCheckedChange={setAddMessageCard}
                       />
                     </div>
-                    {addTextOnCake && (
+                    {addTextOnCake && orderType !== "piece" && (
                       <div className="pt-2">
                         <div className="flex items-center justify-between">
                           <Input

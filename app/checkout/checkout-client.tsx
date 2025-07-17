@@ -116,9 +116,13 @@ export default function CheckoutClient() {
                     className="px-3 py-1 text-primary"
                     onClick={() => {
                       if (item.quantity > 1) {
-                        updateQuantity(item.id, item.quantity - 1);
+                        updateQuantity(
+                          item.id,
+                          item.quantity - 1,
+                          item.variant
+                        );
                       } else {
-                        removeFromCart(item.id);
+                        removeFromCart(item.id, item.variant);
                       }
                     }}
                   >
@@ -127,7 +131,9 @@ export default function CheckoutClient() {
                   <span className="px-3 py-1">{item.quantity}</span>
                   <button
                     className="px-3 py-1 text-primary"
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() =>
+                      updateQuantity(item.id, item.quantity + 1, item.variant)
+                    }
                   >
                     +
                   </button>

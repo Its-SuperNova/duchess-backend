@@ -29,6 +29,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useCart } from "@/context/cart-context";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -47,7 +48,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const [note, setNote] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
+  const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
   const subtotal = getSubtotal();
+  const isMobile = useIsMobile();
 
   // Sample coupons data
   const availableCoupons = [
@@ -117,51 +120,52 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               {item.name}
             </h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
-              {item.variant}
+              {item.variant.includes("Piece") ? "Piece" : item.variant}
             </p>
             <p className="font-semibold mt-1 text-gray-900 dark:text-white">
               ₹{item.price.toFixed(2)}
             </p>
-            {/* Customization details */}
-            {(item.addTextOnCake ||
-              item.addCandles ||
-              item.addKnife ||
-              item.addMessageCard) && (
-              <div className="mt-2 space-y-1">
-                <div className="flex flex-wrap gap-1">
-                  {item.addTextOnCake && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                      Text on Cake
-                    </span>
+            {/* Customization details - only show on desktop */}
+            {!isMobile &&
+              (item.addTextOnCake ||
+                item.addCandles ||
+                item.addKnife ||
+                item.addMessageCard) && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex flex-wrap gap-1">
+                    {item.addTextOnCake && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        Text on Cake
+                      </span>
+                    )}
+                    {item.addCandles && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                        Candles
+                      </span>
+                    )}
+                    {item.addKnife && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        Knife
+                      </span>
+                    )}
+                    {item.addMessageCard && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                        Message Card
+                      </span>
+                    )}
+                  </div>
+                  {item.cakeText && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Cake text: "{item.cakeText}"
+                    </p>
                   )}
-                  {item.addCandles && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                      Candles
-                    </span>
-                  )}
-                  {item.addKnife && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      Knife
-                    </span>
-                  )}
-                  {item.addMessageCard && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                      Message Card
-                    </span>
+                  {item.giftCardText && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Gift card: "{item.giftCardText}"
+                    </p>
                   )}
                 </div>
-                {item.cakeText && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Cake text: "{item.cakeText}"
-                  </p>
-                )}
-                {item.giftCardText && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Gift card: "{item.giftCardText}"
-                  </p>
-                )}
-              </div>
-            )}
+              )}
           </div>
 
           {/* Quantity controls */}
@@ -169,7 +173,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             <button
               className="w-8 h-8 flex items-center justify-center rounded-full hover:opacity-80 transition-opacity"
               style={{ backgroundColor: "#f5f5f5", color: "#6b7585" }}
-              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+              onClick={() =>
+                handleUpdateQuantity(item.id, item.quantity - 1, item.variant)
+              }
             >
               <Minus className="h-4 w-4" />
             </button>
@@ -178,7 +184,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             </span>
             <button
               className="w-8 h-8 flex items-center justify-center text-white bg-primary rounded-full hover:bg-primary/90"
-              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+              onClick={() =>
+                handleUpdateQuantity(item.id, item.quantity + 1, item.variant)
+              }
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -222,7 +230,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
         <div className={containerClasses}>
           {cart.map((item) => (
             <div
-              key={item.id}
+              key={item.uniqueId || item.id}
               className="flex items-start justify-between py-3 border-b border-gray-200 dark:border-gray-600 last:border-0"
             >
               <div className="flex">
@@ -244,50 +252,6 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     ₹{item.price.toFixed(2)} × {item.quantity}
                   </p>
-                  {/* Customization details in checkout */}
-                  {(item.addTextOnCake ||
-                    item.addCandles ||
-                    item.addKnife ||
-                    item.addMessageCard) && (
-                    <div className="mt-1">
-                      <div className="flex flex-wrap gap-1">
-                        {item.addTextOnCake && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Text
-                          </span>
-                        )}
-                        {item.addCandles && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                            Candles
-                          </span>
-                        )}
-                        {item.addKnife && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            Knife
-                          </span>
-                        )}
-                        {item.addMessageCard && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                            Card
-                          </span>
-                        )}
-                      </div>
-                      {(item.cakeText || item.giftCardText) && (
-                        <div className="mt-1 space-y-0.5">
-                          {item.cakeText && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Cake: "{item.cakeText}"
-                            </p>
-                          )}
-                          {item.giftCardText && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Card: "{item.giftCardText}"
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
               <p className="font-medium text-sm">
@@ -299,7 +263,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
         {/* Note Section */}
         <div className={containerClasses}>
-          <Drawer modal={false}>
+          <Drawer modal={true} onOpenChange={setIsNoteDrawerOpen}>
             <DrawerTrigger asChild>
               <button className="w-full flex items-center justify-between text-left">
                 <div className="flex items-center">
@@ -541,11 +505,15 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     );
   };
 
-  const handleUpdateQuantity = (id: number, newQuantity: number) => {
+  const handleUpdateQuantity = (
+    id: number,
+    newQuantity: number,
+    variant?: string
+  ) => {
     if (newQuantity < 1) {
-      removeFromCart(id);
+      removeFromCart(id, variant);
     } else {
-      updateQuantity(id, newQuantity);
+      updateQuantity(id, newQuantity, variant);
     }
   };
 
@@ -578,6 +546,13 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
           isOpen ? "translate-x-0" : "translate-x-full"
         } shadow-xl`}
       >
+        {/* Note Drawer Backdrop */}
+        {isNoteDrawerOpen && (
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 z-[80]"
+            onClick={() => setIsNoteDrawerOpen(false)}
+          />
+        )}
         <div className="flex flex-col h-full w-full">
           {/* Header */}
           <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">

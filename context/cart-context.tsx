@@ -12,19 +12,21 @@ interface CartItem {
   quantity: number;
   category: string;
   variant: string;
+  orderType?: "weight" | "piece";
   addTextOnCake?: boolean;
   addCandles?: boolean;
   addKnife?: boolean;
   addMessageCard?: boolean;
   cakeText?: string;
   giftCardText?: string;
+  uniqueId?: string; // Unique identifier for each cart item
 }
 
 interface CartContextType {
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, "quantity"> & { quantity: number }) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  removeFromCart: (id: number, variant?: string) => void;
+  updateQuantity: (id: number, quantity: number, variant?: string) => void;
   getSubtotal: () => number;
   isCartOpen: boolean;
   openCart: () => void;
@@ -182,6 +184,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCartLocal = (item: CartItem) => {
     setCart((prev) => {
+      // If uniqueId is present, always add as a new item
+      if (item.uniqueId) {
+        return [...prev, item];
+      }
+      // Fallback to old logic for legacy items
       const existingItemIndex = prev.findIndex(
         (cartItem) =>
           cartItem.id === item.id && cartItem.variant === item.variant
@@ -200,7 +207,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const removeFromCart = async (id: number) => {
+  const removeFromCart = async (id: number, variant?: string) => {
     if (session?.user?.email) {
       // User is authenticated, remove from database
       try {
@@ -208,7 +215,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/cart/remove", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: id }),
+          body: JSON.stringify({ productId: id, variant }),
         });
 
         if (response.ok) {
@@ -217,22 +224,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } else {
           console.error("Failed to remove item from database cart");
           // Fallback to localStorage behavior
-          setCart((prev) => prev.filter((item) => item.id !== id));
+          setCart((prev) =>
+            prev.filter(
+              (item) =>
+                !(item.id === id && (!variant || item.variant === variant))
+            )
+          );
         }
       } catch (error) {
         console.error("Error removing from database cart:", error);
         // Fallback to localStorage behavior
-        setCart((prev) => prev.filter((item) => item.id !== id));
+        setCart((prev) =>
+          prev.filter(
+            (item) =>
+              !(item.id === id && (!variant || item.variant === variant))
+          )
+        );
       } finally {
         setIsLoading(false);
       }
     } else {
       // User is not authenticated, use localStorage
-      setCart((prev) => prev.filter((item) => item.id !== id));
+      setCart((prev) =>
+        prev.filter(
+          (item) => !(item.id === id && (!variant || item.variant === variant))
+        )
+      );
     }
   };
 
-  const updateQuantity = async (id: number, quantity: number) => {
+  const updateQuantity = async (
+    id: number,
+    quantity: number,
+    variant?: string
+  ) => {
     if (session?.user?.email) {
       // User is authenticated, update in database
       try {
@@ -240,7 +265,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/cart/update", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: id, quantity }),
+          body: JSON.stringify({ productId: id, quantity, variant }),
         });
 
         if (response.ok) {
@@ -250,14 +275,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           console.error("Failed to update quantity in database cart");
           // Fallback to localStorage behavior
           setCart((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+            prev.map((item) =>
+              item.id === id && (!variant || item.variant === variant)
+                ? { ...item, quantity }
+                : item
+            )
           );
         }
       } catch (error) {
         console.error("Error updating quantity in database cart:", error);
         // Fallback to localStorage behavior
         setCart((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+          prev.map((item) =>
+            item.id === id && (!variant || item.variant === variant)
+              ? { ...item, quantity }
+              : item
+          )
         );
       } finally {
         setIsLoading(false);
@@ -265,7 +298,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } else {
       // User is not authenticated, use localStorage
       setCart((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+        prev.map((item) =>
+          item.id === id && (!variant || item.variant === variant)
+            ? { ...item, quantity }
+            : item
+        )
       );
     }
   };
