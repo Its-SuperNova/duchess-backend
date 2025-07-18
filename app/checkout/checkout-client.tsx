@@ -72,6 +72,7 @@ import {
 import { calculateDeliveryFee } from "@/lib/distance";
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
@@ -87,6 +88,7 @@ export default function CheckoutClient() {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
+
   // Load applied coupon code to show update/view UI
   useEffect(() => {
     try {
@@ -102,6 +104,39 @@ export default function CheckoutClient() {
       }
     } catch {
       setSelectedCoupon(null);
+    }
+  }, []);
+
+  // Load note and customization options from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedNote = localStorage.getItem("checkoutNote");
+        if (savedNote) {
+          setNote(savedNote);
+        }
+
+        const savedCustomization = localStorage.getItem(
+          "checkoutCustomization"
+        );
+        if (savedCustomization) {
+          setCustomizationOptions(JSON.parse(savedCustomization));
+        }
+
+        const savedCakeText = localStorage.getItem("checkoutCakeText");
+        if (savedCakeText) {
+          setCakeText(savedCakeText);
+        }
+
+        const savedMessageCardText = localStorage.getItem(
+          "checkoutMessageCardText"
+        );
+        if (savedMessageCardText) {
+          setMessageCardText(savedMessageCardText);
+        }
+      } catch (error) {
+        console.error("Error loading checkout data:", error);
+      }
     }
   }, []);
   const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
@@ -166,11 +201,62 @@ export default function CheckoutClient() {
     setTempContactInfo(contactInfo);
   }, [contactInfo]);
 
+  // Save note to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (note) {
+        localStorage.setItem("checkoutNote", note);
+      } else {
+        localStorage.removeItem("checkoutNote");
+      }
+    }
+  }, [note]);
+
+  // Save customization options to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (Object.values(customizationOptions).some(Boolean)) {
+        localStorage.setItem(
+          "checkoutCustomization",
+          JSON.stringify(customizationOptions)
+        );
+      } else {
+        localStorage.removeItem("checkoutCustomization");
+      }
+    }
+  }, [customizationOptions]);
+
+  // Save cake text to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (cakeText) {
+        localStorage.setItem("checkoutCakeText", cakeText);
+      } else {
+        localStorage.removeItem("checkoutCakeText");
+      }
+    }
+  }, [cakeText]);
+
+  // Save message card text to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (messageCardText) {
+        localStorage.setItem("checkoutMessageCardText", messageCardText);
+      } else {
+        localStorage.removeItem("checkoutMessageCardText");
+      }
+    }
+  }, [messageCardText]);
+
   // Function to clear checkout context
   const clearCheckoutContext = () => {
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("checkoutContext");
+        localStorage.removeItem("checkoutNote");
+        localStorage.removeItem("checkoutCustomization");
+        localStorage.removeItem("checkoutCakeText");
+        localStorage.removeItem("checkoutMessageCardText");
       } catch (error) {
         console.error("Error clearing checkout context:", error);
       }
@@ -715,6 +801,15 @@ export default function CheckoutClient() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F6FB]">
         <div className="text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="w-[400px] h-[300px] md:h-[400px] md:w-[500px]">
+              <Lottie
+                animationData={zeroPurchaseAnimation}
+                loop={true}
+                autoplay={true}
+              />
+            </div>
+          </div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
             Your cart is empty
           </h2>
@@ -764,13 +859,17 @@ export default function CheckoutClient() {
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
               {/* Note Drawer (all screens, full-width) */}
               <div>
-                <Drawer modal={true} onOpenChange={setIsNoteDrawerOpen}>
+                <Drawer
+                  modal={true}
+                  open={isNoteDrawerOpen}
+                  onOpenChange={setIsNoteDrawerOpen}
+                >
                   <DrawerTrigger asChild>
                     <button className="w-full flex items-center justify-between text-left">
                       <div className="flex items-center">
                         <DocumentAdd className="h-5 w-5 mr-3 text-black" />
                         <span className="font-medium text-gray-700 dark:text-gray-300">
-                          {note ? note : "Add a note"}
+                          {note ? "Note added" : "Add a note"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -809,9 +908,19 @@ export default function CheckoutClient() {
                       <Textarea
                         placeholder="E.g., Special cake message, delivery instructions, dietary preferences, etc."
                         value={note}
-                        onChange={(e) => setNote(e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value.length <= 100) {
+                            setNote(e.target.value);
+                          }
+                        }}
+                        maxLength={100}
                         className="min-h-[150px] rounded-[18px] placeholder:text-[#C0C0C0] placeholder:font-normal"
                       />
+                      <div className="flex justify-end mt-2">
+                        <span className="text-sm text-gray-500">
+                          {note.length}/100 characters
+                        </span>
+                      </div>
                     </div>
                     {/* Desktop action row under textarea */}
                     <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">

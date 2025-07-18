@@ -19,6 +19,7 @@ const Lottie = dynamic(() => import("lottie-react"), {
 });
 import { useCart } from "@/context/cart-context";
 import { useRouter } from "next/navigation";
+import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
 // Dynamically import Icon to reduce initial bundle size
 const Icon = dynamic(
   () => import("@iconify/react").then((m) => ({ default: m.Icon })),
@@ -34,41 +35,20 @@ export default function CartPage() {
   const { cart, updateQuantity, removeFromCart } = useCart();
   const router = useRouter();
 
-  // Animation data - using a simple shopping cart animation
-  const [animationData, setAnimationData] = useState(null);
 
-  // Load animation data
-  useEffect(() => {
-    // Using a simple empty cart animation
-    const loadAnimation = async () => {
-      try {
-        const response = await fetch(
-          "https://d1jj76g3lut4fe.cloudfront.net/saved_colors/98652/0M71xqBxut5tSYdp.json"
-        );
-        const data = await response.json();
-        setAnimationData(data);
-      } catch (error) {
-        console.error("Failed to load animation:", error);
-      }
-    };
-
-    loadAnimation();
-  }, []);
 
   // Render cart items component
   const renderCartItems = () => {
     if (cart.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center text-center px-4 gap-6">
-          {animationData ? (
-            <div className="w-[400px] h-[300px] mg:h-[400px] mb-4 lg:mb-6">
-              <Lottie animationData={animationData} loop={true} />
-            </div>
-          ) : (
-            <div className="w-32 h-32 lg:w-40 lg:h-40 mb-4 lg:mb-6 flex items-center justify-center">
-              <ShoppingCart className="w-12 h-12 lg:w-16 lg:h-16 text-gray-400" />
-            </div>
-          )}
+          <div className="w-[400px] h-[300px] md:h-[400px] md:w-[500px] mb-4 lg:mb-6">
+            <Lottie 
+              animationData={zeroPurchaseAnimation} 
+              loop={true} 
+              autoplay={true}
+            />
+          </div>
           <div className="flex flex-col items-center justify-center">
             <h3 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Your cart is empty

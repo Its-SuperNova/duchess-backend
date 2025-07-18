@@ -256,8 +256,7 @@ export async function POST(request: NextRequest) {
 
     // Normalize coupon info
     const sanitizedCouponCode = couponCode ? String(couponCode).trim() : null;
-    const finalIsCoupon =
-      isCoupon ?? !!sanitizedCouponCode ?? !!couponId ?? false;
+    const finalIsCoupon = isCoupon ?? (!!sanitizedCouponCode || !!couponId);
 
     // Enhanced order data structure
     const orderData = {

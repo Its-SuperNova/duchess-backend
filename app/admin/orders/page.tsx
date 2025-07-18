@@ -33,7 +33,7 @@ import {
   ShoppingBag,
   Loader2,
 } from "lucide-react";
-import { MaximizeSquare3 } from "@solar-icons/react";
+
 // Order type definition
 interface Order {
   id: string;

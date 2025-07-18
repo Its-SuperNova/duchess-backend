@@ -18,6 +18,7 @@ const Lottie = dynamic(() => import("lottie-react"), {
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,9 +46,6 @@ export default function FavoritesClient() {
   const { addToCart } = useCart();
   const isMobile = useIsMobile();
 
-  // Animation data - using the same empty cart animation
-  const [animationData, setAnimationData] = useState(null);
-
   // Track previous favorites count for skeleton loader
   const [previousFavoritesCount, setPreviousFavoritesCount] = useState(0);
 
@@ -57,23 +55,6 @@ export default function FavoritesClient() {
     id: number;
     name: string;
   } | null>(null);
-
-  // Load animation data
-  useEffect(() => {
-    const loadAnimation = async () => {
-      try {
-        const response = await fetch(
-          "https://d1jj76g3lut4fe.cloudfront.net/saved_colors/98652/0M71xqBxut5tSYdp.json"
-        );
-        const data = await response.json();
-        setAnimationData(data);
-      } catch (error) {
-        console.error("Failed to load animation:", error);
-      }
-    };
-
-    loadAnimation();
-  }, []);
 
   // Update previous favorites count when favorites change (but not during loading)
   useEffect(() => {
@@ -128,173 +109,175 @@ export default function FavoritesClient() {
   return (
     <div className="bg-[#f5f5f7] min-h-screen pb-32">
       {/* Page Header */}
-      <div className="px-4 py-4  bg-[#f5f5f7]">
-        <div className="flex items-center justify-between md:justify-start md:gap-4">
-          <Link href="/">
-            <div className="bg-white p-3 md:p-2 rounded-full md:rounded-[12px] shadow-sm hover:bg-gray-50 transition-colors">
-              <IoIosArrowBack className="h-5 w-5 text-gray-700" />
-            </div>
-          </Link>
-          <h1 className="text-xl font-semibold absolute left-1/2 transform -translate-x-1/2 md:relative md:left-auto md:transform-none">
-            Favorites
-          </h1>
-          <div className="w-9 md:hidden"></div>{" "}
-          {/* Spacer to balance the layout on mobile only */}
+      <div className="px-4 py-4 bg-[#f5f5f7]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="flex items-center justify-between md:justify-start md:gap-4">
+            <Link href="/">
+              <div className="bg-white p-3 md:p-2 rounded-full md:rounded-[12px] shadow-sm hover:bg-gray-50 transition-colors">
+                <IoIosArrowBack className="h-5 w-5 text-gray-700" />
+              </div>
+            </Link>
+            <h1 className="text-xl font-semibold absolute left-1/2 transform -translate-x-1/2 md:relative md:left-auto md:transform-none">
+              Favorites
+            </h1>
+            <div className="w-9 md:hidden"></div>{" "}
+            {/* Spacer to balance the layout on mobile only */}
+          </div>
         </div>
       </div>
 
       {/* Favorites List */}
       <div className="px-4 py-4">
-        {/* Error message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-        )}
+        <div className="max-w-[1200px] mx-auto">
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
 
-        {/* Loading state */}
-        {isLoading ? (
-          <div className="w-full md:mx-auto">
-            <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6 min-[1150px]:grid-cols-3">
-              {/* Skeleton cards - dynamic count based on previous favorites */}
-              {Array.from({
-                length: previousFavoritesCount > 0 ? previousFavoritesCount : 3,
-              }).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex h-[124px] items-start gap-4 py-3 px-3 bg-white rounded-[20px] w-full animate-pulse"
-                >
-                  {/* Skeleton image */}
-                  <div className="h-[100px] w-24 rounded-2xl bg-gray-200 flex-shrink-0"></div>
+          {/* Loading state */}
+          {isLoading ? (
+            <div className="w-full md:mx-auto">
+              <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6 min-[1150px]:grid-cols-3">
+                {/* Skeleton cards - dynamic count based on previous favorites */}
+                {Array.from({
+                  length:
+                    previousFavoritesCount > 0 ? previousFavoritesCount : 3,
+                }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex h-[124px] items-start gap-4 py-3 px-3 bg-white rounded-[20px] w-full animate-pulse"
+                  >
+                    {/* Skeleton image */}
+                    <div className="h-[100px] w-24 rounded-2xl bg-gray-200 flex-shrink-0"></div>
 
-                  <div className="flex-1 flex flex-col justify-between h-full">
-                    {/* Skeleton product details */}
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      {/* Skeleton price */}
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 bg-gray-200 rounded w-12"></div>
-                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    <div className="flex-1 flex flex-col justify-between h-full">
+                      {/* Skeleton product details */}
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                       </div>
 
-                      {/* Skeleton action buttons */}
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                      <div className="flex items-center justify-between">
+                        {/* Skeleton price */}
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 bg-gray-200 rounded w-12"></div>
+                          <div className="h-4 bg-gray-200 rounded w-16"></div>
+                        </div>
+
+                        {/* Skeleton action buttons */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          ) : favorites.length > 0 ? (
+            <div className="w-full  md:mx-auto">
+              <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6 min-[1150px]:grid-cols-3">
+                {favorites.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex h-[124px] items-start gap-4 py-3 px-3 bg-white rounded-[20px] w-full"
+                  >
+                    {/* Product image */}
+                    <div className="relative h-[100px] w-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
+                      <Image
+                        src={item.image || "/images/red-velvet.png"}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = "/images/red-velvet.png";
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-between h-full">
+                      {/* Product details */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-base leading-tight">
+                          {item.name}
+                        </h3>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-gray-500">
+                            {item.category || "Pastry"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        {/* Price */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-red-500 line-through">
+                            ₹{(item.price * 1.2).toFixed(0)}
+                          </span>
+                          <span className="font-bold text-gray-900">
+                            ₹{item.price.toFixed(0)}
+                          </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleAddToCart(item.id)}
+                            className="w-8 h-8 flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                            aria-label="Add to cart"
+                          >
+                            <ShoppingBag className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleRemoveFavorite(item.id, item.name)
+                            }
+                            disabled={deletingItems.has(item.id)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors ${
+                              deletingItems.has(item.id)
+                                ? "border-gray-300 bg-gray-100 cursor-not-allowed"
+                                : "border-red-500 bg-white hover:bg-red-50"
+                            }`}
+                            aria-label="Remove from favorites"
+                          >
+                            {deletingItems.has(item.id) ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 px-6">
+              <div className="mb-4 flex justify-center">
+                <div className="w-[400px] h-[300px] md:h-[400px] md:w-[500px]">
+                  <Lottie
+                    animationData={zeroPurchaseAnimation}
+                    loop={true}
+                    autoplay={true}
+                  />
                 </div>
-              ))}
+              </div>
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                Your favorites list is empty
+              </h2>
+              <p className="text-gray-500 text-center mb-6">
+                Save your favorite items to find them easily later
+              </p>
             </div>
-          </div>
-        ) : favorites.length > 0 ? (
-          <div className="w-full  md:mx-auto">
-            <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-6 min-[1150px]:grid-cols-3">
-              {favorites.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex h-[124px] items-start gap-4 py-3 px-3 bg-white rounded-[20px] w-full"
-                >
-                  {/* Product image */}
-                  <div className="relative h-[100px] w-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
-                    <Image
-                      src={item.image || "/images/red-velvet.png"}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.onerror = null;
-                        target.src = "/images/red-velvet.png";
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex-1 flex flex-col justify-between h-full">
-                    {/* Product details */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-base leading-tight">
-                        {item.name}
-                      </h3>
-                      <div className="flex items-center mt-1">
-                        <span className="text-sm text-gray-500">
-                          {item.category || "Pastry"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      {/* Price */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-red-500 line-through">
-                          ₹{(item.price * 1.2).toFixed(0)}
-                        </span>
-                        <span className="font-bold text-gray-900">
-                          ₹{item.price.toFixed(0)}
-                        </span>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleAddToCart(item.id)}
-                          className="w-8 h-8 flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
-                          aria-label="Add to cart"
-                        >
-                          <ShoppingBag className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleRemoveFavorite(item.id, item.name)
-                          }
-                          disabled={deletingItems.has(item.id)}
-                          className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors ${
-                            deletingItems.has(item.id)
-                              ? "border-gray-300 bg-gray-100 cursor-not-allowed"
-                              : "border-red-500 bg-white hover:bg-red-50"
-                          }`}
-                          aria-label="Remove from favorites"
-                        >
-                          {deletingItems.has(item.id) ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                          ) : (
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-6 px-6">
-            <div className="mb-4 flex justify-center">
-              {animationData && (
-                <Lottie
-                  animationData={animationData}
-                  loop={true}
-                  style={{
-                    width: isMobile ? "320px" : "320px",
-                    height: "auto",
-                  }}
-                />
-              )}
-            </div>
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">
-              Your favorites list is empty
-            </h2>
-            <p className="text-gray-500 text-center mb-6">
-              Save your favorite items to find them easily later
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation - Desktop: Dialog, Mobile: Drawer */}
