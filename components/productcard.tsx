@@ -4,7 +4,8 @@ import { useState, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GrSquare } from "react-icons/gr";
-import { Heart, Star } from "@solar-icons/react";
+import { GoHeartFill } from "react-icons/go";
+import { Star } from "@solar-icons/react";
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
@@ -137,14 +138,16 @@ const ProductCard = memo(function ProductCard({
         {/* Favorite Button */}
         <button
           onClick={handleFavoriteToggle}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-sm"
+          className={`absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors duration-200 ${
+            isClient && isLiked ? "bg-red-500" : "bg-white"
+          }`}
           aria-label={isLiked ? "Remove from favorites" : "Add to favorites"}
         >
-          {isClient && isLiked ? (
-            <Heart className="h-4 w-4 text-red-500" />
-          ) : (
-            <Heart className="h-4 w-4 text-gray-600" />
-          )}
+          <GoHeartFill
+            className={`h-5 w-5 ${
+              isClient && isLiked ? "text-white" : "text-[#ced2da]"
+            }`}
+          />
         </button>
       </div>
 
