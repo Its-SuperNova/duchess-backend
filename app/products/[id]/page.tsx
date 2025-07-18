@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { FaStar, FaHeart, FaRegHeart, FaShare } from "react-icons/fa";
+import Lottie from "lottie-react";
+import successAnimation from "@/public/Lottie/Success.json";
 
 import { useParams, useRouter } from "next/navigation";
 import type { Product } from "@/context/favorites-context";
@@ -24,6 +26,7 @@ import {
   Loader2,
   Minus,
   Plus,
+  Check,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -173,6 +176,8 @@ export default function ProductPage() {
 
   const [isLiked, setIsLiked] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAddedToCart, setIsAddedToCart] = useState(false);
 
   const { addToCart, cart } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
@@ -344,32 +349,55 @@ export default function ProductPage() {
       return;
     }
 
-    const numericId = parseInt(product.id.replace(/\D/g, "")) || 0;
-    let variant = "";
+    setIsAddingToCart(true);
 
-    if (orderType === "weight" && product.weight_options?.length > 0) {
-      const option = product.weight_options[selectedWeightOption];
-      variant = `${option.weight} Kg`;
-    } else if (orderType === "piece" && product.piece_options?.length > 0) {
-      const option = product.piece_options[selectedPieceOption];
-      variant = `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`;
+    try {
+      const numericId = parseInt(product.id.replace(/\D/g, "")) || 0;
+      let variant = "";
+
+      if (orderType === "weight" && product.weight_options?.length > 0) {
+        const option = product.weight_options[selectedWeightOption];
+        variant = `${option.weight} Kg`;
+      } else if (orderType === "piece" && product.piece_options?.length > 0) {
+        const option = product.piece_options[selectedPieceOption];
+        variant = `${pieceQuantity} Piece${pieceQuantity > 1 ? "s" : ""}`;
+      }
+
+      const cartItem = {
+        id: numericId,
+        name: product.name,
+        price:
+          orderType === "piece"
+            ? parseInt(
+                product.piece_options?.[selectedPieceOption]?.price || "0"
+              )
+            : price,
+        image: images[0] || "/placeholder.svg",
+        quantity: orderType === "piece" ? pieceQuantity : 1,
+        category: product.categories?.name || "Product",
+        variant: variant,
+        orderType: orderType,
+      };
+
+      addToCart(cartItem);
+
+      // Show success feedback
+      setIsAddedToCart(true);
+
+      // Revert back to default state after 2 seconds
+      setTimeout(() => {
+        setIsAddedToCart(false);
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsAddingToCart(false);
     }
-
-    const cartItem = {
-      id: numericId,
-      name: product.name,
-      price:
-        orderType === "piece"
-          ? parseInt(product.piece_options?.[selectedPieceOption]?.price || "0")
-          : price,
-      image: images[0] || "/placeholder.svg",
-      quantity: orderType === "piece" ? pieceQuantity : 1,
-      category: product.categories?.name || "Product",
-      variant: variant,
-      orderType: orderType,
-    };
-
-    addToCart(cartItem);
   };
 
   // Get all images for gallery
@@ -618,9 +646,6 @@ export default function ProductPage() {
                     <h2 className="text-2xl font-bold text-black md:block hidden">
                       ₹{currentPrice}
                     </h2>
-                    <span className="text-lg text-red-600 line-through">
-                      ₹{Math.round(currentPrice * 1.2)}
-                    </span>
                   </div>
 
                   {/* Stock Status in Card */}
@@ -741,15 +766,38 @@ export default function ProductPage() {
                 {/* Add to Cart button */}
                 <button
                   onClick={handleAddToCart}
-                  disabled={currentStock === 0}
+                  disabled={currentStock === 0 || isAddingToCart}
                   className={`text-white rounded-xl px-6 py-4 items-center justify-center font-medium text-base transition-all hidden md:flex ${
                     currentStock === 0
                       ? "bg-gray-400 cursor-not-allowed"
+                      : isAddedToCart
+                      ? "bg-green-600 hover:bg-green-700"
                       : "bg-[#560000] hover:bg-[#560000]/90"
                   }`}
                 >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  {currentStock === 0 ? "Out of Stock" : "Add to Cart"}
+                  {isAddingToCart ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Adding...
+                    </>
+                  ) : isAddedToCart ? (
+                    <>
+                      <div className="w-5 h-5 mr-2">
+                        <Lottie
+                          animationData={successAnimation}
+                          loop={false}
+                          autoplay={true}
+                          style={{ width: "100%", height: "100%" }}
+                        />
+                      </div>
+                      Added to Cart!
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      {currentStock === 0 ? "Out of Stock" : "Add to Cart"}
+                    </>
+                  )}
                 </button>
               </div>
 

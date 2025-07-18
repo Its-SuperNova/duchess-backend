@@ -5,6 +5,8 @@ import { ShoppingCart, Minus, Plus } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSelection } from "@/context/product-selection-context";
+import Lottie from "lottie-react";
+import successAnimation from "@/public/Lottie/Success.json";
 import {
   Drawer,
   DrawerContent,
@@ -88,6 +90,7 @@ export default function ProductAddToCart({
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAddedToCart, setIsAddedToCart] = useState(false);
 
   useEffect(() => {
     // Compute price and originalPrice based on selected option and orderType
@@ -157,6 +160,14 @@ export default function ProductAddToCart({
       });
 
       setIsDrawerOpen(false);
+
+      // Show success feedback
+      setIsAddedToCart(true);
+
+      // Revert back to default state after 2 seconds
+      setTimeout(() => {
+        setIsAddedToCart(false);
+      }, 2000);
     } catch (error) {
       toast({
         title: "Error",
@@ -187,10 +198,29 @@ export default function ProductAddToCart({
       <div className="fixed bottom-6 left-0 right-0 flex justify-center z-[61] md:hidden px-4 pb-3">
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>
-            <div className="w-[100%] max-w-md rounded-2xl bg-[#7A0000] flex items-center justify-between px-6 py-4 shadow-lg cursor-pointer">
+            <div
+              className={`w-[100%] max-w-md rounded-2xl flex items-center justify-between px-6 py-4 shadow-lg cursor-pointer transition-all duration-300 ${
+                isAddedToCart
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-[#7A0000]"
+              }`}
+            >
               <div className="flex items-center gap-3 text-white">
-                <ShoppingCart className="h-6 w-6" />
-                <span className="font-medium text-lg">Add To Cart</span>
+                {isAddedToCart ? (
+                  <div className="w-6 h-6">
+                    <Lottie
+                      animationData={successAnimation}
+                      loop={false}
+                      autoplay={true}
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  </div>
+                ) : (
+                  <ShoppingCart className="h-6 w-6" />
+                )}
+                <span className="font-medium text-lg">
+                  {isAddedToCart ? "Added to Cart!" : "Add To Cart"}
+                </span>
               </div>
               <div className="h-8 w-px bg-white ml-[20px]" />
               <div className="flex items-center text-white font-bold text-xl">
