@@ -12,10 +12,15 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { IoIosArrowBack } from "react-icons/io";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { createAddress, getDisplayDistance } from "@/lib/address-utils";
+import {
+  updateAddress,
+  getUserAddresses,
+  getDisplayDistance,
+} from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
+import type { Address } from "@/lib/supabase";
 import { calculateDeliveryFromAddress } from "@/lib/distance";
 import {
   autofillAddressFromPincode,
@@ -25,8 +30,8 @@ import RouteInfoDisplay from "@/components/RouteInfoDisplay";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Skeleton Loader Component for Add New Address
-function AddAddressSkeleton() {
+// Skeleton Loader Component
+function AddressEditSkeleton() {
   return (
     <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -34,7 +39,7 @@ function AddAddressSkeleton() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Skeleton className="h-11 w-11 rounded-full" />
-            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-6 w-32" />
           </div>
           <div className="hidden lg:flex items-center gap-4">
             <Skeleton className="h-8 w-32 rounded-full" />
@@ -107,7 +112,7 @@ function AddAddressSkeleton() {
               </div>
 
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-4 w-24 mb-2" />
                 <Skeleton className="h-3 w-full mb-1" />
                 <Skeleton className="h-3 w-3/4" />
               </div>
@@ -127,25 +132,94 @@ function AddAddressSkeleton() {
   );
 }
 
-export default function NewAddressPage() {
+export default function EditAddressPage() {
   const router = useRouter();
+  const params = useParams();
   const { data: session } = useSession();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [validationLoading, setValidationLoading] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [areaAutoFilled, setAreaAutoFilled] = useState(false);
-  const [formData, setFormData] = useState({
-    addressName: "Home",
+  const [address, setAddress] = useState<Address | null>(null);
+  const [originalFormData, setOriginalFormData] = useState({
+    addressName: "",
     fullAddress: "",
     area: "",
     zipCode: "",
     additionalDetails: "",
     alternatePhone: "",
   });
+  const [formData, setFormData] = useState({
+    addressName: "",
+    fullAddress: "",
+    area: "",
+    zipCode: "",
+    additionalDetails: "",
+    alternatePhone: "",
+  });
+
+  const addressId = params.id as string;
+
+  // Check if form has been modified
+  const hasChanges =
+    JSON.stringify(formData) !== JSON.stringify(originalFormData);
+
+  // Load address data
+  useEffect(() => {
+    const loadAddress = async () => {
+      if (!session?.user?.email || !addressId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get the actual user ID from the database using email
+        const user = await getUserByEmail(session.user.email);
+        if (!user) {
+          setError("User not found. Please try logging in again.");
+          setLoading(false);
+          return;
+        }
+
+        const userAddresses = await getUserAddresses(user.id);
+        const targetAddress = userAddresses.find(
+          (addr) => addr.id === addressId
+        );
+
+        if (!targetAddress) {
+          setError("Address not found.");
+          setLoading(false);
+          return;
+        }
+
+        setAddress(targetAddress);
+        const initialFormData = {
+          addressName: targetAddress.address_name,
+          fullAddress: targetAddress.full_address,
+          area: (targetAddress as any).area || targetAddress.city, // Use area field if available, fallback to city
+          zipCode: targetAddress.zip_code,
+          additionalDetails: targetAddress.additional_details || "",
+          alternatePhone: targetAddress.alternate_phone,
+        };
+        setFormData(initialFormData);
+        setOriginalFormData(initialFormData);
+      } catch (err) {
+        console.error("Error loading address:", err);
+        setError("Failed to load address. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAddress();
+  }, [session, addressId]);
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -238,8 +312,8 @@ export default function NewAddressPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!session?.user?.email) {
-      setError("You must be logged in to add an address.");
+    if (!session?.user?.email || !address) {
+      setError("You must be logged in to edit an address.");
       return;
     }
 
@@ -263,23 +337,15 @@ export default function NewAddressPage() {
     }
 
     try {
-      setLoading(true);
+      setSaving(true);
       setError(null);
 
-      // Get the actual user ID from the database using email
-      const user = await getUserByEmail(session.user.email);
-      if (!user) {
-        setError("User not found. Please try logging in again.");
-        return;
-      }
-
-      const result = await createAddress(user.id, {
+      const result = await updateAddress(addressId, {
         address_name: formData.addressName,
         full_address: formData.fullAddress,
         city: "Coimbatore", // Always Coimbatore for our delivery area
         state: "Tamil Nadu", // Always Tamil Nadu for Coimbatore
         zip_code: formData.zipCode,
-        is_default: false,
         alternate_phone: formData.alternatePhone,
         additional_details: formData.additionalDetails,
       });
@@ -287,7 +353,7 @@ export default function NewAddressPage() {
       if (result.address) {
         // Show success toast with distance and time information
         toast({
-          title: "Address Saved Successfully! 🎉",
+          title: "Address Updated Successfully! 🎉",
           description: `Distance from shop: ${
             result.address.distance
               ? `${getDisplayDistance(result.address.distance)?.toFixed(1)} km`
@@ -301,82 +367,55 @@ export default function NewAddressPage() {
           className: "bg-green-50 border-green-200 text-green-800",
         });
 
-        router.push("/profile/addresses");
+        router.push("/addresses");
       } else {
-        setError(result.error || "Failed to create address. Please try again.");
+        setError(result.error || "Failed to update address. Please try again.");
       }
     } catch (err) {
-      console.error("Error creating address:", err);
-      setError("Failed to create address. Please try again.");
+      console.error("Error updating address:", err);
+      setError("Failed to update address. Please try again.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  // Validation status component
-  const ValidationStatus = () => {
-    if (validationLoading || pincodeLoading) {
-      return (
-        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-          <span className="text-blue-700 dark:text-blue-300 text-sm">
-            {pincodeLoading ? "Checking pincode..." : "Validating address..."}
-          </span>
-        </div>
-      );
-    }
+  if (loading) {
+    return <AddressEditSkeleton />;
+  }
 
-    if (!validationResult) return null;
-
-    if (!validationResult.isCoimbatoreArea || validationResult.error) {
-      return (
-        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <XCircle className="h-4 w-4 text-red-600" />
-          <span className="text-red-700 dark:text-red-300 text-sm">
-            {validationResult.error || "Address is outside our delivery area"}
-          </span>
-        </div>
-      );
-    }
-
-    if (validationResult.isCoimbatoreArea) {
-      return (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <span className="text-green-700 dark:text-green-300 text-sm">
-              ✓ Address is within our Coimbatore delivery area
-            </span>
+  if (error && !address) {
+    return (
+      <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Link href="/addresses">
+                <div className="px-4 py-2 bg-[#7a0000] text-white rounded-xl">
+                  Back to Addresses
+                </div>
+              </Link>
+            </div>
           </div>
-
-          <RouteInfoDisplay
-            distance={validationResult.distance}
-            duration={validationResult.duration}
-            area={formData.area}
-            pincode={formData.zipCode}
-            showMapLink={true}
-          />
         </div>
-      );
-    }
-
-    return null;
-  };
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4  pb-24 lg:pb-8">
+    <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/profile/addresses">
+            <Link href="/addresses">
               <div className="bg-white dark:bg-[#202028] p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>
             </Link>
             <div>
               <h1 className="text-xl font-semibold text-[#000000] dark:text-white">
-                Add New Address
+                Edit Address
               </h1>
             </div>
           </div>
@@ -408,7 +447,7 @@ export default function NewAddressPage() {
             <button
               onClick={handleSubmit}
               disabled={
-                loading ||
+                saving ||
                 !formData.addressName ||
                 !formData.fullAddress ||
                 !formData.area ||
@@ -418,13 +457,13 @@ export default function NewAddressPage() {
               }
               className="px-6 py-3 bg-[#7a0000] dark:bg-[#7a0000] text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-[#6a0000] transition-colors"
             >
-              {loading ? (
+              {saving ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Saving...</span>
+                  <span>Updating...</span>
                 </>
               ) : (
-                "Save Address"
+                "Update Address"
               )}
             </button>
           </div>
@@ -653,11 +692,12 @@ export default function NewAddressPage() {
 
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                 <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  💡 Pro Tip
+                  ✏️ Edit Mode
                 </h4>
                 <p className="text-xs text-blue-700 dark:text-blue-200">
-                  Enter your ZIP code first to automatically fill the area.
-                  Always verify the details manually for accuracy.
+                  Your existing address details are pre-filled. You can modify
+                  any field and the delivery calculations will be updated
+                  automatically.
                 </p>
               </div>
             </div>
@@ -692,7 +732,7 @@ export default function NewAddressPage() {
           <button
             onClick={handleSubmit}
             disabled={
-              loading ||
+              saving ||
               !formData.addressName ||
               !formData.fullAddress ||
               !formData.area ||
@@ -702,13 +742,13 @@ export default function NewAddressPage() {
             }
             className="w-full py-4 bg-[#7a0000] dark:bg-[#7a0000] text-white rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-[#6a0000] transition-colors"
           >
-            {loading ? (
+            {saving ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Saving...</span>
+                <span>Updating...</span>
               </>
             ) : (
-              "Save Address"
+              "Update Address"
             )}
           </button>
         </div>
