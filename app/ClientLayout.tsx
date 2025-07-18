@@ -17,6 +17,7 @@ import SWRProvider from "@/components/providers/swr-provider";
 import SplashScreen from "@/components/splashscreen";
 import OnboardingPage from "@/app/onboarding/page";
 import UserHeader from "@/components/user-header";
+import FixedOrderStatusBar from "@/components/fixed-order-status-bar";
 
 // Inner component that can use cart and layout context
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
@@ -120,8 +121,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           {showHeader && <UserHeader />}
 
-          {/* Main Content */}
-          <main className="flex-1">
+          {/* Main Content - Add bottom padding for fixed order status bar */}
+          <main className="flex-1 pb-24 bg-[#F5F6FB]">
             {isHomePage ? (
               <div className="mx-auto w-full max-w-[1200px]">{children}</div>
             ) : (
@@ -163,6 +164,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           <Toaster />
           <SonnerToaster />
+
+          {/* Fixed Order Status Bar - Only show on home page */}
+          {isHomePage && <FixedOrderStatusBar />}
         </>
       )}
     </>

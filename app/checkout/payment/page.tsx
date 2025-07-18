@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { IoIosArrowBack } from "react-icons/io";
 import { useMemo, useState } from "react";
 import { useCart } from "@/context/cart-context";
+import OrderSuccessNotification from "@/components/order-success-notification";
 
 function PaymentPageContent() {
   const router = useRouter();
@@ -14,6 +15,11 @@ function PaymentPageContent() {
   const { clearCart } = useCart() || { clearCart: () => {} };
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [orderDetails, setOrderDetails] = useState<{
+    orderId: string;
+    orderNumber: string;
+  } | null>(null);
 
   const amount = useMemo(() => {
     const parsed = parseFloat(amountParam || "0");
@@ -33,7 +39,29 @@ function PaymentPageContent() {
           : null;
       const checkoutCtx = checkoutCtxRaw ? JSON.parse(checkoutCtxRaw) : {};
 
-      console.log("Sending order creation request with data:", {
+      // Pull additional data from localStorage
+      const customizationData = localStorage.getItem("customizationOptions");
+      const deliveryData = localStorage.getItem("deliveryDetails");
+      const addressData = localStorage.getItem("selectedAddress");
+      const distanceData = localStorage.getItem("distanceCalculation");
+
+      // Parse additional data
+      const customizationOptions = customizationData
+        ? JSON.parse(customizationData)
+        : {};
+      const deliveryDetails = deliveryData ? JSON.parse(deliveryData) : {};
+      const selectedAddress = addressData ? JSON.parse(addressData) : {};
+      const distanceCalculation = distanceData ? JSON.parse(distanceData) : {};
+
+      // Calculate taxes (CGST 9% + SGST 9% = 18% total)
+      const subtotal = checkoutCtx.subtotal || 0;
+      const discount = checkoutCtx.discount || 0;
+      const taxableAmount = subtotal - discount;
+      const cgstAmount = taxableAmount * 0.09;
+      const sgstAmount = taxableAmount * 0.09;
+
+      // Prepare comprehensive order data
+      const comprehensiveOrderData = {
         subtotalAmount: checkoutCtx.subtotal,
         discountAmount: checkoutCtx.discount,
         deliveryFee: checkoutCtx.deliveryFee,
@@ -42,20 +70,67 @@ function PaymentPageContent() {
         addressText: checkoutCtx.addressText,
         couponCode: checkoutCtx.couponCode,
         contactInfo: checkoutCtx.contactInfo,
-      });
+        // Enhanced customization options
+        customizationOptions: {
+          addTextOnCake: customizationOptions.addTextOnCake || false,
+          addCandles: customizationOptions.addCandles || false,
+          addKnife: customizationOptions.addKnife || false,
+          addMessageCard: customizationOptions.addMessageCard || false,
+          cakeText: customizationOptions.cakeText || "",
+          messageCardText: customizationOptions.messageCardText || "",
+        },
+        // Delivery timing and scheduling
+        deliveryTiming: deliveryDetails.deliveryOption || "same-day",
+        scheduledDelivery: deliveryDetails.scheduledDate
+          ? {
+              date: deliveryDetails.scheduledDate,
+              timeSlot: deliveryDetails.timeSlot || "morning",
+            }
+          : null,
+        estimatedDeliveryTime: deliveryDetails.estimatedTime || null,
+        isSameDayDelivery: deliveryDetails.deliveryOption === "same-day",
+        // Distance and location data
+        distance: distanceCalculation.distance || null,
+        duration: distanceCalculation.duration || null,
+        deliveryZone: distanceCalculation.zone || null,
+        coordinates: selectedAddress.coordinates || null,
+        // Enhanced delivery address
+        deliveryAddress: {
+          address: checkoutCtx.addressText || selectedAddress.full_address,
+          type: selectedAddress.type || "home",
+          contact: checkoutCtx.contactInfo
+            ? {
+                name: checkoutCtx.contactInfo.name,
+                phone: checkoutCtx.contactInfo.phone,
+                alternatePhone: checkoutCtx.contactInfo.alternatePhone || null,
+              }
+            : null,
+          coordinates: selectedAddress.coordinates || null,
+          distance: distanceCalculation.distance || null,
+          duration: distanceCalculation.duration || null,
+          delivery_zone: distanceCalculation.zone || null,
+          city: selectedAddress.city || null,
+          state: selectedAddress.state || null,
+          pincode: selectedAddress.zip_code || null,
+        },
+        // Tax information
+        cgstAmount: cgstAmount,
+        sgstAmount: sgstAmount,
+        // Payment and order details
+        paymentMethod: "online",
+        specialInstructions: checkoutCtx.note || "",
+        restaurantNotes: checkoutCtx.restaurantNotes || "",
+      };
+
+      console.log(
+        "Sending comprehensive order creation request:",
+        comprehensiveOrderData
+      );
 
       const response = await fetch("/api/orders/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subtotalAmount: checkoutCtx.subtotal,
-          discountAmount: checkoutCtx.discount,
-          deliveryFee: checkoutCtx.deliveryFee,
-          totalAmount: amount,
-          note: checkoutCtx.note,
-          addressText: checkoutCtx.addressText,
-          couponCode: checkoutCtx.couponCode,
-        }),
+        body: JSON.stringify(comprehensiveOrderData),
       });
 
       if (!response.ok) {
@@ -69,17 +144,32 @@ function PaymentPageContent() {
         return;
       }
 
-      const { orderId } = await response.json();
+      const { orderId, orderNumber } = await response.json();
       console.log("Order created successfully:", orderId);
 
-      // Optionally clear local checkout context
+      // Store order details for notification
+      setOrderDetails({
+        orderId,
+        orderNumber: orderNumber || `ORD-${Date.now()}`,
+      });
+
+      // Show success notification
+      setShowSuccessNotification(true);
+
+      // Clear all local storage data
       localStorage.removeItem("checkoutContext");
+      localStorage.removeItem("customizationOptions");
+      localStorage.removeItem("deliveryDetails");
+      localStorage.removeItem("selectedAddress");
+      localStorage.removeItem("distanceCalculation");
 
       // Clear cart
       clearCart();
 
-      // Navigate to confirmation
-      router.replace("/checkout/confirmation?orderId=" + orderId);
+      // Navigate to confirmation after a delay (let user see the notification)
+      setTimeout(() => {
+        router.replace("/checkout/confirmation?orderId=" + orderId);
+      }, 3000); // 3 seconds delay
     } catch (err) {
       console.error("Error on Pay Now:", err);
       setError(
@@ -144,6 +234,23 @@ function PaymentPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Order Success Notification */}
+      {orderDetails && (
+        <OrderSuccessNotification
+          orderId={orderDetails.orderId}
+          orderNumber={orderDetails.orderNumber}
+          isVisible={showSuccessNotification}
+          onClose={() => {
+            setShowSuccessNotification(false);
+            // Navigate immediately when user closes notification
+            router.replace(
+              "/checkout/confirmation?orderId=" + orderDetails.orderId
+            );
+          }}
+          autoHideDuration={0} // Don't auto-hide, let user manually close or wait for timeout
+        />
+      )}
     </div>
   );
 }

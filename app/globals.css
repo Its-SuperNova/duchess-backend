@@ -448,3 +448,68 @@
 .animate-fade-in {
   animation: fadeIn 200ms ease-in-out;
 }
+
+/* Order Success Notification Animations */
+.animate-slide-up {
+  animation: slideUpNotification 0.3s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slideDownNotification 0.3s ease-in forwards;
+}
+
+@keyframes slideUpNotification {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDownNotification {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+/* Progress bar shrink animation */
+.animate-progress-shrink {
+  animation: progressShrink var(--duration, 5s) linear forwards;
+}
+
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Success notification bounce animation */
+.animate-success-bounce {
+  animation: successBounce 0.6s ease-out forwards;
+}
+
+@keyframes successBounce {
+  0% {
+    transform: translateY(100%) scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}

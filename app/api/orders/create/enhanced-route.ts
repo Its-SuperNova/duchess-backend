@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 
+// This is the enhanced version to use AFTER running the database migration
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -137,16 +138,19 @@ export async function POST(request: NextRequest) {
     const calculatedSgst =
       sgstAmount ?? (subtotalAmount - discountAmount) * 0.09;
 
-    // Order data structure with existing columns only
-    const orderData = {
+    // Enhanced order data structure (AFTER migration)
+    const enhancedOrderData = {
       user_id: user.id,
       subtotal_amount: subtotalAmount ?? 0,
       discount_amount: discountAmount ?? 0,
       delivery_fee: deliveryFee ?? 0,
       total_amount: totalAmount ?? 0,
-      // Basic delivery information
+      // Tax information
+      cgst_amount: calculatedCgst,
+      sgst_amount: calculatedSgst,
+      // Enhanced delivery information
       address_text: addressText || null,
-      delivery_address: {
+      delivery_address: deliveryAddress || {
         address: addressText || "Default address",
         type: "home",
         contact: contactInfo
@@ -156,26 +160,29 @@ export async function POST(request: NextRequest) {
               alternatePhone: contactInfo.alternatePhone || null,
             }
           : null,
-        // Store enhanced data in the JSON field
         coordinates: coordinates || null,
         distance: distance || null,
         duration: duration || null,
         delivery_zone: deliveryZone || null,
-        delivery_timing: deliveryTiming || "same-day",
-        scheduled_delivery: scheduledDelivery || null,
-        estimated_delivery_time: estimatedDeliveryTime || null,
-        is_same_day_delivery: isSameDayDelivery ?? true,
-        // Tax information stored in JSON
-        cgst_amount: calculatedCgst,
-        sgst_amount: calculatedSgst,
-        // Enhanced instructions stored in JSON
-        restaurant_notes: restaurantNotes || null,
-        special_instructions: specialInstructions || null,
-        payment_method: paymentMethod || "online",
-        customization_options: customizationOptions || {},
       },
-      // Basic fields that should exist
+      // Delivery timing
+      delivery_timing: deliveryTiming || "same-day",
+      scheduled_delivery: scheduledDelivery || null,
+      estimated_delivery_time: estimatedDeliveryTime || null,
+      is_same_day_delivery: isSameDayDelivery ?? true,
+      // Distance and location data
+      distance: distance || null,
+      duration: duration || null,
+      delivery_zone: deliveryZone || null,
+      coordinates: coordinates
+        ? `(${coordinates.lat},${coordinates.lng})`
+        : null,
+      // Customization and special instructions
       note: note || null,
+      restaurant_notes: restaurantNotes || null,
+      special_instructions: specialInstructions || null,
+      // Payment and order details
+      payment_method: paymentMethod || "online",
       coupon_code: sanitizedCouponCode,
       // Generate a simple order number
       order_number: `ORD-${Date.now()}`,
@@ -184,12 +191,12 @@ export async function POST(request: NextRequest) {
       // payment_status: "pending",
     };
 
-    console.log("Order data to insert:", orderData);
+    console.log("Enhanced order data to insert:", enhancedOrderData);
 
-    // Insert order
+    // Insert enhanced order
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .insert(orderData)
+      .insert(enhancedOrderData)
       .select("id")
       .single();
 
@@ -202,10 +209,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Attempting to insert order items...");
+    console.log("Attempting to insert order items with customization...");
 
-    // Order items with basic fields that should exist
-    const orderItemsPayload = cartItems.map((item) => ({
+    // Enhanced order items with customization options
+    const enhancedOrderItemsPayload = cartItems.map((item) => ({
       order_id: order.id,
       product_id: item.product_id,
       product_name: item.product_name,
@@ -213,28 +220,24 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
       price: item.price,
       variant: item.variant,
-      // Store customization in variant field or as JSON if supported
-      // Enhanced customization stored in a custom field if it exists, otherwise in variant
-      ...(item.add_text_on_cake !== undefined
-        ? { add_text_on_cake: item.add_text_on_cake }
-        : {}),
-      ...(item.add_candles !== undefined
-        ? { add_candles: item.add_candles }
-        : {}),
-      ...(item.add_knife !== undefined ? { add_knife: item.add_knife } : {}),
-      ...(item.add_message_card !== undefined
-        ? { add_message_card: item.add_message_card }
-        : {}),
-      ...(item.cake_text ? { cake_text: item.cake_text } : {}),
-      ...(item.gift_card_text ? { gift_card_text: item.gift_card_text } : {}),
-      ...(item.order_type ? { order_type: item.order_type } : {}),
-      ...(item.category ? { category: item.category } : {}),
+      // Enhanced customization fields
+      add_text_on_cake: item.add_text_on_cake || false,
+      add_candles: item.add_candles || false,
+      add_knife: item.add_knife || false,
+      add_message_card: item.add_message_card || false,
+      cake_text: item.cake_text || null,
+      gift_card_text: item.gift_card_text || null,
+      // Order type and category
+      order_type: item.order_type || "weight",
+      category: item.category || null,
+      // Customization options from checkout
+      customization_options: customizationOptions || {},
     }));
 
-    console.log("Order items payload:", orderItemsPayload);
+    console.log("Enhanced order items payload:", enhancedOrderItemsPayload);
     const { error: orderItemsError } = await supabase
       .from("order_items")
-      .insert(orderItemsPayload);
+      .insert(enhancedOrderItemsPayload);
 
     if (orderItemsError) {
       console.error("Failed to insert order items:", orderItemsError);
@@ -262,7 +265,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       orderId: order.id,
-      orderNumber: `ORD-${Date.now()}`,
       message: "Order created successfully",
     });
   } catch (error) {
