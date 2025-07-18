@@ -5,14 +5,29 @@ import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 // removed Trash2, using Solar icon via Iconify
 import { TiDocumentText } from "react-icons/ti";
 import { TbPaperBag } from "react-icons/tb";
+import { RiKnifeFill } from "react-icons/ri";
+import { FaCakeCandles } from "react-icons/fa6";
+import {
+  TrashBinTrash,
+  DocumentAdd,
+  TicketSale,
+  WidgetAdd,
+  ClockCircle,
+  HomeSmileAngle,
+  Phone,
+  Bill,
+  Pen,
+  HomeAngle,
+  MenuDots,
+  Routing,
+  Card,
+} from "@solar-icons/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-const Icon = dynamic(() => import("@iconify/react").then((m) => m.Icon), {
-  ssr: false,
-}) as any;
+
 // Dynamically import Lottie to reduce initial bundle size
 const Lottie = dynamic(() => import("lottie-react"), {
   ssr: false,
@@ -300,10 +315,7 @@ export default function CheckoutClient() {
                   <DrawerTrigger asChild>
                     <button className="w-full flex items-center justify-between text-left">
                       <div className="flex items-center">
-                        <Icon
-                          icon="solar:document-add-broken"
-                          className="h-5 w-5 mr-3 text-black"
-                        />
+                        <DocumentAdd className="h-5 w-5 mr-3 text-black" />
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {note ? note : "Add a note"}
                         </span>
@@ -430,8 +442,8 @@ export default function CheckoutClient() {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
                               <span className="h-6 w-6 rounded-xl items-center justify-center  flex">
-                                <Icon
-                                  icon="solar:home-angle-broken"
+                                <HomeAngle
+                                  weight="Broken"
                                   className="h-5 w-5 text-[#570000]"
                                 />
                               </span>
@@ -440,8 +452,8 @@ export default function CheckoutClient() {
                               </span>
                             </div>
                             <button className="text-[#570000]">
-                              <Icon
-                                icon="solar:menu-dots-outline"
+                              <MenuDots
+                                weight="Broken"
                                 className="h-5 w-5 text-[#570000]"
                               />
                             </button>
@@ -451,10 +463,7 @@ export default function CheckoutClient() {
                           </p>
                           <div className="mt-3">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
-                              <Icon
-                                icon="solar:routing-broken"
-                                className="h-4 w-4"
-                              />
+                              <Routing weight="Broken" className="h-4 w-4" />
                               {getDisplayDistance(addr.distance) ?? "-"} km
                             </span>
                           </div>
@@ -470,10 +479,7 @@ export default function CheckoutClient() {
               <Link href="/checkout/coupons">
                 <button className="w-full flex items-center justify-between text-left">
                   <div className="flex items-center">
-                    <Icon
-                      icon="solar:ticket-sale-broken"
-                      className="h-5 w-5 mr-3 text-black"
-                    />
+                    <TicketSale className="h-5 w-5 mr-3 text-black" />
                     <span className="font-medium text-gray-700 dark:text-gray-300">
                       {selectedCoupon ? selectedCoupon : "View all coupons"}
                     </span>
@@ -496,10 +502,7 @@ export default function CheckoutClient() {
                   <DrawerTrigger asChild>
                     <button className="w-full flex items-center justify-between text-left">
                       <div className="flex items-center">
-                        <Icon
-                          icon="solar:settings-broken"
-                          className="h-5 w-5 mr-3 text-black"
-                        />
+                        <WidgetAdd className="h-5 w-5 mr-3 text-black" />
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {Object.values(customizationOptions).some(
                             (opt) => opt
@@ -533,125 +536,76 @@ export default function CheckoutClient() {
                     {/* Scrollable content area */}
                     <div className="flex-1 overflow-y-auto scrollbar-hide px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <div className="space-y-4 pb-4">
-                        {/* Add Text on Cake */}
-                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Icon
-                                icon="solar:pen-broken"
-                                className="h-5 w-5 text-[#570000]"
-                              />
-                              <div>
-                                <h3 className="font-medium text-gray-800">
-                                  Add Text on Cake
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  Personalize your cake with custom text
-                                </p>
-                              </div>
-                            </div>
-                            <Switch
-                              checked={customizationOptions.addTextOnCake}
-                              onCheckedChange={(checked) => {
-                                const newOptions = {
-                                  ...customizationOptions,
-                                  addTextOnCake: checked,
-                                };
-                                setCustomizationOptions(newOptions);
-                                updateAllCartItemsCustomization(newOptions);
-                              }}
-                            />
-                          </div>
-                          {customizationOptions.addTextOnCake && (
-                            <div className="mt-3 pt-3 border-t border-gray-100">
-                              <button
-                                onClick={() => setIsCakeTextDrawerOpen(true)}
-                                className="w-full text-left p-3 bg-gray-50 rounded-[12px] hover:bg-gray-100 transition-colors"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-gray-600">
-                                    {cakeText
-                                      ? cakeText
-                                      : "Click to add cake text"}
-                                  </span>
-                                  <Icon
-                                    icon="solar:pen-broken"
-                                    className="h-4 w-4 text-gray-400"
-                                  />
+                        {/* Add Candles - Only show if cart has cake products */}
+                        {cart.some(
+                          (item) => item.category?.toLowerCase() === "cake"
+                        ) && (
+                          <div className="bg-white rounded-[18px] p-4 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <FaCakeCandles className="h-5 w-5 text-[#570000]" />
+                                <div>
+                                  <h3 className="font-medium text-gray-800">
+                                    Add Candles
+                                  </h3>
+                                  <p className="text-sm text-gray-500">
+                                    Include birthday candles for celebration
+                                  </p>
                                 </div>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Add Candles */}
-                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Icon
-                                icon="majesticons:cake-line"
-                                className="h-5 w-5 text-[#570000]"
-                              />
-                              <div>
-                                <h3 className="font-medium text-gray-800">
-                                  Add Candles
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  Include birthday candles for celebration
-                                </p>
                               </div>
-                            </div>
-                            <Switch
-                              checked={customizationOptions.addCandles}
-                              onCheckedChange={(checked) => {
-                                const newOptions = {
-                                  ...customizationOptions,
-                                  addCandles: checked,
-                                };
-                                setCustomizationOptions(newOptions);
-                                updateAllCartItemsCustomization(newOptions);
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Add Knife */}
-                        <div className="bg-white rounded-[18px] p-4 border border-gray-100">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Icon
-                                icon="mdi:silverware-fork-knife"
-                                className="h-5 w-5 text-[#570000]"
+                              <Switch
+                                checked={customizationOptions.addCandles}
+                                onCheckedChange={(checked) => {
+                                  const newOptions = {
+                                    ...customizationOptions,
+                                    addCandles: checked,
+                                  };
+                                  setCustomizationOptions(newOptions);
+                                  updateAllCartItemsCustomization(newOptions);
+                                }}
                               />
-                              <div>
-                                <h3 className="font-medium text-gray-800">
-                                  Add Knife
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  Include a cake cutting knife
-                                </p>
-                              </div>
                             </div>
-                            <Switch
-                              checked={customizationOptions.addKnife}
-                              onCheckedChange={(checked) => {
-                                const newOptions = {
-                                  ...customizationOptions,
-                                  addKnife: checked,
-                                };
-                                setCustomizationOptions(newOptions);
-                                updateAllCartItemsCustomization(newOptions);
-                              }}
-                            />
                           </div>
-                        </div>
+                        )}
+
+                        {/* Add Knife - Only show if cart has cake products */}
+                        {cart.some(
+                          (item) => item.category?.toLowerCase() === "cake"
+                        ) && (
+                          <div className="bg-white rounded-[18px] p-4 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <RiKnifeFill className="h-5 w-5 text-[#570000]" />
+                                <div>
+                                  <h3 className="font-medium text-gray-800">
+                                    Add Knife
+                                  </h3>
+                                  <p className="text-sm text-gray-500">
+                                    Include a cake cutting knife
+                                  </p>
+                                </div>
+                              </div>
+                              <Switch
+                                checked={customizationOptions.addKnife}
+                                onCheckedChange={(checked) => {
+                                  const newOptions = {
+                                    ...customizationOptions,
+                                    addKnife: checked,
+                                  };
+                                  setCustomizationOptions(newOptions);
+                                  updateAllCartItemsCustomization(newOptions);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         {/* Add Message Card */}
                         <div className="bg-white rounded-[18px] p-4 border border-gray-100">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <Icon
-                                icon="solar:card-broken"
+                              <Card
+                                weight="Broken"
                                 className="h-5 w-5 text-[#570000]"
                               />
                               <div>
@@ -687,8 +641,8 @@ export default function CheckoutClient() {
                                       ? messageCardText
                                       : "Click to add message card text"}
                                   </span>
-                                  <Icon
-                                    icon="solar:card-broken"
+                                  <Card
+                                    weight="Broken"
                                     className="h-4 w-4 text-gray-400"
                                   />
                                 </div>
@@ -1033,10 +987,7 @@ export default function CheckoutClient() {
             {/* Delivery Info */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
               <div className="flex items-start mb-4">
-                <Icon
-                  icon="solar:clock-circle-broken"
-                  className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
-                />
+                <ClockCircle className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
                 <div>
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Delivery in 32 mins
@@ -1048,10 +999,7 @@ export default function CheckoutClient() {
               </div>
 
               <div className="flex items-start mb-4">
-                <Icon
-                  icon="solar:home-smile-angle-broken"
-                  className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
-                />
+                <HomeSmileAngle className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Delivery at Home
@@ -1068,17 +1016,14 @@ export default function CheckoutClient() {
                       }}
                       aria-label="Change delivery address"
                     >
-                      <Icon icon="solar:pen-broken" className="h-4 w-4" />
+                      <Pen weight="Broken" size={16} color="#2664eb" />
                     </button>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-start">
-                <Icon
-                  icon="solar:phone-broken"
-                  className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
-                />
+                <Phone className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Contact
@@ -1095,7 +1040,7 @@ export default function CheckoutClient() {
                       }}
                       aria-label="Edit contact information"
                     >
-                      <Icon icon="solar:pen-broken" className="h-4 w-4" />
+                      <Pen weight="Broken" size={16} color="#2664eb" />
                     </button>
                   </div>
                 </div>
@@ -1191,10 +1136,7 @@ export default function CheckoutClient() {
                                 className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 self-start"
                                 onClick={() => removeFromCart(uid)}
                               >
-                                <Icon
-                                  icon="solar:trash-bin-trash-broken"
-                                  className="h-5 w-5 text-red-600"
-                                />
+                                <TrashBinTrash className="h-5 w-5 text-red-600" />
                               </button>
                             </div>
 
@@ -1243,10 +1185,7 @@ export default function CheckoutClient() {
               <div className="hidden lg:block">
                 <div className="bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
                   <div className="flex items-center mb-3 gap-2">
-                    <Icon
-                      icon="solar:bill-list-broken"
-                      className="h-5 w-5 text-[#570000]"
-                    />
+                    <Bill className="h-5 w-5 text-[#570000]" />
                     <h3 className="font-medium text-gray-800 dark:text-gray-200">
                       Bill Details
                     </h3>
@@ -1306,10 +1245,7 @@ export default function CheckoutClient() {
           {/* Bill Details - Mobile */}
           <div className="bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
             <div className="flex items-center mb-3 gap-2">
-              <Icon
-                icon="solar:bill-list-broken"
-                className="h-5 w-5 text-[#570000]"
-              />
+              <Bill className="h-5 w-5 text-[#570000]" />
               <h3 className="font-medium text-gray-800 dark:text-gray-200">
                 Bill Details
               </h3>

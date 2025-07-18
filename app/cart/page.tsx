@@ -5,6 +5,7 @@ import { Plus, Minus, ShoppingCart, ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { TrashBinTrash } from "@solar-icons/react";
 import dynamic from "next/dynamic";
 
 // Dynamically import Lottie to reduce initial bundle size
@@ -139,10 +140,7 @@ export default function CartPage() {
                         className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0 self-start"
                         onClick={() => removeFromCart(uid)}
                       >
-                        <Icon
-                          icon="solar:trash-bin-trash-broken"
-                          className="h-4 w-4 lg:h-5 lg:w-5 text-red-600"
-                        />
+                        <TrashBinTrash className="h-4 w-4 lg:h-5 lg:w-5 text-red-600" />
                       </button>
                     </div>
 

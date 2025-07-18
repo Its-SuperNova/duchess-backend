@@ -4,18 +4,7 @@ import { useState, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GrSquare } from "react-icons/gr";
-import dynamic from "next/dynamic";
-
-// Dynamically import Icon to reduce initial bundle size
-const Icon = dynamic(
-  () => import("@iconify/react").then((m) => ({ default: m.Icon })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-4 h-4 bg-gray-200 animate-pulse rounded"></div>
-    ),
-  }
-) as any;
+import { Heart, Star } from "@solar-icons/react";
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
@@ -152,9 +141,9 @@ const ProductCard = memo(function ProductCard({
           aria-label={isLiked ? "Remove from favorites" : "Add to favorites"}
         >
           {isClient && isLiked ? (
-            <Icon icon="solar:heart-bold" className="h-4 w-4 text-red-500" />
+            <Heart className="h-4 w-4 text-red-500" />
           ) : (
-            <Icon icon="solar:heart-linear" className="h-4 w-4 text-gray-600" />
+            <Heart className="h-4 w-4 text-gray-600" />
           )}
         </button>
       </div>
@@ -201,7 +190,7 @@ const ProductCard = memo(function ProductCard({
         <div className="flex justify-between items-center">
           {/* Rating on the left with gradient background */}
           <div className="flex items-center bg-gradient-to-r from-amber-100 to-white px-2 py-1 rounded-full">
-            <Icon icon="solar:star-bold" className="text-amber-500 mr-1" />
+            <Star weight="Bold" className="text-amber-500 mr-1" />
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {rating}
             </span>

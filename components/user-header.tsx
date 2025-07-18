@@ -7,18 +7,7 @@ import { useSession } from "next-auth/react";
 import { useCart } from "@/context/cart-context";
 import { useFavorites } from "@/context/favorites-context";
 import { User } from "lucide-react";
-import dynamic from "next/dynamic";
-
-// Dynamically import Icon to reduce initial bundle size
-const Icon = dynamic(
-  () => import("@iconify/react").then((m) => ({ default: m.Icon })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-4 h-4 bg-gray-200 animate-pulse rounded"></div>
-    ),
-  }
-) as any;
+import { Heart, Magnifer, UserCheck, Bag5 } from "@solar-icons/react";
 import { IoCloseOutline } from "react-icons/io5";
 import { useState, useEffect } from "react";
 import { isUserAdmin } from "@/lib/auth-utils";
@@ -123,7 +112,7 @@ export default function UserHeader() {
                     aria-label="Admin"
                     className="hidden md:inline-flex h-8 px-3 items-center justify-center rounded-full bg-white border border-gray-300 text-black hover:bg-gray-50 gap-2"
                   >
-                    <Icon icon="solar:shield-user-broken" className="h-5 w-5" />
+                    <UserCheck className="h-5 w-5" />
                     <span className="text-sm font-medium">Admin</span>
                   </Link>
                   <Link
@@ -131,7 +120,7 @@ export default function UserHeader() {
                     aria-label="Admin"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-gray-300 text-black md:hidden hover:bg-gray-50"
                   >
-                    <Icon icon="solar:shield-user-broken" className="h-5 w-5" />
+                    <UserCheck className="h-5 w-5" />
                   </Link>
                 </>
               )}
@@ -164,7 +153,7 @@ export default function UserHeader() {
                     }`}
                     aria-label="Search"
                   >
-                    <Icon icon="solar:magnifer-linear" className="h-5 w-5" />
+                    <Magnifer className="h-5 w-5 text-black" />
                   </button>
                   {isSearchExpanded && (
                     <button
@@ -189,7 +178,7 @@ export default function UserHeader() {
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full text-black md:hidden"
                 aria-label="Search"
               >
-                <Icon icon="solar:magnifer-linear" className="h-5 w-5" />
+                <Magnifer className="h-5 w-5" />
               </button>
 
               {/* Favorites - Hidden on Mobile */}
@@ -198,7 +187,7 @@ export default function UserHeader() {
                 aria-label="Favorites"
                 className="relative hidden md:inline-flex h-8 w-8 items-center justify-center rounded-full text-black"
               >
-                <Icon icon="solar:heart-linear" className="h-5 w-5" />
+                <Heart className="h-5 w-5" />
                 {totalFavorites > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#7A0000] text-white text-[10px] font-semibold flex items-center justify-center">
                     {totalFavorites > 9 ? "9+" : totalFavorites}
@@ -212,7 +201,7 @@ export default function UserHeader() {
                 aria-label="Cart"
                 className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-black"
               >
-                <Icon icon="solar:bag-4-linear" className="h-5 w-5" />
+                <Bag5 weight="Linear" size={20} color="#0f4159" />
                 {totalCartItems > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#7A0000] text-white text-[10px] font-semibold flex items-center justify-center">
                     {totalCartItems > 9 ? "9+" : totalCartItems}
@@ -256,10 +245,7 @@ export default function UserHeader() {
                   className="w-full h-12 pl-12 pr-12 bg-transparent border-b border-gray-300 focus:outline-none focus:border-black text-base"
                   onBlur={handleSearchBlur}
                 />
-                <Icon
-                  icon="solar:magnifer-linear"
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5"
-                />
+                <Magnifer className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 {isSearchExpanded && (
                   <button
                     type="button"
