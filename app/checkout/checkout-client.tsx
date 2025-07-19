@@ -603,7 +603,11 @@ export default function CheckoutClient() {
   };
 
   const deliveryFee = subtotal > 0 ? calculateDeliveryFeeFromAddress() : 0;
-  const total = subtotal - discount + deliveryFee;
+  // Calculate taxes (CGST 9% + SGST 9% = 18% total)
+  const taxableAmount = subtotal - discount;
+  const cgstAmount = taxableAmount * 0.09;
+  const sgstAmount = taxableAmount * 0.09;
+  const total = subtotal - discount + deliveryFee + cgstAmount + sgstAmount;
 
   // Helper function to get delivery fee breakdown information
   const getDeliveryFeeBreakdown = () => {
@@ -650,10 +654,7 @@ export default function CheckoutClient() {
         return;
       }
 
-      // Calculate taxes (CGST 9% + SGST 9% = 18% total)
-      const taxableAmount = subtotal - discount;
-      const cgstAmount = taxableAmount * 0.09;
-      const sgstAmount = taxableAmount * 0.09;
+      // Use the already calculated tax amounts from the main calculation
 
       // Get coupon data for coupon ID
       let appliedCouponData = null;
@@ -2202,11 +2203,11 @@ export default function CheckoutClient() {
 
                     <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
                       <span>CGST (9%)</span>
-                      <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                      <span>₹{cgstAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
                       <span>SGST (9%)</span>
-                      <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                      <span>₹{sgstAmount.toFixed(2)}</span>
                     </div>
                     <div className="pt-2 mt-2">
                       <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
@@ -2294,23 +2295,17 @@ export default function CheckoutClient() {
 
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>CGST (9%)</span>
-                <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                <span>₹{cgstAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>SGST (9%)</span>
-                <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                <span>₹{sgstAmount.toFixed(2)}</span>
               </div>
               <div className="pt-2 mt-2">
                 <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
                 <div className="flex justify-between text-black dark:text-white font-semibold mt-2">
                   <span>To Pay</span>
-                  <span>
-                    ₹
-                    {subtotal -
-                      discount +
-                      deliveryFee +
-                      (subtotal - discount) * 0.18}
-                  </span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -2409,11 +2404,11 @@ export default function CheckoutClient() {
                   </div>
                   <div className="flex justify-between">
                     <span>CGST (9%):</span>
-                    <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                    <span>₹{cgstAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>SGST (9%):</span>
-                    <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                    <span>₹{sgstAmount.toFixed(2)}</span>
                   </div>
                   <div className="border-t pt-1 mt-2">
                     <div className="flex justify-between font-semibold">
