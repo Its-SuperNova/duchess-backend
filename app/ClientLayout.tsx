@@ -122,7 +122,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {showHeader && <UserHeader />}
 
           {/* Main Content - Add bottom padding for fixed order status bar */}
-          <main className="flex-1 pb-24 bg-[#F5F6FB]">
+          <main className="flex-1 pb-24">
             {isHomePage ? (
               <div className="mx-auto w-full max-w-[1200px]">{children}</div>
             ) : (

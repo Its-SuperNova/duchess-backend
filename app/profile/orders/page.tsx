@@ -67,8 +67,32 @@ interface Order {
   status: string;
   payment_status: string;
   total_amount: number;
+  paid_amount?: number;
+  discount_amount?: number;
+  delivery_charge?: number;
+  cgst?: number;
+  sgst?: number;
+  is_coupon?: boolean;
+  estimated_time_delivery?: string;
+  distance?: number;
+  duration?: number;
+  delivery_zone?: string;
+  payment_method?: string;
+  notes?: string;
   created_at: string;
   delivery_address?: any;
+  addresses?: {
+    id: string;
+    address_name: string;
+    full_address: string;
+    city: string;
+  };
+  coupons?: {
+    id: string;
+    code: string;
+    value: number;
+  };
+  // Legacy fields
   note?: string;
   order_items?: OrderItem[];
 }

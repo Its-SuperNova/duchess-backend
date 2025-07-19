@@ -112,6 +112,169 @@ declare global {
         >;
         Update: Partial<Tables["favorites"]["Insert"]>;
       };
+
+      orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          order_number: string;
+          status:
+            | "pending"
+            | "confirmed"
+            | "preparing"
+            | "ready"
+            | "out_for_delivery"
+            | "delivered"
+            | "cancelled";
+          payment_status:
+            | "pending"
+            | "paid"
+            | "failed"
+            | "refunded"
+            | "partially_paid";
+          // Financial information
+          item_total: number;
+          delivery_charge: number;
+          discount_amount: number;
+          cgst: number;
+          sgst: number;
+          total_amount: number;
+          // Address and delivery
+          delivery_address_id: string | null;
+          delivery_address_text: string | null;
+          // Customer notes and special requests
+          notes: string | null;
+          is_knife: boolean;
+          is_candle: boolean;
+          is_text_on_card: boolean;
+          text_on_card: string | null;
+          // Delivery timing
+          delivery_timing: string;
+          delivery_date: string | null;
+          delivery_time_slot: string | null;
+          // Contact information
+          contact_name: string;
+          contact_number: string;
+          contact_alternate_number: string | null;
+          // Coupon information
+          is_coupon: boolean;
+          coupon_id: string | null;
+          coupon_code: string | null;
+          // Delivery logistics
+          estimated_time_delivery: string | null;
+          delivery_zone: string | null;
+          delivery_partner_id: string | null;
+          // Payment information
+          payment_method: "online" | "cod" | "card" | "upi" | "wallet";
+          payment_transaction_id: string | null;
+          // Additional tracking
+          preparation_time: number | null;
+          cooking_started_at: string | null;
+          ready_at: string | null;
+          picked_up_at: string | null;
+          delivered_at: string | null;
+          // Ratings and feedback
+          customer_rating: number | null;
+          customer_feedback: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Tables["orders"]["Row"],
+          "id" | "created_at" | "updated_at"
+        >;
+        Update: Partial<Tables["orders"]["Insert"]>;
+      };
+
+      delivery_partners: {
+        Row: {
+          id: string;
+          name: string;
+          phone: string;
+          email: string | null;
+          vehicle_type: string | null;
+          vehicle_number: string | null;
+          license_number: string | null;
+          is_active: boolean;
+          current_location: any;
+          rating: number;
+          total_deliveries: number;
+          joining_date: string;
+          emergency_contact: string | null;
+          profile_image: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Tables["delivery_partners"]["Row"],
+          "id" | "created_at" | "updated_at" | "rating" | "total_deliveries"
+        >;
+        Update: Partial<Tables["delivery_partners"]["Insert"]>;
+      };
+
+      addresses: {
+        Row: {
+          id: string;
+          user_id: string;
+          address_name: string;
+          full_address: string;
+          city: string;
+          state: string;
+          zip_code: string;
+          is_default: boolean;
+          distance: number | null;
+          duration: number | null;
+          alternate_phone: string;
+          additional_details: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Tables["addresses"]["Row"],
+          "id" | "created_at" | "updated_at"
+        >;
+        Update: Partial<Tables["addresses"]["Insert"]>;
+      };
+
+      order_items: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string; // This matches your string-based product IDs
+          // Product information (snapshot at time of order)
+          product_name: string;
+          product_image: string | null;
+          product_description: string | null;
+          category: string | null;
+          // Quantity and pricing
+          quantity: number;
+          unit_price: number;
+          total_price: number;
+          // Product variant/customization
+          variant: string | null;
+          customization_options: any;
+          // Cake-specific customizations
+          cake_text: string | null;
+          cake_flavor: string | null;
+          cake_size: string | null;
+          cake_weight: number | null;
+          // Additional services for this item
+          item_has_knife: boolean;
+          item_has_candle: boolean;
+          item_has_message_card: boolean;
+          item_message_card_text: string | null;
+          // Item status tracking
+          item_status: "pending" | "preparing" | "ready" | "delivered";
+          preparation_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Tables["order_items"]["Row"],
+          "id" | "created_at" | "updated_at"
+        >;
+        Update: Partial<Tables["order_items"]["Insert"]>;
+      };
     }
   }
 }

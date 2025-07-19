@@ -1,18 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -36,12 +28,12 @@ import {
   ChevronDown,
   FileDown,
   Filter,
-  MoreHorizontal,
+  Maximize2,
   Search,
   ShoppingBag,
   Loader2,
 } from "lucide-react";
-
+import { MaximizeSquare3 } from "@solar-icons/react";
 // Order type definition
 interface Order {
   id: string;
@@ -58,9 +50,33 @@ interface Order {
   date: string;
   fullDate: string;
   total_amount: number;
-  subtotal_amount: number;
+  paid_amount: number;
   discount_amount: number;
-  delivery_fee: number;
+  delivery_charge: number;
+  cgst: number;
+  sgst: number;
+  delivery_address?: {
+    id: string;
+    name: string;
+    full_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+  };
+  coupon?: {
+    id: string;
+    code: string;
+    type: string;
+    value: number;
+  };
+  is_coupon: boolean;
+  estimated_time_delivery?: string;
+  distance?: number;
+  duration?: number;
+  delivery_zone?: string;
+  payment_method: string;
+  notes?: string;
+  // Legacy fields for backward compatibility
   address_text?: string;
   note?: string;
   coupon_code?: string;
@@ -102,6 +118,7 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const router = useRouter();
 
   // Fetch orders from database
   useEffect(() => {
@@ -231,47 +248,16 @@ export default function OrdersPage() {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked>
-                Show All
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Delivered</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Processing</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>
-                Out for Delivery
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Cancelled</DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
-                <Filter className="mr-2 h-4 w-4" />
-                Payment
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Filter by Payment</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked>
-                Show All
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Paid</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Pending</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Failed</DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="outline" className="w-full sm:w-auto">
+            <Filter className="mr-2 h-4 w-4" />
+            Filter
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </Button>
+          <Button variant="outline" className="w-full sm:w-auto">
+            <Filter className="mr-2 h-4 w-4" />
+            Payment
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -312,7 +298,7 @@ export default function OrdersPage() {
                   </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -380,24 +366,15 @@ export default function OrdersPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View details</DropdownMenuItem>
-                          <DropdownMenuItem>Update status</DropdownMenuItem>
-                          <DropdownMenuItem>Print invoice</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            Cancel order
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/admin/orders/${order.id}`)}
+                        className="h-8 w-8 p-0 hover:bg-primary/10"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

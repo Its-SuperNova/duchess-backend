@@ -88,6 +88,7 @@ export default function CouponsClient() {
     // For now, persist the applied coupon for checkout to consume
     try {
       const toStore = {
+        id: coupon.id, // Add the coupon ID for database relationship
         code: coupon.code,
         type: coupon.type,
         value: coupon.value,

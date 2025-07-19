@@ -19,6 +19,20 @@ export async function GET() {
         ),
         order_items!order_items_order_id_fkey (
           id
+        ),
+        addresses!orders_delivery_address_id_fkey (
+          id,
+          address_name,
+          full_address,
+          city,
+          state,
+          zip_code
+        ),
+        coupons!orders_coupon_id_fkey (
+          id,
+          code,
+          type,
+          value
         )
       `
       )
@@ -50,13 +64,40 @@ export async function GET() {
         products: itemsCount,
         amount: `₹${order.total_amount?.toFixed(2) || "0.00"}`,
         paymentStatus: order.payment_status || "pending",
-        orderStatus: order.status || "processing",
+        orderStatus: order.status || "pending",
         date: formatRelativeDate(order.created_at),
         fullDate: formatFullDate(order.created_at),
         total_amount: order.total_amount,
-        subtotal_amount: order.subtotal_amount,
+        paid_amount: order.paid_amount,
         discount_amount: order.discount_amount,
-        delivery_fee: order.delivery_fee,
+        delivery_charge: order.delivery_charge,
+        cgst: order.cgst,
+        sgst: order.sgst,
+        delivery_address: order.addresses
+          ? {
+              id: order.addresses.id,
+              name: order.addresses.address_name,
+              full_address: order.addresses.full_address,
+              city: order.addresses.city,
+              state: order.addresses.state,
+              zip_code: order.addresses.zip_code,
+            }
+          : null,
+        coupon: order.coupons
+          ? {
+              id: order.coupons.id,
+              code: order.coupons.code,
+              type: order.coupons.type,
+              value: order.coupons.value,
+            }
+          : null,
+        is_coupon: order.is_coupon,
+        estimated_time_delivery: order.estimated_time_delivery,
+        distance: order.distance,
+        duration: order.duration,
+        delivery_zone: order.delivery_zone,
+        payment_method: order.payment_method,
+        // Legacy fields for backward compatibility
         address_text: order.address_text,
         note: order.note,
         coupon_code: order.coupon_code,

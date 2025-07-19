@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
+import { getAreaFromPincode } from "@/lib/pincode-areas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,30 +14,66 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("Request body:", body);
     const {
-      subtotalAmount,
+      // Financial information
+      itemTotal,
+      subtotalAmount, // fallback
       discountAmount,
       deliveryFee,
+      deliveryCharge, // alias
       totalAmount,
-      note,
-      addressText,
-      couponCode,
-      contactInfo,
-      // Enhanced fields for comprehensive order data
-      customizationOptions,
-      deliveryTiming,
-      distance,
-      duration,
       cgstAmount,
       sgstAmount,
+
+      // Contact and delivery
+      contactName,
+      contactNumber,
+      contactAlternateNumber,
+      deliveryAddressId,
+      addressText, // fallback
+
+      // Special requests
+      notes,
+      note, // fallback
+      isKnife,
+      isCandle,
+      isTextOnCard,
+      textOnCard,
+
+      // Delivery timing
+      deliveryTiming,
+      deliveryDate,
+      deliveryTimeSlot,
+      estimatedTimeDelivery,
+      estimatedDeliveryTime, // fallback
+      distance,
+      duration,
+      deliveryZone,
+
+      // Coupon information
+      isCoupon,
+      couponId,
+      couponCode,
+
+      // Payment
+      paymentMethod,
+      paymentTransactionId,
+      paymentStatus,
+
+      // Order status
+      orderStatus,
+      status,
+
+      // Legacy fields for backward compatibility
+      contactInfo,
+      customizationOptions,
       deliveryAddress,
       scheduledDelivery,
-      paymentMethod,
       specialInstructions,
       restaurantNotes,
-      estimatedDeliveryTime,
       isSameDayDelivery,
-      deliveryZone,
       coordinates,
+      deliveryPartner,
+      deliveryPartnerId,
     } = body || {};
 
     console.log("Extracted enhanced order data:", {
@@ -127,61 +164,163 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // Normalize inputs
-    const sanitizedCouponCode =
-      couponCode ?? null ? String(couponCode).trim() : null;
+    // Normalize and calculate values
+    const finalItemTotal = itemTotal ?? subtotalAmount ?? 0;
+    const finalDeliveryCharge = deliveryCharge ?? deliveryFee ?? 0;
+    const finalDiscountAmount = discountAmount ?? 0;
 
     // Calculate taxes if not provided
     const calculatedCgst =
-      cgstAmount ?? (subtotalAmount - discountAmount) * 0.09;
+      cgstAmount ?? (finalItemTotal - finalDiscountAmount) * 0.09;
     const calculatedSgst =
-      sgstAmount ?? (subtotalAmount - discountAmount) * 0.09;
+      sgstAmount ?? (finalItemTotal - finalDiscountAmount) * 0.09;
 
-    // Order data structure with existing columns only
-    const orderData = {
-      user_id: user.id,
-      subtotal_amount: subtotalAmount ?? 0,
-      discount_amount: discountAmount ?? 0,
-      delivery_fee: deliveryFee ?? 0,
-      total_amount: totalAmount ?? 0,
-      // Basic delivery information
-      address_text: addressText || null,
-      delivery_address: {
-        address: addressText || "Default address",
-        type: "home",
-        contact: contactInfo
-          ? {
-              name: contactInfo.name,
-              phone: contactInfo.phone,
-              alternatePhone: contactInfo.alternatePhone || null,
+    // Extract contact info from legacy or new format
+    const finalContactName = contactName || contactInfo?.name || "";
+    const finalContactNumber = contactNumber || contactInfo?.phone || "";
+    const finalContactAlternateNumber =
+      contactAlternateNumber || contactInfo?.alternatePhone || null;
+
+    // Fetch address data if deliveryAddressId is provided
+    let addressData = null;
+    let finalDeliveryZone = deliveryZone;
+
+    if (deliveryAddressId) {
+      try {
+        const { data: address, error: addressError } = await supabase
+          .from("addresses")
+          .select("*")
+          .eq("id", deliveryAddressId)
+          .eq("user_id", user.id)
+          .single();
+
+        if (!addressError && address) {
+          console.log("Found address data:", {
+            id: address.id,
+            name: address.address_name,
+            distance: address.distance,
+            duration: address.duration,
+            zip_code: address.zip_code,
+          });
+
+          addressData = address;
+
+          // Calculate delivery zone based on distance and pincode area from address
+          if (address.distance) {
+            const areaName = getAreaFromPincode(address.zip_code);
+
+            // Enhanced zone calculation
+            if (address.distance <= 3) {
+              finalDeliveryZone = "Zone A - Express";
+            } else if (address.distance <= 7) {
+              finalDeliveryZone = "Zone B - Standard";
+            } else if (address.distance <= 12) {
+              finalDeliveryZone = "Zone C - Extended";
+            } else if (address.distance <= 20) {
+              finalDeliveryZone = "Zone D - Outskirts";
+            } else {
+              finalDeliveryZone = "Zone E - Remote";
             }
-          : null,
-        // Store enhanced data in the JSON field
-        coordinates: coordinates || null,
-        distance: distance || null,
-        duration: duration || null,
-        delivery_zone: deliveryZone || null,
-        delivery_timing: deliveryTiming || "same-day",
-        scheduled_delivery: scheduledDelivery || null,
-        estimated_delivery_time: estimatedDeliveryTime || null,
-        is_same_day_delivery: isSameDayDelivery ?? true,
-        // Tax information stored in JSON
-        cgst_amount: calculatedCgst,
-        sgst_amount: calculatedSgst,
-        // Enhanced instructions stored in JSON
-        restaurant_notes: restaurantNotes || null,
-        special_instructions: specialInstructions || null,
-        payment_method: paymentMethod || "online",
-        customization_options: customizationOptions || {},
-      },
-      // Basic fields that should exist
-      note: note || null,
+
+            // Add area info if available
+            if (areaName) {
+              finalDeliveryZone += ` (${areaName})`;
+            }
+          } else if (address.zip_code) {
+            // Fallback zone calculation based on pincode only
+            const areaName = getAreaFromPincode(address.zip_code);
+            if (areaName) {
+              finalDeliveryZone = `Standard Zone (${areaName})`;
+            }
+          }
+        } else {
+          console.warn("Address not found or access denied:", addressError);
+          // If address not found, we should still allow the order but log the issue
+          console.warn(
+            "Proceeding with order creation without address validation"
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching address:", error);
+      }
+    }
+
+    // Validate that we have a delivery address ID
+    if (!deliveryAddressId) {
+      console.error("No delivery address ID provided");
+      return NextResponse.json(
+        { error: "Delivery address is required" },
+        { status: 400 }
+      );
+    }
+
+    // Normalize coupon info
+    const sanitizedCouponCode = couponCode ? String(couponCode).trim() : null;
+    const finalIsCoupon =
+      isCoupon ?? !!sanitizedCouponCode ?? !!couponId ?? false;
+
+    // Enhanced order data structure
+    const orderData = {
+      // User and order identification
+      user_id: user.id,
+      order_number: `ORD-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 6)
+        .toUpperCase()}`,
+
+      // Order status
+      status: status || orderStatus || "pending",
+      payment_status: paymentStatus || "pending",
+
+      // Financial information
+      item_total: finalItemTotal,
+      delivery_charge: finalDeliveryCharge,
+      discount_amount: finalDiscountAmount,
+      cgst: calculatedCgst,
+      sgst: calculatedSgst,
+      total_amount:
+        totalAmount ??
+        finalItemTotal +
+          finalDeliveryCharge -
+          finalDiscountAmount +
+          calculatedCgst +
+          calculatedSgst,
+
+      // Address and delivery
+      delivery_address_id: deliveryAddressId || null,
+
+      // Contact information (use from address if available, fallback to provided)
+      contact_name: addressData?.address_name || finalContactName,
+      contact_number: finalContactNumber,
+      contact_alternate_number:
+        addressData?.alternate_phone || finalContactAlternateNumber,
+
+      // Customer notes and special requests
+      notes: notes || note || null,
+      is_knife: isKnife ?? false,
+      is_candle: isCandle ?? false,
+      is_text_on_card: isTextOnCard ?? false,
+      text_on_card: textOnCard || null,
+
+      // Delivery timing and scheduling
+      delivery_timing: deliveryTiming || "same_day",
+      delivery_date: deliveryDate || null,
+      delivery_time_slot: deliveryTimeSlot || null,
+
+      // Coupon information
+      is_coupon: finalIsCoupon,
+      coupon_id: couponId || null,
       coupon_code: sanitizedCouponCode,
-      // Generate a simple order number
-      order_number: `ORD-${Date.now()}`,
-      // Status fields (will use database defaults)
-      // status: "processing",
-      // payment_status: "pending",
+
+      // Delivery logistics (distance and duration will come from address relationship)
+      estimated_time_delivery:
+        estimatedTimeDelivery || estimatedDeliveryTime || null,
+      delivery_zone: finalDeliveryZone || null,
+      delivery_partner_id: deliveryPartnerId || null,
+
+      // Payment information
+      payment_method: paymentMethod || "online",
+      payment_transaction_id: paymentTransactionId || null,
     };
 
     console.log("Order data to insert:", orderData);
@@ -204,31 +343,44 @@ export async function POST(request: NextRequest) {
 
     console.log("Attempting to insert order items...");
 
-    // Order items with basic fields that should exist
+    // Enhanced order items with new schema
     const orderItemsPayload = cartItems.map((item) => ({
       order_id: order.id,
       product_id: item.product_id,
+
+      // Product information (snapshot at time of order)
       product_name: item.product_name,
-      product_image: item.product_image,
+      product_image: item.product_image || null,
+      product_description: item.product_description || null,
+      category: item.category || null,
+
+      // Quantity and pricing
       quantity: item.quantity,
-      price: item.price,
-      variant: item.variant,
-      // Store customization in variant field or as JSON if supported
-      // Enhanced customization stored in a custom field if it exists, otherwise in variant
-      ...(item.add_text_on_cake !== undefined
-        ? { add_text_on_cake: item.add_text_on_cake }
-        : {}),
-      ...(item.add_candles !== undefined
-        ? { add_candles: item.add_candles }
-        : {}),
-      ...(item.add_knife !== undefined ? { add_knife: item.add_knife } : {}),
-      ...(item.add_message_card !== undefined
-        ? { add_message_card: item.add_message_card }
-        : {}),
-      ...(item.cake_text ? { cake_text: item.cake_text } : {}),
-      ...(item.gift_card_text ? { gift_card_text: item.gift_card_text } : {}),
-      ...(item.order_type ? { order_type: item.order_type } : {}),
-      ...(item.category ? { category: item.category } : {}),
+      unit_price: item.price || item.unit_price || 0,
+      total_price: (item.price || item.unit_price || 0) * item.quantity,
+
+      // Product variant/customization
+      variant: item.variant || null,
+      customization_options:
+        customizationOptions || item.customization_options || {},
+
+      // Cake-specific customizations
+      cake_text: item.cake_text || null,
+      cake_flavor: item.cake_flavor || null,
+      cake_size: item.cake_size || null,
+      cake_weight: item.cake_weight || null,
+
+      // Additional services for this item
+      item_has_knife: item.add_knife || item.item_has_knife || false,
+      item_has_candle: item.add_candles || item.item_has_candle || false,
+      item_has_message_card:
+        item.add_message_card || item.item_has_message_card || false,
+      item_message_card_text:
+        item.gift_card_text || item.item_message_card_text || null,
+
+      // Item status tracking
+      item_status: "pending",
+      preparation_notes: null,
     }));
 
     console.log("Order items payload:", orderItemsPayload);

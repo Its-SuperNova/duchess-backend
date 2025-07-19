@@ -22,13 +22,15 @@ interface Order {
   id: string;
   order_number: string;
   total_amount: number;
-  subtotal_amount: number;
-  discount_amount: number;
-  delivery_fee: number;
+  subtotal_amount?: number;
+  discount_amount?: number;
+  delivery_charge?: number; // Updated from delivery_fee
+  delivery_fee?: number; // Keep for backward compatibility
   status: string;
   payment_status: string;
   address_text: string | null;
   note: string | null;
+  notes?: string | null; // New field
   coupon_code: string | null;
   created_at: string;
   items: OrderItem[];
@@ -105,7 +107,10 @@ export default function ConfirmationClient() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return "₹0.00";
+    }
     return `₹${amount.toFixed(2)}`;
   };
 
@@ -297,7 +302,7 @@ export default function ConfirmationClient() {
               <span className="text-gray-600">Subtotal</span>
               <span>{formatCurrency(order.subtotal_amount)}</span>
             </div>
-            {order.discount_amount > 0 && (
+            {order.discount_amount && order.discount_amount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Discount</span>
                 <span>-{formatCurrency(order.discount_amount)}</span>
@@ -305,7 +310,9 @@ export default function ConfirmationClient() {
             )}
             <div className="flex justify-between">
               <span className="text-gray-600">Delivery Fee</span>
-              <span>{formatCurrency(order.delivery_fee)}</span>
+              <span>
+                {formatCurrency(order.delivery_charge || order.delivery_fee)}
+              </span>
             </div>
             <Separator className="my-3" />
             <div className="flex justify-between font-bold text-lg">
@@ -316,7 +323,10 @@ export default function ConfirmationClient() {
         </div>
 
         {/* Delivery & Notes Section */}
-        {(order.address_text || order.note || order.coupon_code) && (
+        {(order.address_text ||
+          order.note ||
+          order.notes ||
+          order.coupon_code) && (
           <div className="bg-white rounded-[20px] p-6 shadow-sm space-y-4">
             {order.address_text && (
               <div>
@@ -325,10 +335,10 @@ export default function ConfirmationClient() {
               </div>
             )}
 
-            {order.note && (
+            {(order.note || order.notes) && (
               <div>
                 <h3 className="font-medium mb-2">Order Note</h3>
-                <p className="text-gray-600">{order.note}</p>
+                <p className="text-gray-600">{order.note || order.notes}</p>
               </div>
             )}
 

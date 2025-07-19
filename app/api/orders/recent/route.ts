@@ -34,8 +34,19 @@ export async function GET() {
         status,
         payment_status,
         total_amount,
+        paid_amount,
+        discount_amount,
+        delivery_charge,
+        cgst,
+        sgst,
+        is_coupon,
+        estimated_time_delivery,
+        distance,
+        duration,
+        delivery_zone,
+        payment_method,
+        notes,
         created_at,
-        note,
         order_items (
           id,
           product_name,
@@ -43,6 +54,17 @@ export async function GET() {
           category,
           quantity,
           price
+        ),
+        addresses!orders_delivery_address_id_fkey (
+          id,
+          address_name,
+          full_address,
+          city
+        ),
+        coupons!orders_coupon_id_fkey (
+          id,
+          code,
+          value
         )
       `
       )

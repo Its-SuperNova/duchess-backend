@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 
@@ -53,6 +54,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useCart } from "@/context/cart-context";
 import { getUserByEmail, updateUserProfile } from "@/lib/auth-utils";
 import {
@@ -72,8 +81,10 @@ export default function CheckoutClient() {
     updateQuantity,
     removeFromCart,
     updateCartItemCustomization,
+    clearCart,
   } = useCart();
   const { toast } = useToast();
+  const router = useRouter();
   const [note, setNote] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
   // Load applied coupon code to show update/view UI
@@ -126,6 +137,11 @@ export default function CheckoutClient() {
   });
   const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
   const [tempContactInfo, setTempContactInfo] = useState(contactInfo);
+
+  // Payment dialog state
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -532,15 +548,144 @@ export default function CheckoutClient() {
 
   const deliveryBreakdown = getDeliveryFeeBreakdown();
 
+  // Payment processing function
+  const handlePaymentConfirm = async () => {
+    try {
+      setIsProcessingPayment(true);
+      setPaymentError(null);
+
+      // Find the complete address object based on the selected address text
+      const selectedAddressObj = addresses.find(
+        (addr) => addr.full_address === addressText
+      );
+
+      if (!selectedAddressObj) {
+        setPaymentError("Address not found. Please select a valid address.");
+        return;
+      }
+
+      // Calculate taxes (CGST 9% + SGST 9% = 18% total)
+      const taxableAmount = subtotal - discount;
+      const cgstAmount = taxableAmount * 0.09;
+      const sgstAmount = taxableAmount * 0.09;
+
+      // Get coupon data for coupon ID
+      let appliedCouponData = null;
+      let couponId = null;
+      try {
+        const appliedCouponRaw =
+          typeof window !== "undefined"
+            ? localStorage.getItem("appliedCoupon")
+            : null;
+        if (appliedCouponRaw) {
+          appliedCouponData = JSON.parse(appliedCouponRaw);
+          couponId = appliedCouponData?.id || null;
+
+          // If no ID found but coupon code exists, warn but continue
+          if (!couponId && appliedCouponData?.code) {
+            console.warn(
+              "Applied coupon found but missing ID. Please reapply the coupon:",
+              appliedCouponData.code
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing applied coupon:", error);
+      }
+
+      // Prepare comprehensive order data
+      const orderData = {
+        subtotalAmount: subtotal,
+        discountAmount: discount,
+        deliveryFee: deliveryFee,
+        totalAmount: total,
+        note: note,
+        addressText: addressText,
+        couponCode: selectedCoupon,
+        couponId: couponId, // Add coupon ID for database relationship
+        contactInfo: contactInfo,
+        // Address ID for database relationship
+        deliveryAddressId: selectedAddressObj.id,
+        // Contact information for order
+        contactName: contactInfo.name,
+        contactNumber: contactInfo.phone,
+        contactAlternateNumber: contactInfo.alternatePhone || null,
+        // Enhanced customization options
+        customizationOptions: {
+          addTextOnCake: customizationOptions.addTextOnCake || false,
+          addCandles: customizationOptions.addCandles || false,
+          addKnife: customizationOptions.addKnife || false,
+          addMessageCard: customizationOptions.addMessageCard || false,
+          cakeText: cakeText || "",
+          messageCardText: messageCardText || "",
+        },
+        // Financial information
+        itemTotal: subtotal,
+        // Tax information
+        cgstAmount: cgstAmount,
+        sgstAmount: sgstAmount,
+        // Payment method
+        paymentMethod: "online",
+        specialInstructions: note || "",
+      };
+
+      console.log("Applied coupon data:", appliedCouponData);
+      console.log("Extracted coupon ID:", couponId);
+      console.log("Creating order with data:", orderData);
+
+      const response = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Failed to create order:", response.status, errorData);
+        setPaymentError(
+          `Failed to create order: ${
+            errorData.error || `HTTP ${response.status}`
+          }`
+        );
+        return;
+      }
+
+      const { orderId, orderNumber } = await response.json();
+      console.log("Order created successfully:", orderId);
+
+      // Clear cart and storage
+      clearCart();
+      clearCheckoutContext();
+
+      // Navigate to confirmation
+      router.replace("/checkout/confirmation?orderId=" + orderId);
+    } catch (err) {
+      console.error("Error creating order:", err);
+      setPaymentError(
+        `Payment failed: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   // Persist lightweight checkout context for payment step
   useEffect(() => {
     try {
+      // Find the complete address object based on the selected address text
+      const selectedAddressObj = addresses.find(
+        (addr) => addr.full_address === addressText
+      );
+
       const ctx = {
         subtotal,
         discount,
         deliveryFee,
         note,
         addressText,
+        selectedAddress: selectedAddressObj || null, // Store the complete address object
         couponCode: selectedCoupon,
         customizationOptions,
         cakeText,
@@ -1963,28 +2108,19 @@ export default function CheckoutClient() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Link
-                      href={`/checkout/payment?amount=${total.toFixed(2)}`}
-                      className="w-full"
-                      onClick={() => {
-                        // Clear checkout context when proceeding to payment
-                        // This indicates the user has completed the checkout form
-                        clearCheckoutContext();
-                      }}
+                    <Button
+                      className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={
+                        !addressText ||
+                        addressText ===
+                          "2nd street, Barathipuram, Kannampalayam" ||
+                        !contactInfo.name ||
+                        !contactInfo.phone
+                      }
+                      onClick={() => setIsPaymentDialogOpen(true)}
                     >
-                      <Button
-                        className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={
-                          !addressText ||
-                          addressText ===
-                            "2nd street, Barathipuram, Kannampalayam" ||
-                          !contactInfo.name ||
-                          !contactInfo.phone
-                        }
-                      >
-                        Proceed to Payment
-                      </Button>
-                    </Link>
+                      Proceed to Payment
+                    </Button>
                   </div>
                 </div>
 
@@ -2116,29 +2252,116 @@ export default function CheckoutClient() {
         {/* Fixed bottom Place Order bar (mobile only) */}
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
           <div className="mx-auto px-4 py-3 w-full max-w-[1200px]">
-            <Link
-              href={`/checkout/payment?amount=${total.toFixed(2)}`}
-              className="w-full"
-              onClick={() => {
-                // Clear checkout context when proceeding to payment
-                // This indicates the user has completed the checkout form
-                clearCheckoutContext();
-              }}
+            <Button
+              className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={
+                !addressText ||
+                addressText === "2nd street, Barathipuram, Kannampalayam" ||
+                !contactInfo.name ||
+                !contactInfo.phone
+              }
+              onClick={() => setIsPaymentDialogOpen(true)}
             >
-              <Button
-                className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={
-                  !addressText ||
-                  addressText === "2nd street, Barathipuram, Kannampalayam" ||
-                  !contactInfo.name ||
-                  !contactInfo.phone
-                }
-              >
-                Proceed to Payment
-              </Button>
-            </Link>
+              Proceed to Payment
+            </Button>
           </div>
         </div>
+
+        {/* Payment Confirmation Dialog */}
+        <Dialog
+          open={isPaymentDialogOpen}
+          onOpenChange={setIsPaymentDialogOpen}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Payment</DialogTitle>
+              <DialogDescription>
+                You're about to place an order for ₹{total.toFixed(2)}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Order Summary</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Item Total:</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount:</span>
+                      <span>-₹{discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Delivery Fee:</span>
+                    <span>₹{deliveryFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>CGST (9%):</span>
+                    <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>SGST (9%):</span>
+                    <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-1 mt-2">
+                    <div className="flex justify-between font-semibold">
+                      <span>Total:</span>
+                      <span>₹{total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Delivery Address</h4>
+                <p className="text-sm text-gray-700">{addressText}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Contact: {contactInfo.name}, {contactInfo.phone}
+                </p>
+              </div>
+
+              {selectedCoupon && (
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2 text-green-800">
+                    Applied Coupon
+                  </h4>
+                  <p className="text-sm text-green-700 font-mono">
+                    {selectedCoupon}
+                  </p>
+                  <p className="text-sm text-green-600 mt-1">
+                    Discount: ₹{discount.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {paymentError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-700 text-sm">{paymentError}</p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsPaymentDialogOpen(false)}
+                disabled={isProcessingPayment}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePaymentConfirm}
+                disabled={isProcessingPayment}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {isProcessingPayment ? "Processing..." : "Confirm & Pay"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
