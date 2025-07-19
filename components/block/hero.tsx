@@ -1,19 +1,17 @@
 "use client";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
-
-import { IoFilter } from "react-icons/io5";
 import { Shield, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import { isUserAdmin } from "@/lib/auth-utils";
 import { useCategories } from "@/hooks/use-categories";
 import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
 import BannerSlider from "./banner-slider";
+import DesktopEmblaSlider from "./desktop-embla-banner-slider";
 interface Category {
   id: string;
   name: string;
@@ -22,21 +20,21 @@ interface Category {
   is_active: boolean;
 }
 
-// Mobile slider images (keeping existing ones)
+// Mobile slider images (updated to use new banner images)
 const mobileSlides = [
   {
     id: 1,
-    image: "/images/image1.png",
+    image: "/banners/mobile/1.png",
     alt: "Delicious pastries and cakes",
   },
   {
     id: 2,
-    image: "/images/image2.png",
+    image: "/banners/mobile/2.png",
     alt: "Fresh baked goods",
   },
   {
     id: 3,
-    image: "/images/image3.png",
+    image: "/banners/mobile/3.png",
     alt: "Sweet treats and desserts",
   },
 ];
@@ -237,9 +235,9 @@ const Hero = memo(() => {
 
   return (
     <div className="w-full">
-      {/* Desktop Pink Banner - Only visible on lg screens and up */}
+      {/* Desktop Banner Slider - Only visible on lg screens and up */}
       <div className="hidden lg:block w-full mt-6 mb-8 px-4 max-w-full">
-        <div className="w-full h-[250px] bg-gradient-to-br from-pink-400 to-pink-600 rounded-[28px]" />
+        <DesktopEmblaSlider />
       </div>
 
       {/* Desktop Categories - Only visible on lg screens and up */}

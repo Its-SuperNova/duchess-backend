@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Swiper CSS imports */
+@import 'swiper/css';
+@import 'swiper/css/pagination';
+@import 'swiper/css/navigation';
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -98,6 +103,42 @@
 /* Custom Scrollbar Styles */
 .custom-scrollbar {
   scrollbar-width: thin;
+}
+
+/* Desktop Banner Slider Custom Styles */
+.desktop-banner-swiper {
+  --swiper-pagination-color: #ffffff;
+  --swiper-pagination-bullet-size: 12px;
+  --swiper-pagination-bullet-horizontal-gap: 8px;
+  --swiper-navigation-color: #ffffff;
+  --swiper-navigation-size: 24px;
+}
+
+.desktop-banner-swiper .swiper-pagination-bullet {
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 1;
+}
+
+.desktop-banner-swiper .swiper-pagination-bullet-active {
+  background: #ffffff;
+  transform: scale(1.2);
+}
+
+.desktop-banner-swiper .swiper-button-next,
+.desktop-banner-swiper .swiper-button-prev {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  backdrop-filter: blur(4px);
+}
+
+.desktop-banner-swiper .swiper-button-next:hover,
+.desktop-banner-swiper .swiper-button-prev:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.custom-scrollbar {
   scrollbar-color: #cbd5e1 transparent;
 }
 
