@@ -10,8 +10,7 @@ import { isUserAdmin } from "@/lib/auth-utils";
 import { useCategories } from "@/hooks/use-categories";
 import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
-import BannerSlider from "./banner-slider";
-import DesktopEmblaSlider from "./desktop-embla-banner-slider";
+import DesktopEmblaSlider from "@/components/block/desktop-embla-banner-slider";
 interface Category {
   id: string;
   name: string;
@@ -20,27 +19,7 @@ interface Category {
   is_active: boolean;
 }
 
-// Mobile slider images (updated to use new banner images)
-const mobileSlides = [
-  {
-    id: 1,
-    image: "/banners/mobile/1.png",
-    alt: "Delicious pastries and cakes",
-  },
-  {
-    id: 2,
-    image: "/banners/mobile/2.png",
-    alt: "Fresh baked goods",
-  },
-  {
-    id: 3,
-    image: "/banners/mobile/3.png",
-    alt: "Sweet treats and desserts",
-  },
-];
-
 const Hero = memo(() => {
-  const [currentSlide, setCurrentSlide] = useState(0);
   const { data: session, status } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -67,19 +46,6 @@ const Hero = memo(() => {
 
   // Get category grid configuration
   const { columns, maxCategories, gridClasses } = getCategoryGridConfig();
-
-  // Auto-slide functionality for mobile
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % mobileSlides.length);
-    }, 4000); // Change slide every 4 seconds
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
-  }, []);
 
   const retryFetchCategories = useCallback(async () => {
     try {
@@ -292,7 +258,7 @@ const Hero = memo(() => {
       <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[30px]">
         {/* Banner Slider for Mobile */}
         <div className="w-full max-w-md mx-auto mb-2">
-          <BannerSlider />
+          <DesktopEmblaSlider />
         </div>
 
         {/* Categories */}

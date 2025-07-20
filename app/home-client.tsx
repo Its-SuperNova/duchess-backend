@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo } from "react";
 import { ProcessedProduct } from "@/lib/utils";
 import ProductCard from "@/components/productcard";
 import { processProductForHomepage } from "@/lib/utils";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import Hero from "@/components/block/hero";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,88 +18,53 @@ interface HomeClientProps {
   initialProducts: ProcessedProduct[];
 }
 
-// Fetcher function for SWR
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
+interface ApiResponse {
+  success: boolean;
+  products: any[];
+}
+
+// Unified data fetching function
+const fetchProducts = async (): Promise<ProcessedProduct[]> => {
+  const response = await fetch("/api/products/homepage?limit=12&offset=0");
   if (!response.ok) {
     throw new Error("Failed to fetch products");
   }
-  return response.json();
+
+  const data: ApiResponse = await response.json();
+  if (!data.success || !data.products) {
+    throw new Error("Invalid response format");
+  }
+
+  return data.products.map(processProductForHomepage);
 };
 
 export default function HomeClient({ initialProducts }: HomeClientProps) {
-  const [products, setProducts] = useState<ProcessedProduct[]>(
-    initialProducts || []
-  );
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [productsError, setProductsError] = useState<string | null>(null);
-
-  // Use SWR for client-side caching
+  // Use SWR for client-side caching with unified data fetching
   const {
-    data: apiData,
-    error: swrError,
-    isLoading: swrLoading,
-  } = useSWR("/api/products/homepage?limit=12&offset=0", fetcher, {
-    revalidateOnFocus: false, // Don't revalidate when window gains focus
-    revalidateOnReconnect: true, // Revalidate when reconnecting
-    dedupingInterval: 3600000, // Dedupe requests within 1 hour
-    fallbackData: { success: true, products: initialProducts },
-    onSuccess: (data) => {
-      if (data.success && data.products) {
-        console.log("Raw API response:", data.products);
-        // Process the complete product data to include images, prices, etc.
-        const processedProducts = data.products.map((product: any) =>
-          processProductForHomepage(product)
-        );
-        console.log("Processed products:", processedProducts);
-        setProducts(processedProducts);
-      }
-    },
-    onError: (error) => {
-      console.error("SWR error:", error);
-      setProductsError("Failed to load complete product data");
-    },
-  });
-
-  // Fallback to manual fetch if SWR fails
-  useEffect(() => {
-    if (swrError && !apiData) {
-      const fetchCompleteProducts = async () => {
-        try {
-          setIsLoadingProducts(true);
-          setProductsError(null);
-          const response = await fetch(
-            "/api/products/homepage?limit=12&offset=0"
-          );
-          if (!response.ok) {
-            throw new Error("Failed to fetch products");
-          }
-          const data = await response.json();
-          if (data.success && data.products) {
-            console.log("Raw API response:", data.products);
-            // Process the complete product data to include images, prices, etc.
-            const processedProducts = data.products.map((product: any) =>
-              processProductForHomepage(product)
-            );
-            console.log("Processed products:", processedProducts);
-            setProducts(processedProducts);
-          }
-        } catch (error) {
-          console.error("Error fetching complete products:", error);
-          setProductsError("Failed to load complete product data");
-        } finally {
-          setIsLoadingProducts(false);
+    data: products = initialProducts,
+    error,
+    isLoading,
+    mutate: mutateProducts,
+  } = useSWR<ProcessedProduct[]>(
+    "/api/products/homepage?limit=12&offset=0",
+    fetchProducts,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 3600000, // 1 hour
+      fallbackData: initialProducts,
+      onSuccess: (data) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.log("Products loaded successfully:", data.length);
         }
-      };
-      if (initialProducts && initialProducts.length > 0) {
-        fetchCompleteProducts();
-      }
+      },
+      onError: (error) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("SWR error:", error);
+        }
+      },
     }
-  }, [swrError, apiData, initialProducts]);
-
-  // Use SWR loading state or fallback to manual loading state
-  const isLoading = swrLoading || isLoadingProducts;
-  const error = swrError || productsError;
+  );
 
   // Get layout information for responsive padding
   let getLayoutClasses = () => ({
@@ -107,6 +72,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
     isVeryCompact: false,
     mainContentClasses: "",
   });
+
   try {
     const layoutContext = useLayout();
     getLayoutClasses = layoutContext.getLayoutClasses;
@@ -121,33 +87,16 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
     return isVeryCompact ? "px-2" : isCompact ? "px-4" : "";
   }, [isVeryCompact, isCompact]);
 
+  // Simplified retry function using SWR mutate
   const retryFetchProducts = async () => {
     try {
-      setIsLoadingProducts(true);
-      setProductsError(null);
-
-      const response = await fetch("/api/products/homepage?limit=12&offset=0");
-      if (!response.ok) {
-        throw new Error("Failed to fetch products");
-      }
-
-      const data = await response.json();
-      if (data.success && data.products) {
-        const processedProducts = data.products.map((product: any) =>
-          processProductForHomepage(product)
-        );
-
-        setProducts(processedProducts);
-        toast.success("Products loaded successfully");
-      }
+      await mutateProducts(fetchProducts(), { revalidate: false });
+      toast.success("Products loaded successfully");
     } catch (error) {
-      console.error("Error refreshing products:", error);
-      setProductsError(
-        error instanceof Error ? error.message : "Failed to fetch products"
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error refreshing products:", error);
+      }
       toast.error("Failed to load products");
-    } finally {
-      setIsLoadingProducts(false);
     }
   };
 
@@ -222,9 +171,9 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
           onClick={retryFetchProducts}
           variant="outline"
           className="mx-auto"
-          disabled={isLoadingProducts}
+          disabled={isLoading}
         >
-          {isLoadingProducts ? (
+          {isLoading ? (
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -253,7 +202,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
           onClick={retryFetchProducts}
           variant="outline"
           className="mx-auto"
-          disabled={isLoadingProducts}
+          disabled={isLoading}
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
