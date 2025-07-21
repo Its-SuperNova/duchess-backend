@@ -45,6 +45,17 @@ const Hero = memo(() => {
   // Get category grid configuration
   const { columns, maxCategories, gridClasses } = getCategoryGridConfig();
 
+  // Function to create a URL-friendly slug from category name
+  const createCategorySlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[&]/g, "and") // Replace & with "and"
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .trim();
+  };
+
   const retryFetchCategories = useCallback(async () => {
     try {
       await refreshCategories();
@@ -228,7 +239,9 @@ const Hero = memo(() => {
             <div className={gridClasses}>
               {categories.slice(0, maxCategories).map((category) => (
                 <Link
-                  href={`/products?category=${category.id}`}
+                  href={`/products/categories/${createCategorySlug(
+                    category.name
+                  )}`}
                   key={category.id}
                 >
                   <div className="flex flex-col items-center cursor-pointer flex-shrink-0 w-24 group">
@@ -278,7 +291,9 @@ const Hero = memo(() => {
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               {categories.map((category) => (
                 <Link
-                  href={`/products?category=${category.id}`}
+                  href={`/products/categories/${createCategorySlug(
+                    category.name
+                  )}`}
                   key={category.id}
                 >
                   <div className="flex flex-col items-center cursor-pointer flex-shrink-0 min-w-[72px] group">

@@ -417,3 +417,203 @@ export async function getHomepageProducts({
     return [];
   }
 }
+
+// Get products by category slug (for category pages)
+export async function getProductsByCategorySlug(categorySlug: string) {
+  try {
+    return await withRetry(async () => {
+      // Convert slug back to readable format and handle URL encoding
+      let searchTerm = categorySlug.replace(/-/g, " ");
+
+      // Handle URL-encoded characters
+      try {
+        searchTerm = decodeURIComponent(searchTerm);
+      } catch (e) {
+        console.log("Failed to decode URL, using original:", searchTerm);
+      }
+
+      console.log("=== CATEGORY SEARCH DEBUG ===");
+      console.log("Original slug:", categorySlug);
+      console.log("Search term after processing:", searchTerm);
+
+      // First, find the category by name (exact match or contains)
+      const { data: categories, error: categoriesError } = await supabaseAdmin
+        .from("categories")
+        .select("id, name")
+        .eq("is_active", true);
+
+      if (categoriesError) {
+        console.error("Error fetching categories:", categoriesError);
+        return [];
+      }
+
+      console.log("Available categories:", categories);
+
+      // Find the matching category - simple approach
+      const matchingCategory = categories?.find((cat: any) => {
+        const categoryName = cat.name.toLowerCase();
+        const searchLower = searchTerm.toLowerCase();
+
+        console.log(`\n--- Checking Category: "${cat.name}" ---`);
+        console.log(`Category (lowercase): "${categoryName}"`);
+        console.log(`Search term (lowercase): "${searchLower}"`);
+
+        // Try exact match first
+        if (categoryName === searchLower) {
+          console.log("✓ Exact match found!");
+          return true;
+        }
+
+        // Handle the case where slug has "and" but category has "&"
+        // Convert both to use "and" for comparison
+        const normalizedSearch = searchLower.replace(/&/g, "and");
+        const normalizedCategory = categoryName.replace(/&/g, "and");
+
+        console.log(`Normalized search: "${normalizedSearch}"`);
+        console.log(`Normalized category: "${normalizedCategory}"`);
+
+        // Try normalized exact match
+        if (normalizedSearch === normalizedCategory) {
+          console.log("✓ Normalized exact match found!");
+          return true;
+        }
+
+        // Try contains match
+        if (
+          categoryName.includes(searchLower) ||
+          searchLower.includes(categoryName)
+        ) {
+          console.log("✓ Contains match found!");
+          return true;
+        }
+
+        console.log("✗ No match found for this category");
+        return false;
+      });
+
+      if (!matchingCategory) {
+        console.log("\n❌ NO MATCHING CATEGORY FOUND");
+        console.log("Search term was:", searchTerm);
+        console.log(
+          "Available categories:",
+          categories?.map((c) => c.name)
+        );
+        return [];
+      }
+
+      console.log("\n✅ MATCHING CATEGORY FOUND:", matchingCategory);
+
+      // Get products for this category using the category_id
+      const { data: products, error: productsError } = await supabaseAdmin
+        .from("products")
+        .select(
+          `
+          id,
+          name,
+          category_id,
+          is_veg,
+          has_offer,
+          offer_percentage,
+          weight_options,
+          piece_options,
+          selling_type,
+          banner_image,
+          categories (
+            id,
+            name
+          )
+        `
+        )
+        .eq("category_id", matchingCategory.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (productsError) {
+        console.error("Error fetching products:", productsError);
+        throw new Error(`Database error: ${productsError.message}`);
+      }
+
+      console.log("Products found:", products?.length || 0);
+      console.log("=== END CATEGORY SEARCH DEBUG ===\n");
+      return products || [];
+    });
+  } catch (error) {
+    console.error("Error in getProductsByCategorySlug:", error);
+    return [];
+  }
+}
+
+// Test function to verify database connectivity
+export async function testDatabaseConnection() {
+  try {
+    console.log("=== TESTING DATABASE CONNECTION ===");
+
+    // Test 1: Fetch categories
+    const { data: categories, error: catError } = await supabaseAdmin
+      .from("categories")
+      .select("id, name, is_active")
+      .limit(5);
+
+    if (catError) {
+      console.error("❌ Categories query failed:", catError);
+      return false;
+    }
+
+    console.log(
+      "✅ Categories query successful:",
+      categories?.length || 0,
+      "categories found"
+    );
+
+    // Test 2: Fetch products
+    const { data: products, error: prodError } = await supabaseAdmin
+      .from("products")
+      .select("id, name, category_id, is_active")
+      .limit(5);
+
+    if (prodError) {
+      console.error("❌ Products query failed:", prodError);
+      return false;
+    }
+
+    console.log(
+      "✅ Products query successful:",
+      products?.length || 0,
+      "products found"
+    );
+
+    // Test 3: Fetch products with categories
+    const { data: productsWithCat, error: joinError } = await supabaseAdmin
+      .from("products")
+      .select(
+        `
+        id,
+        name,
+        category_id,
+        categories (
+          id,
+          name
+        )
+      `
+      )
+      .limit(3);
+
+    if (joinError) {
+      console.error("❌ Products with categories query failed:", joinError);
+      return false;
+    }
+
+    console.log(
+      "✅ Products with categories query successful:",
+      productsWithCat?.length || 0,
+      "products found"
+    );
+    console.log("Sample product with category:", productsWithCat?.[0]);
+
+    console.log("=== DATABASE CONNECTION TEST COMPLETE ===\n");
+    return true;
+  } catch (error) {
+    console.error("❌ Database connection test failed:", error);
+    return false;
+  }
+}

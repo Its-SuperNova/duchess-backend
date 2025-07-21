@@ -16,13 +16,27 @@ interface CategoriesClientProps {
 export default function CategoriesClient({
   categories,
 }: CategoriesClientProps) {
+  // Function to create a URL-friendly slug from category name
+  const createCategorySlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[&]/g, "and") // Replace & with "and"
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .trim();
+  };
+
   return (
     <div className="bg-white min-h-screen pb-32">
       {/* Categories Grid */}
       <div className="px-4 py-4">
         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {categories.map((category, index) => (
-            <Link href={`/products?category=${category.id}`} key={index}>
+            <Link
+              href={`/products/categories/${createCategorySlug(category.name)}`}
+              key={index}
+            >
               <div className="flex flex-col items-center">
                 <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
                   <div className="absolute inset-0 rounded-[24px] overflow-hidden">
