@@ -10,6 +10,7 @@ import { isUserAdmin } from "@/lib/auth-utils";
 import { useCategories } from "@/hooks/use-categories";
 import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
+import DesktopEmblaSlider from "@/components/block/desktop-embla-banner-slider";
 interface Category {
   id: string;
   name: string;
@@ -200,7 +201,10 @@ const Hero = memo(() => {
 
   return (
     <div className="w-full">
-
+      {/* Desktop Banner Slider - Only visible on lg screens and up */}
+      <div className="hidden lg:block w-full mt-6 mb-8 px-4 max-w-full">
+        <DesktopEmblaSlider />
+      </div>
 
       {/* Desktop Categories - Only visible on lg screens and up */}
       <div className="hidden lg:block w-full px-4 mb-8">
@@ -252,7 +256,10 @@ const Hero = memo(() => {
 
       {/* Mobile/Tablet Content - Hidden on lg screens and up */}
       <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[30px]">
-
+        {/* Banner Slider for Mobile */}
+        <div className="w-full max-w-md mx-auto mb-2">
+          <DesktopEmblaSlider />
+        </div>
 
         {/* Categories */}
         <div className="flex w-full justify-between items-center px-1">
