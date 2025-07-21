@@ -1,12 +1,10 @@
 import useSWR from "swr";
 
-// Category interface matching your existing structure
+// Category interface matching optimized structure
 interface Category {
   id: string;
   name: string;
   image: string | null;
-  description?: string;
-  is_active: boolean;
 }
 
 // Fetcher function for SWR
@@ -46,11 +44,9 @@ export function useCategories() {
     }
   );
 
-  // Filter active categories on the client side
-  const activeCategories = data?.filter((category) => category.is_active) || [];
-
+  // Categories are already filtered on server side
   return {
-    categories: activeCategories,
+    categories: data || [],
     allCategories: data,
     isLoading,
     error,

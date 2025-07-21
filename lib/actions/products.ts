@@ -368,7 +368,7 @@ export async function getActiveProducts({
   }
 }
 
-// Get specific featured products for homepage (exact 12 products)
+// Get specific featured products for homepage (exact 12 products) - OPTIMIZED
 export async function getHomepageProducts({
   limit = 12,
   offset = 0,
@@ -383,19 +383,11 @@ export async function getHomepageProducts({
             id,
             name,
             banner_image,
-            short_description,
-            long_description,
             is_veg,
-            has_offer,
-            offer_percentage,
             weight_options,
             piece_options,
-            selling_type,
-            created_at,
             categories (
-              id,
-              name,
-              description
+              name
             )
           `
           )

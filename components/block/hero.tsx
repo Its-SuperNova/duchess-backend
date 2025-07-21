@@ -15,8 +15,6 @@ interface Category {
   id: string;
   name: string;
   image: string | null;
-  description?: string;
-  is_active: boolean;
 }
 
 const Hero = memo(() => {

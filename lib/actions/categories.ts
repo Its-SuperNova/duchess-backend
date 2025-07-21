@@ -3,14 +3,15 @@
 import { supabaseAdmin, withRetry } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
-// Get all categories
+// Get all categories - OPTIMIZED for hero section
 export async function getCategories() {
   try {
     return await withRetry(
       async () => {
         const { data: categories, error } = await supabaseAdmin
           .from("categories")
-          .select("id, name, image, description, is_active")
+          .select("id, name, image") // Only fetch essential columns
+          .eq("is_active", true) // Filter active categories on server side
           .order("name", { ascending: true })
           .limit(50); // Limit to prevent large queries
 

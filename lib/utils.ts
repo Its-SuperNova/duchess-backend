@@ -75,8 +75,9 @@ export function generateRating(): number {
   return Math.round((Math.random() * 1 + 4) * 10) / 10;
 }
 
-// Convert database product to ProcessedProduct for homepage display
+// Convert database product to ProcessedProduct for homepage display - OPTIMIZED
 export function processProductForHomepage(dbProduct: any): ProcessedProduct {
+  // Calculate price from weight_options or piece_options since price column doesn't exist
   const { price, originalPrice } = getProductPrice(dbProduct);
 
   return {
@@ -87,12 +88,10 @@ export function processProductForHomepage(dbProduct: any): ProcessedProduct {
     price: price,
     originalPrice: originalPrice,
     isVeg: dbProduct.is_veg,
-    description:
-      dbProduct.short_description ||
-      "Delicious pastry made with premium ingredients",
+    description: "Delicious pastry made with premium ingredients", // Default description
     category: dbProduct.categories?.name || "Pastry",
-    hasOffer: dbProduct.has_offer,
-    offerPercentage: dbProduct.offer_percentage,
+    hasOffer: false, // No offer data in optimized query
+    offerPercentage: undefined, // No offer data in optimized query
     categories: dbProduct.categories,
   };
 }

@@ -127,12 +127,12 @@ const ProductCard = memo(function ProductCard({
       {/* Product Image with Favorite Button and Offer Badge */}
       <div className="relative">
         <Link href={`/products/${id}`}>
-          <div className="relative h-48 w-full rounded-[28px] overflow-hidden">
+          <div className="relative h-48 w-full rounded-[28px] overflow-hidden group">
             <Image
               src={imageUrl || "/placeholder.svg"}
               alt={name}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               priority={priority}
             />
