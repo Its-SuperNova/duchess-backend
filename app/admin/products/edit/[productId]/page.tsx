@@ -101,11 +101,16 @@ export default function EditProductPage() {
         const product = await getProductById(productId);
 
         if (product) {
+          // Find the category name from the category_id
+          const productCategory = categories.find(
+            (cat) => cat.id === product.category_id
+          );
+
           setFormData({
             name: product.name || "",
             shortDescription: product.short_description || "",
             longDescription: product.long_description || "",
-            category: product.category_id || "",
+            category: productCategory?.name || "",
             isVeg: product.is_veg ?? true,
             hasOffer: product.has_offer ?? false,
             offerPercentage: product.offer_percentage?.toString() || "",
@@ -151,10 +156,10 @@ export default function EditProductPage() {
       }
     };
 
-    if (productId) {
+    if (productId && categories.length > 0) {
       loadProduct();
     }
-  }, [productId, router]);
+  }, [productId, router, categories]);
 
   // Handle form input changes
   const handleChange = (
@@ -318,6 +323,15 @@ export default function EditProductPage() {
       return;
     }
 
+    // Find category ID from category name
+    const selectedCategory = categories.find(
+      (cat) => cat.name === formData.category
+    );
+    if (!selectedCategory) {
+      toast.error("Selected category not found");
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -325,7 +339,7 @@ export default function EditProductPage() {
         name: formData.name.trim(),
         short_description: formData.shortDescription.trim(),
         long_description: formData.longDescription.trim(),
-        category_id: formData.category,
+        category_id: selectedCategory.id,
         is_veg: formData.isVeg,
         has_offer: formData.hasOffer,
         offer_percentage: formData.offerPercentage
