@@ -8,8 +8,8 @@ export const revalidate = 3600;
 // It always returns the 12 featured products for the homepage
 export async function GET() {
   try {
-    // Fetch complete product data for homepage (only products with show_on_home=true)
-    // Fixed limit of 12 products for homepage - no dynamic parameters needed
+    // Fetch only essential product data for homepage display
+    // Optimized to only include fields needed for ProductCard and basic info
     const { data: products, error } = await supabase
       .from("products")
       .select(
@@ -17,20 +17,14 @@ export async function GET() {
         id,
         name,
         banner_image,
-        additional_images,
-        short_description,
-        long_description,
         is_veg,
         has_offer,
         offer_percentage,
         weight_options,
         piece_options,
         selling_type,
-        created_at,
         categories (
-          id,
-          name,
-          description
+          name
         )
       `
       )
@@ -60,9 +54,12 @@ export async function GET() {
     });
 
     // Set cache headers
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    response.headers.set('CDN-Cache-Control', 'public, max-age=3600');
-    response.headers.set('Vercel-CDN-Cache-Control', 'public, max-age=3600');
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=3600, stale-while-revalidate=86400"
+    );
+    response.headers.set("CDN-Cache-Control", "public, max-age=3600");
+    response.headers.set("Vercel-CDN-Cache-Control", "public, max-age=3600");
 
     return response;
   } catch (error) {

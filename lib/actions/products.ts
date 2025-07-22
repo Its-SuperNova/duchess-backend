@@ -244,7 +244,7 @@ export async function toggleProductVisibility(id: string, isActive: boolean) {
   }
 }
 
-// Get products by category
+// Get products by category - OPTIMIZED for ProductCard display
 export async function getProductsByCategory(categoryId: string) {
   try {
     return await withRetry(async () => {
@@ -252,11 +252,17 @@ export async function getProductsByCategory(categoryId: string) {
         .from("products")
         .select(
           `
-          *,
+          id,
+          name,
+          banner_image,
+          is_veg,
+          has_offer,
+          offer_percentage,
+          weight_options,
+          piece_options,
+          selling_type,
           categories (
-            id,
-            name,
-            description
+            name
           )
         `
         )
@@ -277,7 +283,7 @@ export async function getProductsByCategory(categoryId: string) {
   }
 }
 
-// Search products
+// Search products - OPTIMIZED for ProductCard display
 export async function searchProducts(query: string) {
   try {
     return await withRetry(async () => {
@@ -285,11 +291,17 @@ export async function searchProducts(query: string) {
         .from("products")
         .select(
           `
-          *,
+          id,
+          name,
+          banner_image,
+          is_veg,
+          has_offer,
+          offer_percentage,
+          weight_options,
+          piece_options,
+          selling_type,
           categories (
-            id,
-            name,
-            description
+            name
           )
         `
         )
@@ -328,15 +340,12 @@ export async function getActiveProducts({
           name,
           banner_image,
           is_veg,
-          short_description,
           has_offer,
           offer_percentage,
           weight_options,
           piece_options,
           selling_type,
-          created_at,
           categories (
-            id,
             name
           )
         `
@@ -504,13 +513,13 @@ export async function getProductsByCategorySlug(categorySlug: string) {
       console.log("\n✅ MATCHING CATEGORY FOUND:", matchingCategory);
 
       // Get products for this category using the category_id
+      // Only fetch fields needed for ProductCard display and price calculation
       const { data: products, error: productsError } = await supabaseAdmin
         .from("products")
         .select(
           `
           id,
           name,
-          category_id,
           is_veg,
           has_offer,
           offer_percentage,
@@ -519,7 +528,6 @@ export async function getProductsByCategorySlug(categorySlug: string) {
           selling_type,
           banner_image,
           categories (
-            id,
             name
           )
         `
