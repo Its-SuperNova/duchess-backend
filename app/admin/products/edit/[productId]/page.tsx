@@ -335,6 +335,17 @@ export default function EditProductPage() {
     try {
       setSaving(true);
 
+      // Data validation and debug logging
+      console.log("=== PRODUCT UPDATE DEBUG ===");
+      console.log("Product ID:", productId);
+      console.log("Form Data:", formData);
+      console.log("Selected Category:", selectedCategory);
+      console.log("Banner Image:", bannerImage);
+      console.log(
+        "Additional Images:",
+        additionalImages.filter((img) => img)
+      );
+
       const productData = {
         name: formData.name.trim(),
         short_description: formData.shortDescription.trim(),
@@ -369,6 +380,89 @@ export default function EditProductPage() {
         highlights: formData.highlights,
         ingredients: formData.ingredients,
       };
+
+      // Validate numeric fields
+      const numericFields = [
+        { name: "offer_percentage", value: productData.offer_percentage },
+        { name: "offer_up_to_price", value: productData.offer_up_to_price },
+        { name: "calories", value: productData.calories },
+        { name: "net_weight", value: productData.net_weight },
+        { name: "protein", value: productData.protein },
+        { name: "fats", value: productData.fats },
+        { name: "carbs", value: productData.carbs },
+        { name: "sugars", value: productData.sugars },
+        { name: "fiber", value: productData.fiber },
+        { name: "sodium", value: productData.sodium },
+      ];
+
+      for (const field of numericFields) {
+        if (
+          field.value !== null &&
+          (isNaN(field.value) || !isFinite(field.value))
+        ) {
+          toast.error(`Invalid ${field.name}: ${field.value}`);
+          return;
+        }
+      }
+
+      // Validate decimal precision for nutrition fields (max 999.99)
+      const decimalFields = ["protein", "fats", "carbs", "sugars", "fiber"];
+      for (const fieldName of decimalFields) {
+        const value = productData[fieldName];
+        if (value !== null && (value > 999.99 || value < 0)) {
+          toast.error(`${fieldName} must be between 0 and 999.99`);
+          return;
+        }
+      }
+
+      // Validate weight_options structure
+      const validWeightOptions = formData.weightOptions.filter(
+        (option) =>
+          option.weight &&
+          option.price &&
+          !isNaN(parseFloat(option.price)) &&
+          option.stock &&
+          !isNaN(parseInt(option.stock))
+      );
+
+      // Validate piece_options structure
+      const validPieceOptions = formData.pieceOptions.filter(
+        (option) =>
+          option.quantity &&
+          option.price &&
+          !isNaN(parseFloat(option.price)) &&
+          option.stock &&
+          !isNaN(parseInt(option.stock))
+      );
+
+      // Update productData with validated options
+      productData.weight_options = validWeightOptions;
+      productData.piece_options = validPieceOptions;
+
+      // Ensure we have at least one valid pricing option
+      if (
+        formData.sellingType === "weight" &&
+        validWeightOptions.length === 0
+      ) {
+        toast.error("At least one valid weight option is required");
+        return;
+      }
+
+      if (formData.sellingType === "piece" && validPieceOptions.length === 0) {
+        toast.error("At least one valid piece option is required");
+        return;
+      }
+
+      if (
+        formData.sellingType === "both" &&
+        validWeightOptions.length === 0 &&
+        validPieceOptions.length === 0
+      ) {
+        toast.error("At least one valid pricing option is required");
+        return;
+      }
+
+      console.log("Final Product Data:", productData);
 
       await updateProduct(productId, productData);
       toast.success("Product updated successfully!");

@@ -93,6 +93,82 @@ export async function createProduct(productData: any) {
 // Update a product
 export async function updateProduct(id: string, productData: any) {
   try {
+    console.log("=== UPDATE PRODUCT SERVER ACTION ===");
+    console.log("Product ID:", id);
+    console.log("Product Data Keys:", Object.keys(productData));
+    console.log("Product Data:", JSON.stringify(productData, null, 2));
+
+    // Validate required fields
+    if (!id) {
+      throw new Error("Product ID is required");
+    }
+
+    if (!productData.name || typeof productData.name !== "string") {
+      throw new Error("Product name is required and must be a string");
+    }
+
+    if (!productData.category_id) {
+      throw new Error("Category ID is required");
+    }
+
+    // Validate numeric fields
+    const numericFields = [
+      "offer_percentage",
+      "calories",
+      "net_weight",
+      "sodium",
+    ];
+    for (const field of numericFields) {
+      if (productData[field] !== null && productData[field] !== undefined) {
+        if (
+          !Number.isInteger(productData[field]) &&
+          !isNaN(productData[field])
+        ) {
+          productData[field] = parseInt(productData[field]);
+        }
+        if (isNaN(productData[field])) {
+          console.error(`Invalid ${field}:`, productData[field]);
+          throw new Error(`Invalid ${field}: must be a number`);
+        }
+      }
+    }
+
+    // Validate decimal fields
+    const decimalFields = [
+      "offer_up_to_price",
+      "protein",
+      "fats",
+      "carbs",
+      "sugars",
+      "fiber",
+    ];
+    for (const field of decimalFields) {
+      if (productData[field] !== null && productData[field] !== undefined) {
+        if (isNaN(productData[field])) {
+          console.error(`Invalid ${field}:`, productData[field]);
+          throw new Error(`Invalid ${field}: must be a number`);
+        }
+      }
+    }
+
+    // Validate JSONB fields
+    const jsonFields = [
+      "additional_images",
+      "weight_options",
+      "piece_options",
+      "highlights",
+      "ingredients",
+    ];
+    for (const field of jsonFields) {
+      if (
+        productData[field] !== undefined &&
+        !Array.isArray(productData[field])
+      ) {
+        console.error(`Invalid ${field}:`, productData[field]);
+        throw new Error(`Invalid ${field}: must be an array`);
+      }
+    }
+
     return await withRetry(async () => {
       const { data: product, error } = await supabaseAdmin
         .from("products")
@@ -102,16 +178,25 @@ export async function updateProduct(id: string, productData: any) {
         .single();
 
       if (error) {
-        console.error("Error updating product:", error);
+        console.error("Supabase Error Details:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
         throw new Error(`Database error: ${error.message}`);
       }
 
+      console.log("Product updated successfully:", product?.id);
       revalidatePath("/admin/products");
       revalidatePath(`/admin/products/edit/${id}`);
       return product;
     });
   } catch (error) {
     console.error("Error in updateProduct:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to update product");
   }
 }
