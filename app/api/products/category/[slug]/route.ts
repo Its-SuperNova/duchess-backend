@@ -3,13 +3,14 @@ import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "0");
     const limit = parseInt(searchParams.get("limit") || "4");
-    const categorySlug = params.slug;
+    const categorySlug = slug;
 
     // Validate parameters
     if (page < 0 || limit <= 0 || limit > 20) {
