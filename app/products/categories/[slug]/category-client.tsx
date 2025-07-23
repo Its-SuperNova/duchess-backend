@@ -9,11 +9,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface CategoryClientProps {
   categorySlug: string;
   categoryName: string;
+  initialProducts: any[];
 }
 
 export default function CategoryClient({
   categorySlug,
   categoryName,
+  initialProducts,
 }: CategoryClientProps) {
   const {
     products,
@@ -25,18 +27,9 @@ export default function CategoryClient({
   } = useSimpleInfiniteProducts({
     categorySlug,
     pageSize: 4,
+    initialData: initialProducts, // ✅ hydrate with server data
   });
 
-  // Debug logging
-  console.log("CategoryClient render:", {
-    products: products.length,
-    isLoading,
-    hasMore,
-    error,
-    isIntersectionLoading,
-  });
-
-  // Calculate price from product options
   const calculatePrice = (product: any) => {
     let price = 0;
     let originalPrice = 0;
@@ -63,10 +56,7 @@ export default function CategoryClient({
         price = parseFloat(activeOption.price) || 0;
         originalPrice = price;
       }
-    } else if (
-      product.selling_type === "both" &&
-      (product.weight_options?.length > 0 || product.piece_options?.length > 0)
-    ) {
+    } else if (product.selling_type === "both") {
       if (product.weight_options?.length > 0) {
         const activeWeightOption = product.weight_options.find(
           (opt: any) => opt.isActive
@@ -87,13 +77,11 @@ export default function CategoryClient({
       }
     }
 
-    // Apply offer if available
     if (product.has_offer && product.offer_percentage && price > 0) {
       originalPrice = price;
       price = price * (1 - product.offer_percentage / 100);
     }
 
-    // If no price found, use a fallback
     if (price <= 0) {
       price = 100;
     }
@@ -127,21 +115,6 @@ export default function CategoryClient({
     return (
       <div className="w-full px-4 py-8">
         <div className="text-center py-12">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-          </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No products found in this category
           </h3>
@@ -192,39 +165,18 @@ export default function CategoryClient({
           })}
         </div>
 
-        {/* Intersection Observer Target */}
         {hasMore && (
           <div ref={observerRef} className="w-full py-8 flex justify-center">
             {isIntersectionLoading ? (
               <LoadingSpinnerWithText text="Loading more products..." />
             ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-gray-500">
-                  Scroll down to load more
-                </p>
-              </div>
+              <p className="text-sm text-gray-500">Scroll down to load more</p>
             )}
           </div>
         )}
 
-        {/* End of products indicator */}
         {!hasMore && products.length > 0 && (
           <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
             <p className="text-gray-600">
               You've reached the end of all products in this category!
             </p>

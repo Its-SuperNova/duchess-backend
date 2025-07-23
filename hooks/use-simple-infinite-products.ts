@@ -19,17 +19,25 @@ interface Product {
 interface UseSimpleInfiniteProductsOptions {
   categorySlug: string;
   pageSize?: number;
+  initialData?: Product[]; // ✅ new
 }
 
 export function useSimpleInfiniteProducts({
   categorySlug,
   pageSize = 4,
+  initialData = [], // ✅ default empty
 }: UseSimpleInfiniteProductsOptions) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [products, setProducts] = useState<Product[]>(initialData);
+  const [currentPage, setCurrentPage] = useState(
+    initialData.length > 0 ? 1 : 0 // ✅ if preloaded, start on page 1
+  );
+  const [hasMore, setHasMore] = useState(
+    initialData.length === pageSize // ✅ if we got a full page, assume more exists
+  );
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(
+    initialData.length === 0
+  );
 
   const fetchProducts = useCallback(
     async (page: number, append: boolean = false) => {
@@ -91,12 +99,12 @@ export function useSimpleInfiniteProducts({
     fetchProducts(0, false);
   }, [fetchProducts]);
 
-  // Initial load
+  // ✅ Only fetch if we don’t already have initialData
   useEffect(() => {
-    if (categorySlug) {
+    if (categorySlug && initialData.length === 0) {
       fetchProducts(0, false);
     }
-  }, [categorySlug, fetchProducts]);
+  }, [categorySlug, fetchProducts, initialData.length]);
 
   const {
     observerRef,
