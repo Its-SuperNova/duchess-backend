@@ -3,7 +3,7 @@ import { getProductsByCategorySlug } from "@/lib/actions/products";
 import CategoryClient from "./category-client";
 
 interface CategoryPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // ✅ This is an SSG function – categories get prebuilt at build time
@@ -11,7 +11,7 @@ interface CategoryPageProps {
 export const revalidate = 60; // ISR (revalidate every 60 seconds)
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { slug } = params;
+  const { slug } = await params;
 
   // Get category name from slug for display
   const categoryName = slug.replace(/-/g, " ").replace(/\band\b/g, "&");
