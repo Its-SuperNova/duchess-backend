@@ -15,7 +15,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹380",
     veg: false,
-    image: "/images/homePage-Product/Chocolate-Pistachio-Melting-Cake.jpg",
+    image: "/images/homePage-Product/Chocolate-Pistachio-MeltingCake.jpg",
   },
   {
     id: "6dda8c9d-f5f1-49af-9b42-7f8523b6997f",
@@ -23,7 +23,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹290",
     veg: false,
-    image: "/images/homePage-Product/Chocolate-cherry-Cake.jpg",
+    image: "/images/homePage-Product/Chocolate-cherryCake.jpg",
   },
   {
     id: "a3878b07-e31c-4d95-81cf-3cb17a7ffb05",
