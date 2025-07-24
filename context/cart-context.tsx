@@ -208,79 +208,65 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromCart = async (uniqueId: string) => {
+    // Optimistic update - remove item immediately for instant feedback
+    const previousCart = [...cart];
+    setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
+
     if (session?.user?.email) {
-      // User is authenticated, remove from database
+      // User is authenticated, sync with database in background
       try {
-        setIsLoading(true);
         const response = await fetch("/api/cart/remove", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uniqueItemId: uniqueId }),
         });
 
-        if (response.ok) {
-          // Reload cart from database to get updated state
-          await loadCartFromDatabase();
-        } else {
+        if (!response.ok) {
           console.error("Failed to remove item from database cart");
-          // Fallback to localStorage behavior
-          setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
+          // Revert optimistic update on failure
+          setCart(previousCart);
         }
+        // Success: keep the optimistic update (item stays removed)
       } catch (error) {
         console.error("Error removing from database cart:", error);
-        // Fallback to localStorage behavior
-        setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
-      } finally {
-        setIsLoading(false);
+        // Revert optimistic update on error
+        setCart(previousCart);
       }
-    } else {
-      // User is not authenticated, use localStorage
-      setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
     }
+    // For non-authenticated users, the optimistic update is already applied
   };
 
   const updateQuantity = async (uniqueId: string, quantity: number) => {
+    // Optimistic update - update UI immediately for instant feedback
+    const previousCart = [...cart];
+    setCart((prev) =>
+      prev.map((item) =>
+        item.uniqueId === uniqueId ? { ...item, quantity } : item
+      )
+    );
+
     if (session?.user?.email) {
-      // User is authenticated, update in database
+      // User is authenticated, sync with database in background
       try {
-        setIsLoading(true);
         const response = await fetch("/api/cart/update", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uniqueItemId: uniqueId, quantity }),
         });
 
-        if (response.ok) {
-          // Reload cart from database to get updated state
-          await loadCartFromDatabase();
-        } else {
+        if (!response.ok) {
           console.error("Failed to update quantity in database cart");
-          // Fallback to localStorage behavior
-          setCart((prev) =>
-            prev.map((item) =>
-              item.uniqueId === uniqueId ? { ...item, quantity } : item
-            )
-          );
+          // Revert optimistic update on failure
+          setCart(previousCart);
         }
+        // Success: keep the optimistic update (no need to reload from database)
       } catch (error) {
         console.error("Error updating quantity in database cart:", error);
-        // Fallback to localStorage behavior
-        setCart((prev) =>
-          prev.map((item) =>
-            item.uniqueId === uniqueId ? { ...item, quantity } : item
-          )
-        );
-      } finally {
-        setIsLoading(false);
+        // Revert optimistic update on error
+        setCart(previousCart);
       }
-    } else {
-      // User is not authenticated, use localStorage
-      setCart((prev) =>
-        prev.map((item) =>
-          item.uniqueId === uniqueId ? { ...item, quantity } : item
-        )
-      );
     }
+    // For non-authenticated users, the optimistic update is already applied
   };
 
   const getSubtotal = () => {

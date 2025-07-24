@@ -484,8 +484,10 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
   const handleUpdateQuantity = (uniqueId: string, newQuantity: number) => {
     if (newQuantity < 1) {
+      // Remove item when quantity reaches 0
       removeFromCart(uniqueId);
     } else {
+      // Update quantity (optimistic update for instant feedback)
       updateQuantity(uniqueId, newQuantity);
     }
   };
