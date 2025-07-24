@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
       cakeText: item.cake_text,
       giftCardText: item.gift_card_text,
       orderType: item.order_type,
+      uniqueId: item.unique_item_id, // Include the unique identifier
     }));
 
     return NextResponse.json({

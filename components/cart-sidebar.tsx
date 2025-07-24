@@ -97,7 +97,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     <>
       {cart.map((item) => (
         <div
-          key={item.id}
+          key={item.uniqueId || item.id}
           className="flex items-start gap-4 py-3 px-3 bg-white rounded-[20px]"
         >
           {/* Product image */}
@@ -115,7 +115,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             />
           </div>
 
-          <div>
+          <div className="flex-1">
             {/* Product details */}
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight ">
@@ -144,9 +144,8 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
                   onClick={() =>
                     handleUpdateQuantity(
-                      item.id,
-                      item.quantity - 1,
-                      item.variant
+                      item.uniqueId || `${item.id}-${item.variant}`,
+                      item.quantity - 1
                     )
                   }
                 >
@@ -159,9 +158,8 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   className="w-8 h-8 flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
                   onClick={() =>
                     handleUpdateQuantity(
-                      item.id,
-                      item.quantity + 1,
-                      item.variant
+                      item.uniqueId || `${item.id}-${item.variant}`,
+                      item.quantity + 1
                     )
                   }
                 >
@@ -484,15 +482,11 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     );
   };
 
-  const handleUpdateQuantity = (
-    id: number,
-    newQuantity: number,
-    variant?: string
-  ) => {
+  const handleUpdateQuantity = (uniqueId: string, newQuantity: number) => {
     if (newQuantity < 1) {
-      removeFromCart(id, variant);
+      removeFromCart(uniqueId);
     } else {
-      updateQuantity(id, newQuantity, variant);
+      updateQuantity(uniqueId, newQuantity);
     }
   };
 

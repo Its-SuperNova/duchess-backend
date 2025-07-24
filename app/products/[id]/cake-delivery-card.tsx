@@ -1044,30 +1044,60 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                           </DialogHeader>
                           {option.id === "text" ? (
                             <>
-                              <Input
-                                value={tempCakeText}
-                                onChange={(e) =>
-                                  setTempCakeText(e.target.value.slice(0, 30))
-                                }
-                                placeholder="Happy Birthday John!"
-                                className="bg-white text-sm mb-2 focus-visible:ring-primary"
-                                maxLength={30}
-                              />
-                              <div className="flex justify-between text-xs text-gray-500 mb-4">
-                                <span></span>
-                                <span>{tempCakeText.length}/30</span>
+                              <div className="flex items-start justify-between gap-2">
+                                <Input
+                                  value={tempCakeText}
+                                  onChange={(e) =>
+                                    setTempCakeText(e.target.value.slice(0, 30))
+                                  }
+                                  placeholder="e.g., Happy Birthday John!"
+                                  className={`flex-1 bg-white text-sm focus-visible:ring-primary ${
+                                    tempCakeText.trim().length > 0 &&
+                                    tempCakeText.trim().length < 4
+                                      ? "border-red-300 focus-visible:ring-red-500"
+                                      : ""
+                                  }`}
+                                  maxLength={30}
+                                />
+                                <span className="ml-2 text-xs text-gray-500 pt-2">
+                                  {tempCakeText.length}/30
+                                </span>
                               </div>
+                              {tempCakeText.trim().length > 0 &&
+                                tempCakeText.trim().length < 4 && (
+                                  <div className="text-xs text-red-500 mb-4">
+                                    Minimum 4 characters required
+                                  </div>
+                                )}
                             </>
                           ) : (
-                            <Textarea
-                              value={tempMessageCardText}
-                              onChange={(e) =>
-                                setTempMessageCardText(e.target.value)
-                              }
-                              placeholder="Write your special message here..."
-                              className="bg-white text-sm resize-none mb-2 focus-visible:ring-primary"
-                              rows={3}
-                            />
+                            <>
+                              <div className="flex items-start justify-between gap-2">
+                                <Textarea
+                                  value={tempMessageCardText}
+                                  onChange={(e) =>
+                                    setTempMessageCardText(e.target.value)
+                                  }
+                                  placeholder="e.g., Wishing you a wonderful birthday filled with happiness and love!"
+                                  className={`flex-1 bg-white text-sm resize-none focus-visible:ring-primary ${
+                                    tempMessageCardText.trim().length > 0 &&
+                                    tempMessageCardText.trim().length < 4
+                                      ? "border-red-300 focus-visible:ring-red-500"
+                                      : ""
+                                  }`}
+                                  rows={4}
+                                />
+                                <span className="ml-2 text-xs text-gray-500 pt-2">
+                                  {tempMessageCardText.length}/100
+                                </span>
+                              </div>
+                              {tempMessageCardText.trim().length > 0 &&
+                                tempMessageCardText.trim().length < 4 && (
+                                  <div className="text-xs text-red-500 mb-4">
+                                    Minimum 4 characters required
+                                  </div>
+                                )}
+                            </>
                           )}
                           <DialogFooter>
                             <DialogClose asChild>
@@ -1080,7 +1110,26 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                             </DialogClose>
                             <DialogClose asChild>
                               <button
-                                className="px-4 py-2 rounded-lg border border-primary bg-primary text-white font-semibold hover:bg-primary/90"
+                                className={`px-4 py-2 rounded-lg border font-semibold transition-colors ${
+                                  (option.id === "text" &&
+                                    tempCakeText.trim().length >= 4) ||
+                                  (option.id === "card" &&
+                                    tempMessageCardText.trim().length >= 4) ||
+                                  (option.id === "text" &&
+                                    tempCakeText.trim().length === 0) ||
+                                  (option.id === "card" &&
+                                    tempMessageCardText.trim().length === 0)
+                                    ? "border-primary bg-primary text-white hover:bg-primary/90"
+                                    : "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
+                                }`}
+                                disabled={
+                                  (option.id === "text" &&
+                                    tempCakeText.trim().length > 0 &&
+                                    tempCakeText.trim().length < 4) ||
+                                  (option.id === "card" &&
+                                    tempMessageCardText.trim().length > 0 &&
+                                    tempMessageCardText.trim().length < 4)
+                                }
                                 onClick={() => {
                                   if (option.id === "text")
                                     setCakeText(tempCakeText);

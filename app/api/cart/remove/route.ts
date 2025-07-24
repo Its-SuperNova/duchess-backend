@@ -11,11 +11,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, variant, orderType } = body;
+    const { uniqueItemId } = body;
 
-    if (!productId) {
+    if (!uniqueItemId) {
       return NextResponse.json(
-        { error: "Product ID is required" },
+        { error: "uniqueItemId is required" },
         { status: 400 }
       );
     }
@@ -42,14 +42,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
 
-    // Remove item from cart
+    // Remove specific item from cart using unique_item_id
     const { error: deleteError } = await supabase
       .from("cart_items")
       .delete()
       .eq("cart_id", cart.id)
-      .eq("product_id", productId.toString())
-      .eq("variant", variant || "Regular")
-      .eq("order_type", orderType || "weight");
+      .eq("unique_item_id", uniqueItemId);
 
     if (deleteError) {
       return NextResponse.json(

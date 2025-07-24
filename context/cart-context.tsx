@@ -25,8 +25,8 @@ interface CartItem {
 interface CartContextType {
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, "quantity"> & { quantity: number }) => void;
-  removeFromCart: (id: number, variant?: string) => void;
-  updateQuantity: (id: number, quantity: number, variant?: string) => void;
+  removeFromCart: (uniqueId: string) => void;
+  updateQuantity: (uniqueId: string, quantity: number) => void;
   getSubtotal: () => number;
   isCartOpen: boolean;
   openCart: () => void;
@@ -207,7 +207,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const removeFromCart = async (id: number, variant?: string) => {
+  const removeFromCart = async (uniqueId: string) => {
     if (session?.user?.email) {
       // User is authenticated, remove from database
       try {
@@ -215,7 +215,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/cart/remove", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: id, variant }),
+          body: JSON.stringify({ uniqueItemId: uniqueId }),
         });
 
         if (response.ok) {
@@ -224,40 +224,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } else {
           console.error("Failed to remove item from database cart");
           // Fallback to localStorage behavior
-          setCart((prev) =>
-            prev.filter(
-              (item) =>
-                !(item.id === id && (!variant || item.variant === variant))
-            )
-          );
+          setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
         }
       } catch (error) {
         console.error("Error removing from database cart:", error);
         // Fallback to localStorage behavior
-        setCart((prev) =>
-          prev.filter(
-            (item) =>
-              !(item.id === id && (!variant || item.variant === variant))
-          )
-        );
+        setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
       } finally {
         setIsLoading(false);
       }
     } else {
       // User is not authenticated, use localStorage
-      setCart((prev) =>
-        prev.filter(
-          (item) => !(item.id === id && (!variant || item.variant === variant))
-        )
-      );
+      setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
     }
   };
 
-  const updateQuantity = async (
-    id: number,
-    quantity: number,
-    variant?: string
-  ) => {
+  const updateQuantity = async (uniqueId: string, quantity: number) => {
     if (session?.user?.email) {
       // User is authenticated, update in database
       try {
@@ -265,7 +247,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/cart/update", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: id, quantity, variant }),
+          body: JSON.stringify({ uniqueItemId: uniqueId, quantity }),
         });
 
         if (response.ok) {
@@ -276,9 +258,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           // Fallback to localStorage behavior
           setCart((prev) =>
             prev.map((item) =>
-              item.id === id && (!variant || item.variant === variant)
-                ? { ...item, quantity }
-                : item
+              item.uniqueId === uniqueId ? { ...item, quantity } : item
             )
           );
         }
@@ -287,9 +267,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // Fallback to localStorage behavior
         setCart((prev) =>
           prev.map((item) =>
-            item.id === id && (!variant || item.variant === variant)
-              ? { ...item, quantity }
-              : item
+            item.uniqueId === uniqueId ? { ...item, quantity } : item
           )
         );
       } finally {
@@ -299,9 +277,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // User is not authenticated, use localStorage
       setCart((prev) =>
         prev.map((item) =>
-          item.id === id && (!variant || item.variant === variant)
-            ? { ...item, quantity }
-            : item
+          item.uniqueId === uniqueId ? { ...item, quantity } : item
         )
       );
     }

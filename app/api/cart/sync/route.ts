@@ -80,53 +80,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Merge local cart items with database cart
+    // Add all local cart items as new entries (following new uniqueness behavior)
     for (const localItem of localCartItems) {
-      const existingItem = existingItems.find(
-        (item) =>
-          item.product_id === localItem.id.toString() &&
-          item.variant === localItem.variant &&
-          item.order_type === (localItem.orderType || "weight")
-      );
+      // Always add as new item - each local item gets a new database entry
+      const itemUniqueId = localItem.uniqueId || `${Date.now()}-${Math.random()}`;
+      
+      const { error: insertError } = await supabase
+        .from("cart_items")
+        .insert({
+          cart_id: cart.id,
+          product_id: localItem.id.toString(),
+          quantity: localItem.quantity,
+          variant: localItem.variant || "Regular",
+          price: localItem.price,
+          product_name: localItem.name,
+          product_image: localItem.image || "/placeholder.svg",
+          category: localItem.category || "Product",
+          add_text_on_cake: localItem.addTextOnCake || false,
+          add_candles: localItem.addCandles || false,
+          add_knife: localItem.addKnife || false,
+          add_message_card: localItem.addMessageCard || false,
+          cake_text: localItem.cakeText || null,
+          gift_card_text: localItem.giftCardText || null,
+          order_type: localItem.orderType || "weight",
+          unique_item_id: itemUniqueId,
+        });
 
-      if (existingItem) {
-        // Update quantity (add local quantity to existing)
-        const { error: updateError } = await supabase
-          .from("cart_items")
-          .update({
-            quantity: existingItem.quantity + localItem.quantity,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingItem.id);
-
-        if (updateError) {
-          console.error("Failed to update cart item:", updateError);
-        }
-      } else {
-        // Add new item to database cart
-        const { error: insertError } = await supabase
-          .from("cart_items")
-          .insert({
-            cart_id: cart.id,
-            product_id: localItem.id.toString(),
-            quantity: localItem.quantity,
-            variant: localItem.variant || "Regular",
-            price: localItem.price,
-            product_name: localItem.name,
-            product_image: localItem.image || "/placeholder.svg",
-            category: localItem.category || "Product",
-            add_text_on_cake: localItem.addTextOnCake || false,
-            add_candles: localItem.addCandles || false,
-            add_knife: localItem.addKnife || false,
-            add_message_card: localItem.addMessageCard || false,
-            cake_text: localItem.cakeText || null,
-            gift_card_text: localItem.giftCardText || null,
-            order_type: localItem.orderType || "weight",
-          });
-
-        if (insertError) {
-          console.error("Failed to insert cart item:", insertError);
-        }
+      if (insertError) {
+        console.error("Failed to insert cart item:", insertError);
       }
     }
 

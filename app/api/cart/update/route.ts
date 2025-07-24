@@ -11,11 +11,11 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, quantity, variant, orderType } = body;
+    const { uniqueItemId, quantity } = body;
 
-    if (!productId || quantity === undefined) {
+    if (!uniqueItemId || quantity === undefined) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields: uniqueItemId and quantity" },
         { status: 400 }
       );
     }
@@ -50,14 +50,12 @@ export async function PUT(request: NextRequest) {
     }
 
     if (quantity === 0) {
-      // Remove item from cart
+      // Remove item if quantity is 0
       const { error: deleteError } = await supabase
         .from("cart_items")
         .delete()
         .eq("cart_id", cart.id)
-        .eq("product_id", productId.toString())
-        .eq("variant", variant || "Regular")
-        .eq("order_type", orderType || "weight");
+        .eq("unique_item_id", uniqueItemId);
 
       if (deleteError) {
         return NextResponse.json(
@@ -76,9 +74,7 @@ export async function PUT(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("cart_id", cart.id)
-        .eq("product_id", productId.toString())
-        .eq("variant", variant || "Regular")
-        .eq("order_type", orderType || "weight")
+        .eq("unique_item_id", uniqueItemId)
         .select()
         .single();
 
@@ -95,7 +91,7 @@ export async function PUT(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Error updating cart:", error);
+    console.error("Error updating cart item:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

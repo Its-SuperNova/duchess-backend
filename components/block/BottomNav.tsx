@@ -28,6 +28,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 // Types for database product
 interface DatabaseProduct {
   id: string;
@@ -149,8 +150,23 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
     if (isDrawerOpen) setDrawerStep(1);
   }, [isDrawerOpen]);
 
+  // Validation for text inputs
+  const isTextInputValid = () => {
+    if (addTextOnCake && orderType !== "piece" && cakeText.trim().length < 4) {
+      return false;
+    }
+    if (addMessageCard && giftCardText.trim().length < 4) {
+      return false;
+    }
+    return true;
+  };
+
   const handleAddToCart = () => {
     if (!product || !inStock) return;
+
+    // Validate text inputs if they are enabled
+    if (!isTextInputValid()) return;
+
     addToCart({
       id: parseInt(product.id.replace(/\D/g, "")) || 0,
       name: product.name,
@@ -458,33 +474,64 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                     </div>
                     {addTextOnCake && orderType !== "piece" && (
                       <div className="pt-2">
-                        <div className="flex items-center justify-between">
-                          <Input
-                            value={cakeText}
-                            onChange={(e) => setCakeText(e.target.value)}
-                            placeholder="Enter text for cake..."
-                            maxLength={20}
-                            className="flex-1"
-                          />
-                          <span className="ml-2 text-xs text-gray-500">
-                            {cakeText.length}/20
-                          </span>
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <Input
+                              value={cakeText}
+                              onChange={(e) => setCakeText(e.target.value)}
+                              placeholder="e.g., Happy Birthday John!"
+                              maxLength={20}
+                              className={`flex-1 ${
+                                addTextOnCake &&
+                                cakeText.trim().length > 0 &&
+                                cakeText.trim().length < 4
+                                  ? "border-red-300 focus-visible:ring-red-500"
+                                  : ""
+                              }`}
+                            />
+                            <span className="ml-2 text-xs text-gray-500 pt-2">
+                              {cakeText.length}/20
+                            </span>
+                          </div>
+                          {addTextOnCake &&
+                            cakeText.trim().length > 0 &&
+                            cakeText.trim().length < 4 && (
+                              <p className="text-xs text-red-500">
+                                Minimum 4 characters required
+                              </p>
+                            )}
                         </div>
                       </div>
                     )}
                     {addMessageCard && (
                       <div className="pt-2">
-                        <div className="flex items-center justify-between">
-                          <Input
-                            value={giftCardText}
-                            onChange={(e) => setGiftCardText(e.target.value)}
-                            placeholder="Enter message for gift card..."
-                            maxLength={100}
-                            className="flex-1"
-                          />
-                          <span className="ml-2 text-xs text-gray-500">
-                            {giftCardText.length}/100
-                          </span>
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <Textarea
+                              value={giftCardText}
+                              onChange={(e) => setGiftCardText(e.target.value)}
+                              placeholder="e.g., Wishing you a wonderful birthday filled with happiness and love!"
+                              maxLength={100}
+                              rows={3}
+                              className={`flex-1 resize-none ${
+                                addMessageCard &&
+                                giftCardText.trim().length > 0 &&
+                                giftCardText.trim().length < 4
+                                  ? "border-red-300 focus-visible:ring-red-500"
+                                  : ""
+                              }`}
+                            />
+                            <span className="ml-2 text-xs text-gray-500 pt-2">
+                              {giftCardText.length}/100
+                            </span>
+                          </div>
+                          {addMessageCard &&
+                            giftCardText.trim().length > 0 &&
+                            giftCardText.trim().length < 4 && (
+                              <p className="text-xs text-red-500">
+                                Minimum 4 characters required
+                              </p>
+                            )}
                         </div>
                       </div>
                     )}
@@ -500,11 +547,15 @@ function ProductPageBottomNav({ product }: { product: DatabaseProduct }) {
                     </Button>
                     <Button
                       onClick={handleAddToCart}
-                      disabled={!inStock}
-                      className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white"
+                      disabled={!inStock || !isTextInputValid()}
+                      className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white disabled:opacity-50"
                     >
                       <ShoppingCart className="h-5 w-5 mr-2" />
-                      {inStock ? "Add to Cart" : "Out of Stock"}
+                      {!inStock
+                        ? "Out of Stock"
+                        : !isTextInputValid()
+                        ? "Check Text Inputs"
+                        : "Add to Cart"}
                     </Button>
                   </div>
                 </>

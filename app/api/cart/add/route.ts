@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       cakeText,
       giftCardText,
       orderType,
+      uniqueId, // Use this to ensure each add action creates a new entry
     } = body;
 
     if (!id || !name || !price || !quantity) {
@@ -82,87 +83,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if item already exists in cart (same product, variant, and order type)
-    const { data: existingItem, error: existingError } = await supabase
+    // Always add as new item - each add to cart action creates a new entry
+    // Generate a unique identifier for this specific cart item
+    const itemUniqueId = uniqueId || `${Date.now()}-${Math.random()}`;
+
+    const insertData = {
+      cart_id: cart.id,
+      product_id: id.toString(),
+      quantity,
+      variant: variant || "Regular",
+      price,
+      product_name: name,
+      product_image: image || "/placeholder.svg",
+      category: category || "Product",
+      add_text_on_cake: addTextOnCake || false,
+      add_candles: addCandles || false,
+      add_knife: addKnife || false,
+      add_message_card: addMessageCard || false,
+      cake_text: cakeText || null,
+      gift_card_text: giftCardText || null,
+      order_type: orderType || "weight",
+      unique_item_id: itemUniqueId, // Store the unique identifier
+    };
+
+    console.log("Adding new item to cart:", insertData);
+
+    const { data: newItem, error: insertError } = await supabase
       .from("cart_items")
-      .select("*")
-      .eq("cart_id", cart.id)
-      .eq("product_id", id.toString())
-      .eq("variant", variant || "Regular")
-      .eq("order_type", orderType || "weight")
+      .insert(insertData)
+      .select()
       .single();
 
-    if (existingError && existingError.code !== "PGRST116") {
+    if (insertError) {
+      console.error("Insert error:", insertError);
       return NextResponse.json(
-        { error: "Failed to check existing items" },
+        { error: "Failed to add item to cart", details: insertError.message },
         { status: 500 }
       );
     }
 
-    if (existingItem) {
-      // Update existing item quantity
-      const { data: updatedItem, error: updateError } = await supabase
-        .from("cart_items")
-        .update({
-          quantity: existingItem.quantity + quantity,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingItem.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        return NextResponse.json(
-          { error: "Failed to update cart item" },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        message: "Item quantity updated",
-        item: updatedItem,
-      });
-    } else {
-      // Add new item to cart
-      const insertData = {
-        cart_id: cart.id,
-        product_id: id.toString(),
-        quantity,
-        variant: variant || "Regular",
-        price,
-        product_name: name,
-        product_image: image || "/placeholder.svg",
-        category: category || "Product",
-        add_text_on_cake: addTextOnCake || false,
-        add_candles: addCandles || false,
-        add_knife: addKnife || false,
-        add_message_card: addMessageCard || false,
-        cake_text: cakeText || null,
-        gift_card_text: giftCardText || null,
-        order_type: orderType || "weight",
-      };
-
-      console.log("Adding item to cart:", insertData);
-
-      const { data: newItem, error: insertError } = await supabase
-        .from("cart_items")
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("Insert error:", insertError);
-        return NextResponse.json(
-          { error: "Failed to add item to cart", details: insertError.message },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        message: "Item added to cart",
-        item: newItem,
-      });
-    }
+    return NextResponse.json({
+      message: "New item added to cart",
+      item: newItem,
+    });
   } catch (error) {
     console.error("Error adding to cart:", error);
     return NextResponse.json(
