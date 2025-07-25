@@ -8,7 +8,12 @@ export interface Product {
   weight_options: any[];
   piece_options: any[];
   selling_type: string;
-  categories: {
-    name: string;
-  };
+  categories:
+    | {
+        name: string;
+      }
+    | {
+        name: string;
+      }[]
+    | null;
 }

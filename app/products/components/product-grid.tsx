@@ -101,7 +101,11 @@ const ProductGridComponent = ({
             originalPrice={originalPrice > price ? originalPrice : undefined}
             isVeg={product.is_veg}
             description={product.name}
-            category={product.categories?.name}
+            category={
+              Array.isArray(product.categories)
+                ? product.categories[0]?.name
+                : product.categories?.name || undefined
+            }
             hasOffer={product.has_offer}
             offerPercentage={product.offer_percentage}
             priority={globalIndex < 4} // Only prioritize first 4 images
