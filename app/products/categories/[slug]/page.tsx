@@ -1,8 +1,8 @@
 // app/categories/[slug]/page.tsx
-import { getProductsByCategorySlug } from "@/lib/actions/products";
+import { getPaginatedProductsByCategorySlug } from "@/lib/actions/products";
 import { Suspense } from "react";
 import { ProductSkeletonGrid } from "@/components/ui/product-skeleton";
-import CategoryClient from "./category-client";
+import ProductList from "@/components/ProductList";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -33,7 +33,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const categoryName = slug.replace(/-/g, " ").replace(/\band\b/g, "&");
 
   // ✅ Prefetch initial products on the server for SEO and fast initial load
-  const initialProducts = await getProductsByCategorySlug(slug);
+  // Only load 4 products initially for better performance
+  const {
+    products: initialProducts,
+    totalCount,
+    hasMore,
+    category,
+  } = await getPaginatedProductsByCategorySlug(slug, 4, 0);
 
   return (
     <div className="w-full px-4 py-8">
@@ -41,16 +47,17 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-3xl font-bold capitalize">{categoryName}</h1>
           <p className="text-gray-600">
-            {initialProducts.length} product
-            {initialProducts.length !== 1 ? "s" : ""} loaded
+            {totalCount} product{totalCount !== 1 ? "s" : ""} available
           </p>
         </div>
 
         <Suspense fallback={<ProductSkeletonGrid count={4} />}>
-          <CategoryClient
+          <ProductList
             categorySlug={slug}
             categoryName={categoryName}
             initialProducts={initialProducts}
+            initialTotalCount={totalCount}
+            initialHasMore={hasMore}
           />
         </Suspense>
       </div>
