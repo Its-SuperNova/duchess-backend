@@ -377,6 +377,28 @@ export async function getActiveProducts({
   }
 }
 
+// Get total count of active products
+export async function getActiveProductsCount() {
+  try {
+    return await withRetry(async () => {
+      const { count, error } = await supabaseAdmin
+        .from("products")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
+      if (error) {
+        console.error("Error fetching active products count:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return count || 0;
+    });
+  } catch (error) {
+    console.error("Error in getActiveProductsCount:", error);
+    return 0;
+  }
+}
+
 // Get specific featured products for homepage (exact 12 products) - OPTIMIZED
 export async function getHomepageProducts({
   limit = 12,

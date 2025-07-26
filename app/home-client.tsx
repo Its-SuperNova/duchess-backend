@@ -87,11 +87,6 @@ export default function HomeClient({
     }
   }, [memoizedProducts.length, isIOS]);
 
-  const refreshProducts = () => {
-    // Since we're using local data, just show a success message
-    toast.success("Products refreshed");
-  };
-
   return (
     <div className="w-full overflow-x-hidden bg-white dark:bg-gray-900">
       {/* Hero section */}
@@ -101,9 +96,6 @@ export default function HomeClient({
       <section className="px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl md:text-3xl font-bold">Featured Products</h2>
-          <Button onClick={refreshProducts} variant="outline" size="sm">
-            Refresh
-          </Button>
         </div>
 
         {/* Products display */}
