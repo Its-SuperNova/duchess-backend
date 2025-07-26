@@ -91,7 +91,7 @@ export default function CategoryClient({
 
   if (error) {
     return (
-      <div className="w-full px-4 py-8">
+      <div className="w-full">
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -103,86 +103,70 @@ export default function CategoryClient({
   }
 
   if (isLoading && products.length === 0) {
-    return (
-      <div className="w-full px-4 py-8">
-        <h1 className="text-3xl font-bold capitalize mb-6">{categoryName}</h1>
-        <ProductSkeletonGrid count={4} />
-      </div>
-    );
+    return <ProductSkeletonGrid count={4} />;
   }
 
   if (products.length === 0) {
     return (
-      <div className="w-full px-4 py-8">
-        <div className="text-center py-12">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No products found in this category
-          </h3>
-          <p className="text-gray-600 mb-4">
-            We couldn't find any products in the "{categoryName}" category.
-          </p>
-          <p className="text-sm text-gray-500">
-            Please check back later or try a different category.
-          </p>
-        </div>
+      <div className="text-center py-12">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          No products found in this category
+        </h3>
+        <p className="text-gray-600 mb-4">
+          We couldn't find any products in the "{categoryName}" category.
+        </p>
+        <p className="text-sm text-gray-500">
+          Please check back later or try a different category.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full px-4 py-8">
-      <div className="max-w-[1200px] mx-auto md:px-4">
-        <div className="mb-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold capitalize">{categoryName}</h1>
+    <div className="w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {products.map((product: any, i) => {
+          const { price, originalPrice } = calculatePrice(product);
+
+          return (
+            <ProductCard
+              key={`${product.id}-${i}`}
+              id={product.id}
+              name={product.name}
+              rating={4.5}
+              imageUrl={product.banner_image || "/images/categories/cake.png"}
+              price={price}
+              originalPrice={originalPrice > price ? originalPrice : undefined}
+              isVeg={product.is_veg}
+              description={product.name}
+              category={product.categories?.name}
+              hasOffer={product.has_offer}
+              offerPercentage={product.offer_percentage}
+              priority={i < 4}
+            />
+          );
+        })}
+      </div>
+
+      {hasMore && (
+        <div ref={observerRef} className="w-full py-8">
+          {isIntersectionLoading ? (
+            <LoadingSpinnerWithText text="Loading more products..." />
+          ) : (
+            <div className="flex justify-center">
+              <p className="text-sm text-gray-500">Scroll down to load more</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!hasMore && products.length > 0 && (
+        <div className="text-center py-8">
           <p className="text-gray-600">
-            {products.length} product{products.length !== 1 ? "s" : ""} loaded
+            You've reached the end of all products in this category!
           </p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map((product: any, i) => {
-            const { price, originalPrice } = calculatePrice(product);
-
-            return (
-              <ProductCard
-                key={`${product.id}-${i}`}
-                id={product.id}
-                name={product.name}
-                rating={4.5}
-                imageUrl={product.banner_image || "/images/categories/cake.png"}
-                price={price}
-                originalPrice={
-                  originalPrice > price ? originalPrice : undefined
-                }
-                isVeg={product.is_veg}
-                description={product.name}
-                category={product.categories?.name}
-                hasOffer={product.has_offer}
-                offerPercentage={product.offer_percentage}
-                priority={i < 4}
-              />
-            );
-          })}
-        </div>
-
-        {hasMore && (
-          <div ref={observerRef} className="w-full py-8 flex justify-center">
-            {isIntersectionLoading ? (
-              <LoadingSpinnerWithText text="Loading more products..." />
-            ) : (
-              <p className="text-sm text-gray-500">Scroll down to load more</p>
-            )}
-          </div>
-        )}
-
-        {!hasMore && products.length > 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-600">
-              You've reached the end of all products in this category!
-            </p>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
