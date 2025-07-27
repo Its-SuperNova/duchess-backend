@@ -591,6 +591,43 @@ export async function getPaginatedProductsByCategorySlug(
         console.log("Failed to decode URL, using original:", searchTerm);
       }
 
+      // Create a reverse mapping for common category slugs
+      const categorySlugMap: { [key: string]: string } = {
+        "muffins-cupcakes": "Muffins & Cupcakes",
+        "muffins-and-cupcakes": "Muffins & Cupcakes",
+        "chocolate-cakes": "Chocolate Cakes",
+        "vanilla-cakes": "Vanilla Cakes",
+        "birthday-cakes": "Birthday Cakes",
+        "wedding-cakes": "Wedding Cakes",
+        cheesecakes: "Cheesecakes",
+        "chocolate-cookies": "Chocolate Cookies",
+        "butter-cookies": "Butter Cookies",
+        "oatmeal-cookies": "Oatmeal Cookies",
+        "chocolate-brownies": "Chocolate Brownies",
+        "vanilla-brownies": "Vanilla Brownies",
+        "chocolate-donuts": "Chocolate Donuts",
+        "glazed-donuts": "Glazed Donuts",
+        "chocolate-macarons": "Chocolate Macarons",
+        "vanilla-macarons": "Vanilla Macarons",
+        "chocolate-tarts": "Chocolate Tarts",
+        "fruit-tarts": "Fruit Tarts",
+        "chocolate-pies": "Chocolate Pies",
+        "apple-pies": "Apple Pies",
+        "chocolate-muffins": "Chocolate Muffins",
+        "blueberry-muffins": "Blueberry Muffins",
+        "chocolate-croissants": "Chocolate Croissants",
+        "plain-croissants": "Plain Croissants",
+        "white-bread": "White Bread",
+        "whole-wheat-bread": "Whole Wheat Bread",
+        "chocolate-sweets": "Chocolate Sweets",
+        "traditional-sweets": "Traditional Sweets",
+      };
+
+      // Check if we have a direct mapping first
+      if (categorySlugMap[categorySlug]) {
+        searchTerm = categorySlugMap[categorySlug];
+      }
+
       // First, find the category by name (exact match or contains)
       const { data: categories, error: categoriesError } = await supabaseAdmin
         .from("categories")
@@ -602,17 +639,17 @@ export async function getPaginatedProductsByCategorySlug(
         return { products: [], totalCount: 0, hasMore: false };
       }
 
-      // Find the matching category
+      // Find the matching category with improved logic
       const matchingCategory = categories?.find((cat: any) => {
         const categoryName = cat.name.toLowerCase();
         const searchLower = searchTerm.toLowerCase();
 
-        // Try exact match first
+        // 1. Try exact match first (highest priority)
         if (categoryName === searchLower) {
           return true;
         }
 
-        // Handle the case where slug has "and" but category has "&"
+        // 2. Handle the case where slug has "and" but category has "&"
         const normalizedSearch = searchLower.replace(/&/g, "and");
         const normalizedCategory = categoryName.replace(/&/g, "and");
 
@@ -621,10 +658,35 @@ export async function getPaginatedProductsByCategorySlug(
           return true;
         }
 
-        // Try contains match
+        // 3. Try word-by-word matching for multi-word categories
+        const searchWords = searchLower
+          .split(/\s+/)
+          .filter((word) => word.length > 0);
+        const categoryWords = categoryName
+          .split(/\s+/)
+          .filter((word) => word.length > 0);
+
+        // Check if all search words are present in category words
+        if (searchWords.length > 1) {
+          const allSearchWordsFound = searchWords.every((searchWord) =>
+            categoryWords.some(
+              (categoryWord) =>
+                categoryWord === searchWord ||
+                categoryWord.includes(searchWord) ||
+                searchWord.includes(categoryWord)
+            )
+          );
+
+          if (allSearchWordsFound) {
+            return true;
+          }
+        }
+
+        // 4. Fallback: try contains match but only if it's a close match
+        // This prevents "cupcakes" from matching "cakes" incorrectly
         if (
-          categoryName.includes(searchLower) ||
-          searchLower.includes(categoryName)
+          categoryName.includes(searchLower) &&
+          categoryName.length - searchLower.length <= 3
         ) {
           return true;
         }
@@ -633,8 +695,19 @@ export async function getPaginatedProductsByCategorySlug(
       });
 
       if (!matchingCategory) {
+        console.log(
+          `No category found for slug: "${categorySlug}" (searchTerm: "${searchTerm}")`
+        );
+        console.log(
+          "Available categories:",
+          categories?.map((c) => c.name)
+        );
         return { products: [], totalCount: 0, hasMore: false };
       }
+
+      console.log(
+        `Category matched: "${matchingCategory.name}" (ID: ${matchingCategory.id}) for slug: "${categorySlug}"`
+      );
 
       // Get total count for pagination
       const { count: totalCount } = await supabaseAdmin

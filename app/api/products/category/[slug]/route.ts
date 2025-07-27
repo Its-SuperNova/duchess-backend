@@ -27,6 +27,43 @@ export async function GET(
       // ignore decode errors
     }
 
+    // Create a reverse mapping for common category slugs
+    const categorySlugMap: { [key: string]: string } = {
+      "muffins-cupcakes": "Muffins & Cupcakes",
+      "muffins-and-cupcakes": "Muffins & Cupcakes",
+      "chocolate-cakes": "Chocolate Cakes",
+      "vanilla-cakes": "Vanilla Cakes",
+      "birthday-cakes": "Birthday Cakes",
+      "wedding-cakes": "Wedding Cakes",
+      cheesecakes: "Cheesecakes",
+      "chocolate-cookies": "Chocolate Cookies",
+      "butter-cookies": "Butter Cookies",
+      "oatmeal-cookies": "Oatmeal Cookies",
+      "chocolate-brownies": "Chocolate Brownies",
+      "vanilla-brownies": "Vanilla Brownies",
+      "chocolate-donuts": "Chocolate Donuts",
+      "glazed-donuts": "Glazed Donuts",
+      "chocolate-macarons": "Chocolate Macarons",
+      "vanilla-macarons": "Vanilla Macarons",
+      "chocolate-tarts": "Chocolate Tarts",
+      "fruit-tarts": "Fruit Tarts",
+      "chocolate-pies": "Chocolate Pies",
+      "apple-pies": "Apple Pies",
+      "chocolate-muffins": "Chocolate Muffins",
+      "blueberry-muffins": "Blueberry Muffins",
+      "chocolate-croissants": "Chocolate Croissants",
+      "plain-croissants": "Plain Croissants",
+      "white-bread": "White Bread",
+      "whole-wheat-bread": "Whole Wheat Bread",
+      "chocolate-sweets": "Chocolate Sweets",
+      "traditional-sweets": "Traditional Sweets",
+    };
+
+    // Check if we have a direct mapping first
+    if (categorySlugMap[slug]) {
+      searchTerm = categorySlugMap[slug];
+    }
+
     // 1. Get categories
     const { data: categories, error: catError } = await supabase
       .from("categories")
@@ -44,23 +81,67 @@ export async function GET(
       const cName = c.name.toLowerCase();
       const sName = searchTerm.toLowerCase();
 
+      // 1. Try exact match first (highest priority)
+      if (cName === sName) {
+        return true;
+      }
+
+      // 2. Handle the case where slug has "and" but category has "&"
       const normC = cName.replace(/&/g, "and");
       const normS = sName.replace(/&/g, "and");
 
-      return (
-        cName === sName ||
-        normC === normS ||
-        cName.includes(sName) ||
-        sName.includes(cName)
-      );
+      if (normC === normS) {
+        return true;
+      }
+
+      // 3. Try word-by-word matching for multi-word categories
+      const searchWords = sName.split(/\s+/).filter((word) => word.length > 0);
+      const categoryWords = cName
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+
+      // Check if all search words are present in category words
+      if (searchWords.length > 1) {
+        const allSearchWordsFound = searchWords.every((searchWord) =>
+          categoryWords.some(
+            (categoryWord) =>
+              categoryWord === searchWord ||
+              categoryWord.includes(searchWord) ||
+              searchWord.includes(categoryWord)
+          )
+        );
+
+        if (allSearchWordsFound) {
+          return true;
+        }
+      }
+
+      // 4. Fallback: try contains match but only if it's a close match
+      // This prevents "cupcakes" from matching "cakes" incorrectly
+      if (cName.includes(sName) && cName.length - sName.length <= 3) {
+        return true;
+      }
+
+      return false;
     });
 
     if (!category) {
+      console.log(
+        `No category found for slug: "${slug}" (searchTerm: "${searchTerm}")`
+      );
+      console.log(
+        "Available categories:",
+        categories?.map((c) => c.name)
+      );
       return NextResponse.json(
         { error: "Category not found" },
         { status: 404 }
       );
     }
+
+    console.log(
+      `Category matched: "${category.name}" (ID: ${category.id}) for slug: "${slug}"`
+    );
 
     // 2. Fetch products with offset pagination
     const { data: products, error: prodError } = await supabase
