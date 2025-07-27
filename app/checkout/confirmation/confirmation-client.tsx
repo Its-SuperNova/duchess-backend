@@ -458,7 +458,7 @@ export default function ConfirmationClient() {
           asChild
           className="w-full bg-[#523435] hover:bg-[#4a2a2a] py-4 text-lg font-semibold"
         >
-          <Link href="/profile/orders/track">Track Order</Link>
+          <Link href="/orders/track">Track Order</Link>
         </Button>
       </div>
     </div>

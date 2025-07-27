@@ -29,9 +29,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isAuthRoute = pathname === "/login" || pathname === "/register";
   const isHomePage = pathname === "/";
   const isOnboardingPage = pathname === "/onboarding";
+  const isTrackOrderPage = pathname === "/orders/track";
 
   // Hide header and user sidebar on all non-admin pages
-  const showHeader = !isAdminRoute && !isAuthRoute && !isOnboardingPage;
+  const showHeader =
+    !isAdminRoute && !isAuthRoute && !isOnboardingPage && !isTrackOrderPage;
 
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -131,36 +133,41 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </main>
 
           {/* Footer */}
-          <footer className="w-full border-t border-gray-200 bg-white">
-            <div className="mx-auto w-full max-w-[1200px] px-4 py-3">
-              <div className="text-xs text-gray-600 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 text-center items-center">
-                <span className="col-span-2 sm:col-span-3 lg:col-span-1">
-                  &copy; {new Date().getFullYear()} duchess pastry
-                </span>
-                <Link href="/legal/privacy-policy" className="hover:underline">
-                  Privacy Policy
-                </Link>
-                <Link
-                  href="/legal/terms-conditions"
-                  className="hover:underline"
-                >
-                  Terms & Conditions
-                </Link>
-                <Link
-                  href="/legal/refund-cancellation"
-                  className="hover:underline"
-                >
-                  Refund & Cancellation
-                </Link>
-                <Link
-                  href="/legal/shipping-delivery"
-                  className="hover:underline"
-                >
-                  Shipping & Delivery
-                </Link>
+          {showHeader && (
+            <footer className="w-full border-t border-gray-200 bg-white">
+              <div className="mx-auto w-full max-w-[1200px] px-4 py-3">
+                <div className="text-xs text-gray-600 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 text-center items-center">
+                  <span className="col-span-2 sm:col-span-3 lg:col-span-1">
+                    &copy; {new Date().getFullYear()} duchess pastry
+                  </span>
+                  <Link
+                    href="/legal/privacy-policy"
+                    className="hover:underline"
+                  >
+                    Privacy Policy
+                  </Link>
+                  <Link
+                    href="/legal/terms-conditions"
+                    className="hover:underline"
+                  >
+                    Terms & Conditions
+                  </Link>
+                  <Link
+                    href="/legal/refund-cancellation"
+                    className="hover:underline"
+                  >
+                    Refund & Cancellation
+                  </Link>
+                  <Link
+                    href="/legal/shipping-delivery"
+                    className="hover:underline"
+                  >
+                    Shipping & Delivery
+                  </Link>
+                </div>
               </div>
-            </div>
-          </footer>
+            </footer>
+          )}
 
           <Toaster />
           <SonnerToaster />
