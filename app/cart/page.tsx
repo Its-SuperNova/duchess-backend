@@ -79,8 +79,8 @@ export default function CartPage() {
               Looks like you haven't added any delicious treats to your cart
               yet.
             </p>
-            <Link href="/products">
-              <Button className="bg-[#7A0000] hover:bg-[#600000] text-white px-4 lg:px-6 py-2 lg:py-3 rounded-lg text-sm lg:text-base">
+            <Link href="/">
+              <Button className="bg-primary hover:bg-primary/90 text-white px-4 lg:px-6 py-2 lg:py-3 rounded-lg text-sm lg:text-base">
                 Start Shopping
               </Button>
             </Link>
@@ -244,7 +244,7 @@ export default function CartPage() {
 
           {/* Checkout Button */}
           <Link href="/checkout" className="w-full">
-            <Button className="w-full bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-xl font-medium">
+            <Button className="w-full h-[48px] bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-[18px] font-medium">
               Check out
             </Button>
           </Link>
