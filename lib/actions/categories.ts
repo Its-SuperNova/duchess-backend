@@ -12,7 +12,6 @@ export async function getCategories() {
           .from("categories")
           .select("id, name, image") // Only fetch essential columns
           .eq("is_active", true) // Filter active categories on server side
-          .order("name", { ascending: true })
           .limit(50); // Limit to prevent large queries
 
         if (error) {
@@ -20,7 +19,35 @@ export async function getCategories() {
           throw new Error(`Database error: ${error.message}`);
         }
 
-        return categories || [];
+        // Custom ordering for categories
+        const categoryOrder = [
+          "Cakes",
+          "Chocolates",
+          "Cookies",
+          "Entremets",
+          "Muffins & Cupcakes",
+          "Brownies & Brookies",
+        ];
+
+        // Sort categories according to the custom order
+        const sortedCategories = (categories || []).sort((a, b) => {
+          const aIndex = categoryOrder.indexOf(a.name);
+          const bIndex = categoryOrder.indexOf(b.name);
+
+          // If both categories are in the order list, sort by their position
+          if (aIndex !== -1 && bIndex !== -1) {
+            return aIndex - bIndex;
+          }
+
+          // If only one is in the order list, prioritize it
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+
+          // If neither is in the order list, sort alphabetically
+          return a.name.localeCompare(b.name);
+        });
+
+        return sortedCategories;
       },
       2,
       5000

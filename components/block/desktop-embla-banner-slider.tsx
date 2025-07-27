@@ -7,17 +7,17 @@ import Image from "next/image";
 const bannerImages = [
   {
     id: 1,
-    src: "/banners/1.png",
+    src: "/banners/desktop/1.png",
     alt: "Delicious cakes and pastries",
   },
   {
     id: 2,
-    src: "/banners/2.png",
+    src: "/banners/desktop/2.png",
     alt: "Fresh baked cookies",
   },
   {
     id: 3,
-    src: "/banners/3.png",
+    src: "/banners/desktop/3.png",
     alt: "Beautiful cupcakes",
   },
 ];
@@ -47,7 +47,17 @@ interface DesktopEmblaSliderProps {
 const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
   className = "",
 }) => {
-  const [emblaRef, emblaApi] = useEmblaCarousel({
+  // Separate carousel instances for desktop and mobile
+  const [emblaRefDesktop, emblaApiDesktop] = useEmblaCarousel({
+    loop: true,
+    align: "start",
+    skipSnaps: false,
+    dragFree: false,
+    containScroll: "trimSnaps",
+    inViewThreshold: 0.7,
+  });
+
+  const [emblaRefMobile, emblaApiMobile] = useEmblaCarousel({
     loop: true,
     align: "start",
     skipSnaps: false,
@@ -86,18 +96,27 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
   }, []);
 
   const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setSelectedIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
+    // Use desktop API for desktop view, mobile API for mobile view
+    const currentApi =
+      window.innerWidth >= 1024 ? emblaApiDesktop : emblaApiMobile;
+    if (!currentApi) return;
+    setSelectedIndex(currentApi.selectedScrollSnap());
+  }, [emblaApiDesktop, emblaApiMobile]);
 
   const scrollTo = useCallback(
-    (index: number) => emblaApi && emblaApi.scrollTo(index),
-    [emblaApi]
+    (index: number) => {
+      const currentApi =
+        window.innerWidth >= 1024 ? emblaApiDesktop : emblaApiMobile;
+      currentApi && currentApi.scrollTo(index);
+    },
+    [emblaApiDesktop, emblaApiMobile]
   );
 
   // Auto-play functionality with visibility control
   useEffect(() => {
-    if (!emblaApi || !isVisible) {
+    const currentApi =
+      window.innerWidth >= 1024 ? emblaApiDesktop : emblaApiMobile;
+    if (!currentApi || !isVisible) {
       // Clear interval when not visible or no API
       if (autoplayIntervalRef.current) {
         clearInterval(autoplayIntervalRef.current);
@@ -108,8 +127,8 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
 
     // Start autoplay when visible
     autoplayIntervalRef.current = setInterval(() => {
-      if (emblaApi && isVisible) {
-        emblaApi.scrollNext();
+      if (currentApi && isVisible) {
+        currentApi.scrollNext();
       }
     }, 5000); // Change slide every 5 seconds
 
@@ -119,7 +138,7 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
         autoplayIntervalRef.current = null;
       }
     };
-  }, [emblaApi, isVisible]);
+  }, [emblaApiDesktop, emblaApiMobile, isVisible]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -131,18 +150,29 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!emblaApi) return;
+    // Set up event listeners for both desktop and mobile APIs
+    const setupApi = (api: any) => {
+      if (!api) return;
 
-    onSelect();
-    setScrollSnaps(emblaApi.scrollSnapList());
-    emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onSelect);
+      onSelect();
+      setScrollSnaps(api.scrollSnapList());
+      api.on("select", onSelect);
+      api.on("reInit", onSelect);
+
+      return () => {
+        api.off("select", onSelect);
+        api.off("reInit", onSelect);
+      };
+    };
+
+    const cleanupDesktop = setupApi(emblaApiDesktop);
+    const cleanupMobile = setupApi(emblaApiMobile);
 
     return () => {
-      emblaApi.off("select", onSelect);
-      emblaApi.off("reInit", onSelect);
+      cleanupDesktop?.();
+      cleanupMobile?.();
     };
-  }, [emblaApi, onSelect]);
+  }, [emblaApiDesktop, emblaApiMobile, onSelect]);
 
   return (
     <div
@@ -153,20 +183,20 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
       <div className="hidden lg:block">
         <div
           className="h-[300px] overflow-hidden rounded-[28px]"
-          ref={emblaRef}
+          ref={emblaRefDesktop}
         >
           <div className="flex h-full">
             {bannerImages.map((banner, index) => (
               <div
                 key={`desktop-${banner.id}`}
-                className="flex-[0_0_100%] min-w-0 relative rounded-[28px] mr-4 last:mr-0 h-full"
+                className="flex-[0_0_100%] min-w-0 relative rounded-[28px] mr-4 last:mr-0 h-full w-full"
               >
                 <div className="relative w-full h-full rounded-[28px]">
                   <Image
                     src={banner.src}
                     alt={banner.alt}
                     fill
-                    className="object-cover rounded-[28px]"
+                    className="object-fill rounded-[28px]"
                     priority={index === 0} // Only first image gets priority
                     loading={index === 0 ? "eager" : "lazy"} // Lazy load non-first images
                     sizes="(max-width: 1280px) 100vw, 1280px" // Optimized for hero usage
@@ -186,7 +216,7 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
       <div className="block lg:hidden">
         <div
           className="w-full aspect-[450/220] overflow-hidden rounded-[20px] md:rounded-[24px]"
-          ref={emblaRef}
+          ref={emblaRefMobile}
         >
           <div className="flex h-full">
             {bannerImagesMobile.map((banner, index) => (

@@ -74,7 +74,7 @@ export default function ProfilePage() {
   const { favorites } = useFavorites();
 
   // Mock data for demonstration, matching the Figma numbers
-  const totalOrders = 12;
+  const totalOrders = 0;
   const totalFavorites = favorites.length;
 
   // Handle mounting state
