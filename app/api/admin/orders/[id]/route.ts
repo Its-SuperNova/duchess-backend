@@ -130,12 +130,12 @@ export async function GET(
       id: order.id,
       order_number: order.order_number,
       customer: {
-        name: order.contact_name || order.users?.name || "Unknown Customer",
+        name: order.users?.name || order.contact_name || "Unknown Customer",
         email: order.users?.email || "No email",
         phone: order.contact_number || addressData?.alternate_phone || null,
         alternatePhone: order.contact_alternate_number || null,
         avatar: `/api/avatar?name=${encodeURIComponent(
-          order.contact_name || order.users?.name || "Unknown"
+          order.users?.name || order.contact_name || "Unknown"
         )}`,
       },
       products: products,

@@ -75,8 +75,8 @@ export default function AdminLayout({
           />
           <div className="flex flex-col flex-1 overflow-hidden">
             <Topbar sidebarExpanded={sidebarExpanded} />
-            <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6">
-              <div className="responsive-padding max-w-7xl mx-auto">
+            <main className="flex-1 overflow-y-auto ">
+              <div className="max-w-7xl mx-auto">
                 {children}
               </div>
             </main>

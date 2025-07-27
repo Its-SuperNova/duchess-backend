@@ -28,11 +28,13 @@ import {
   ChevronDown,
   FileDown,
   Filter,
-  Maximize2,
   Search,
   ShoppingBag,
   Loader2,
 } from "lucide-react";
+import { MaximizeSquare3 } from "@solar-icons/react";
+import Lottie from "lottie-react";
+import emptyOrderAnimation from "../../../public/Lottie/Empty-Order.json";
 
 // Order type definition
 interface Order {
@@ -265,8 +267,12 @@ export default function OrdersPage() {
       {filteredOrders.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="rounded-full bg-blue-100 p-4 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
-              <ShoppingBag className="h-10 w-10" />
+            <div className="w-64 h-64 mx-auto mb-4">
+              <Lottie
+                animationData={emptyOrderAnimation}
+                loop={true}
+                autoplay={true}
+              />
             </div>
             <h3 className="mt-4 text-lg font-semibold">
               {searchTerm ? "No orders found" : "No orders yet"}
@@ -276,7 +282,11 @@ export default function OrdersPage() {
                 ? "Try adjusting your search terms or filters."
                 : "Orders placed by customers will show up here. You can manage and track all customer orders from this page."}
             </p>
-            {!searchTerm && <Button className="mt-6">Go to Products</Button>}
+            {!searchTerm && (
+              <Button className="mt-6 bg-blue-600 hover:bg-blue-700 text-white">
+                Go to Products
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -373,7 +383,7 @@ export default function OrdersPage() {
                         onClick={() => router.push(`/admin/orders/${order.id}`)}
                         className="h-8 w-8 p-0 hover:bg-primary/10"
                       >
-                        <Maximize2 className="h-4 w-4" />
+                        <MaximizeSquare3 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
