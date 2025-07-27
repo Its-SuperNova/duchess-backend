@@ -214,7 +214,7 @@ function AddressDrawer({
             <button
               onClick={handleUseCurrentLocation}
               disabled={locationLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[#560000] bg-white text-[#560000] hover:bg-[#560000] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-primary bg-white text-primary hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {locationLoading ? (
                 <>
@@ -257,7 +257,7 @@ function AddressDrawer({
             </Button>
             <DrawerClose asChild>
               <Button
-                className="flex-1 bg-[#560000] hover:bg-[#560000]/90 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white"
                 onClick={() => setOpen(false)}
               >
                 Confirm
@@ -356,7 +356,7 @@ function AddressDrawer({
               <button
                 className={`flex-1 px-4 py-3 rounded-lg border font-semibold transition-colors ${
                   isAddressFormValid()
-                    ? "!border-[#560000] bg-black text-white hover:bg-gray-900"
+                    ? "!border-primary bg-black text-white hover:bg-gray-900"
                     : "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
                 onClick={() => {
@@ -868,12 +868,12 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
             <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-start gap-2">
-                  <MapPin className="h-5 w-5 text-[#560000] mt-0.5 flex-shrink-0" />
+                  <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-gray-700">
                       Delivering to:
                     </span>
-                    <span className="text-sm font-medium text-[#560000] mt-0.5">
+                    <span className="text-sm font-medium text-primary mt-0.5">
                       {addresses[selectedAddress].label}
                     </span>
                     <div className="text-sm text-gray-600 mt-0.5">
@@ -898,7 +898,7 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                 {isMobile ? (
                   <>
                     <button
-                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[#560000] font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-1.5 shadow-sm"
+                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-primary font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-1.5 shadow-sm"
                       onClick={() => {
                         setShowAddAddress(false);
                         setAddressDialogOpen(true);
@@ -929,7 +929,7 @@ export default function CakeDeliveryCard({ stock = 15 }: { stock?: number }) {
                   >
                     <DialogTrigger asChild>
                       <button
-                        className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[#560000] font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-1.5 shadow-sm"
+                        className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-primary font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-1.5 shadow-sm"
                         onClick={() => {
                           setShowAddAddress(false);
                         }}

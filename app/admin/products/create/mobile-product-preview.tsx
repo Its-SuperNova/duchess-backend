@@ -456,7 +456,7 @@ export default function MobileProductPreview({
                       setMainImage(image);
                     }}
                     className={`w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 ${
-                      mainImage === image ? "border-[#560000]" : "border-white"
+                      mainImage === image ? "border-primary" : "border-white"
                     }`}
                   >
                     <Image
@@ -507,7 +507,7 @@ export default function MobileProductPreview({
                 </p>
               </div>
               <button
-                className="text-sm font-medium text-[#560000] hover:text-[#560000]/80 transition-colors flex items-center mt-3"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center mt-3"
                 onClick={(e) => e.preventDefault()}
               >
                 Read more
@@ -525,7 +525,7 @@ export default function MobileProductPreview({
                   {highlights.map((tag) => (
                     <span
                       key={tag}
-                      className="bg-[#560000]/10 text-[#560000] px-3 py-1 rounded-full text-sm font-medium"
+                      className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
                     >
                       {tag}
                     </span>
@@ -569,7 +569,7 @@ export default function MobileProductPreview({
                     }}
                     className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
                       orderType === "kg"
-                        ? "bg-white text-[#560000] shadow-sm"
+                        ? "bg-white text-primary shadow-sm"
                         : "text-gray-500"
                     }`}
                   >
@@ -582,7 +582,7 @@ export default function MobileProductPreview({
                     }}
                     className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
                       orderType === "piece"
-                        ? "bg-white text-[#560000] shadow-sm"
+                        ? "bg-white text-primary shadow-sm"
                         : "text-gray-500"
                     }`}
                   >
@@ -607,7 +607,7 @@ export default function MobileProductPreview({
                       }}
                       className={`py-3 rounded-xl text-sm transition-all ${
                         selectedWeight === index
-                          ? "bg-[#560000] text-white font-medium"
+                          ? "bg-primary text-white font-medium"
                           : "bg-gray-50 text-gray-700"
                       }`}
                     >
@@ -627,7 +627,7 @@ export default function MobileProductPreview({
                     }}
                     className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${
                       pieceQuantity > 1
-                        ? "bg-[#560000] text-white shadow-sm"
+                        ? "bg-primary text-white shadow-sm"
                         : "text-gray-300 cursor-not-allowed"
                     }`}
                     disabled={pieceQuantity <= 1}
@@ -642,7 +642,7 @@ export default function MobileProductPreview({
                       e.preventDefault();
                       setPieceQuantity(pieceQuantity + 1);
                     }}
-                    className="w-9 h-9 rounded-lg bg-[#560000] text-white flex items-center justify-center text-lg shadow-sm"
+                    className="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center text-lg shadow-sm"
                     disabled={
                       currentStock !== null && pieceQuantity >= currentStock
                     }
@@ -782,7 +782,7 @@ export default function MobileProductPreview({
             className={`rounded-full px-6 py-3 flex items-center gap-2 text-white ${
               currentStock === 0
                 ? "bg-orange-600 hover:bg-orange-700"
-                : "bg-[#560000] hover:bg-[#560000]/90"
+                : "bg-primary hover:bg-primary/90"
             }`}
             onClick={(e) => e.preventDefault()}
           >

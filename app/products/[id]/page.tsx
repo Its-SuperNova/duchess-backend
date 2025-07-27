@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { FaStar, FaHeart, FaRegHeart, FaShare } from "react-icons/fa";
 // Dynamically import Lottie to reduce initial bundle size
@@ -41,13 +41,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { getProductById } from "@/lib/actions/products";
 import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
-import ProductSkeleton from "./product-skeleton";
 import { useProductSelection } from "@/context/product-selection-context";
 import ProductAddToCart from "@/components/block/ProductAddToCart";
+import ProductDetailLoading from "./loading";
 import dynamic from "next/dynamic";
 
 // Create a wrapper component for Swiper with modules
@@ -186,7 +185,9 @@ export default function ProductPage() {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [showViewCart, setShowViewCart] = useState(false);
   const [successAnimation, setSuccessAnimation] = useState(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load Lottie animation data dynamically to reduce bundle size
   useEffect(() => {
@@ -261,6 +262,26 @@ export default function ProductPage() {
       setIsLiked(isFavorite(numericId));
     }
   }, [product, isFavorite]);
+
+  // Reset cart button states when product changes
+  useEffect(() => {
+    setIsAddedToCart(false);
+    setShowViewCart(false);
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, [productId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Calculate current price and stock
   const getCurrentPriceAndStock = () => {
@@ -357,6 +378,11 @@ export default function ProductPage() {
     }
   };
 
+  // Handle view cart
+  const handleViewCart = () => {
+    router.push("/cart");
+  };
+
   // Handle add to cart
   const handleAddToCart = async () => {
     if (!product) return;
@@ -408,10 +434,11 @@ export default function ProductPage() {
       // Show success feedback
       setIsAddedToCart(true);
 
-      // Revert back to default state after 2 seconds
-      setTimeout(() => {
+      // After 2.5 seconds, change to "View Cart" state
+      timeoutRef.current = setTimeout(() => {
         setIsAddedToCart(false);
-      }, 2000);
+        setShowViewCart(true);
+      }, 2500);
     } catch (error) {
       toast({
         title: "Error",
@@ -465,14 +492,14 @@ export default function ProductPage() {
 
   // Loading skeleton
   if (isLoading) {
-    return <ProductSkeleton />;
+    return <ProductDetailLoading />;
   }
 
   // Error state
   if (error || !product) {
     return (
       <div className="bg-[#f5f5f5] flex flex-col items-center min-h-screen">
-        <div className="max-w-[1300px] flex flex-col justify-center items-center h-screen mx-4">
+        <div className="max-w-[1200px] flex flex-col justify-center items-center h-screen mx-4">
           <div className="text-center">
             <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
               <AlertCircle className="w-8 h-8 text-red-600" />
@@ -513,7 +540,7 @@ export default function ProductPage() {
   return (
     <>
       <div className="bg-[#f5f5f5] flex flex-col items-center pt-3">
-        <div className="max-w-[1300px] flex flex-col min-h-screen mb-20 mx-4">
+        <div className="max-w-[1200px] flex flex-col min-h-screen mb-20 mx-4">
           {/* Main content: two columns on desktop, one column on mobile */}
           <div className="flex flex-col md:flex-row md:gap-8 md:px-8 md:pt-0 md:pb-8 flex-1">
             {/* Left column */}
@@ -605,7 +632,7 @@ export default function ProductPage() {
                       onClick={() =>
                         setIsDescriptionExpanded(!isDescriptionExpanded)
                       }
-                      className="text-sm font-medium text-[#560000] hover:text-[#560000]/80 transition-colors flex items-center mt-3"
+                      className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center mt-3"
                     >
                       {isDescriptionExpanded ? "Read less" : "Read more"}
                       <ChevronRight
@@ -627,7 +654,7 @@ export default function ProductPage() {
                       {product.highlights.map((highlight, index) => (
                         <span
                           key={index}
-                          className="bg-[#560000]/10 text-[#560000] px-4 py-1.5 rounded-full text-sm font-medium"
+                          className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-medium"
                         >
                           {highlight}
                         </span>
@@ -650,7 +677,7 @@ export default function ProductPage() {
                             key={index}
                             className="bg-gray-100 px-3 py-2 rounded-full flex items-center text-sm hover:bg-gray-200 transition-colors cursor-pointer"
                           >
-                            <Coffee className="h-4 w-4 mr-2 text-[#560000]" />
+                            <Coffee className="h-4 w-4 mr-2 text-primary" />
                             {ingredient}
                           </span>
                         ))}
@@ -688,7 +715,7 @@ export default function ProductPage() {
                         onClick={() => setOrderType("weight")}
                         className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
                           orderType === "weight"
-                            ? "bg-white text-[#560000] shadow-sm"
+                            ? "bg-white text-primary shadow-sm"
                             : "text-gray-500 hover:text-gray-700"
                         }`}
                       >
@@ -698,7 +725,7 @@ export default function ProductPage() {
                         onClick={() => setOrderType("piece")}
                         className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
                           orderType === "piece"
-                            ? "bg-white text-[#560000] shadow-sm"
+                            ? "bg-white text-primary shadow-sm"
                             : "text-gray-500 hover:text-gray-700"
                         }`}
                       >
@@ -725,7 +752,7 @@ export default function ProductPage() {
                                 onClick={() => setSelectedWeightOption(index)}
                                 className={`py-3 rounded-xl text-sm transition-all ${
                                   selectedWeightOption === index
-                                    ? "bg-[#560000] text-white font-medium"
+                                    ? "bg-primary text-white font-medium"
                                     : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                                 }`}
                               >
@@ -789,14 +816,14 @@ export default function ProductPage() {
 
                 {/* Add to Cart button */}
                 <button
-                  onClick={handleAddToCart}
+                  onClick={showViewCart ? handleViewCart : handleAddToCart}
                   disabled={currentStock === 0 || isAddingToCart}
                   className={`text-white rounded-xl px-6 py-4 items-center justify-center font-medium text-base transition-all hidden md:flex ${
                     currentStock === 0
                       ? "bg-gray-400 cursor-not-allowed"
-                      : isAddedToCart
+                      : isAddedToCart || showViewCart
                       ? "bg-green-600 hover:bg-green-700"
-                      : "bg-[#560000] hover:bg-[#560000]/90"
+                      : "bg-primary hover:bg-primary/90"
                   }`}
                 >
                   {isAddingToCart ? (
@@ -819,6 +846,11 @@ export default function ProductPage() {
                         )}
                       </div>
                       Added to Cart!
+                    </>
+                  ) : showViewCart ? (
+                    <>
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      View Cart
                     </>
                   ) : (
                     <>

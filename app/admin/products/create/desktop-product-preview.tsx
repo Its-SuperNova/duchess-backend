@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,13 +22,13 @@ import {
   Candy,
   Wheat,
   Shell,
-} from "lucide-react"
-import { FaStar } from "react-icons/fa"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Card, CardContent } from "@/components/ui/card"
-import { format, addDays, startOfToday } from "date-fns"
+} from "lucide-react";
+import { FaStar } from "react-icons/fa";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
+import { format, addDays, startOfToday } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -36,84 +36,136 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProductPreviewProps {
-  name: string
-  category: string
-  description: string
-  isVeg: boolean
-  bannerImage: string | null
-  additionalImages: string[]
-  weightOptions: { weight: string; price: string; stock: string; isActive: boolean }[]
-  pieceOptions: { quantity: string; price: string; stock: string; isActive: boolean }[]
-  price: string
-  calories: string
-  netWeight: string
-  protein: string
-  fats: string
-  carbs: string
-  sugars: string
-  fiber: string
-  sodium: string
-  deliveryOption: string
-  addTextOnCake: boolean
-  addCandles: boolean
-  addKnife: boolean
-  addMessageCard: boolean
-  highlights: string[]
-  ingredients: string[]
-  sellingType: string
+  name: string;
+  category: string;
+  description: string;
+  isVeg: boolean;
+  bannerImage: string | null;
+  additionalImages: string[];
+  weightOptions: {
+    weight: string;
+    price: string;
+    stock: string;
+    isActive: boolean;
+  }[];
+  pieceOptions: {
+    quantity: string;
+    price: string;
+    stock: string;
+    isActive: boolean;
+  }[];
+  price: string;
+  calories: string;
+  netWeight: string;
+  protein: string;
+  fats: string;
+  carbs: string;
+  sugars: string;
+  fiber: string;
+  sodium: string;
+  deliveryOption: string;
+  addTextOnCake: boolean;
+  addCandles: boolean;
+  addKnife: boolean;
+  addMessageCard: boolean;
+  highlights: string[];
+  ingredients: string[];
+  sellingType: string;
 }
 
 // Helper for the common delivery detail block
-const DeliveryDetailBlock = ({ currentStock }: { currentStock: number | null }) => (
+const DeliveryDetailBlock = ({
+  currentStock,
+}: {
+  currentStock: number | null;
+}) => (
   <div
     className={`flex items-center justify-between p-3 rounded-lg border ${
-      currentStock === 0 ? "bg-amber-50 border-amber-100" : "bg-green-50 border-green-100"
+      currentStock === 0
+        ? "bg-amber-50 border-amber-100"
+        : "bg-green-50 border-green-100"
     }`}
   >
     <div className="flex items-center gap-3">
-      <div className={`${currentStock === 0 ? "bg-amber-600" : "bg-green-600"} text-white p-2 rounded-lg`}>
+      <div
+        className={`${
+          currentStock === 0 ? "bg-amber-600" : "bg-green-600"
+        } text-white p-2 rounded-lg`}
+      >
         <Clock className="h-5 w-5" />
       </div>
       <div>
-        <p className={`font-medium ${currentStock === 0 ? "text-amber-800" : "text-green-800"}`}>
-          {currentStock === 0 ? "Extended delivery time" : "Same-day delivery available"}
+        <p
+          className={`font-medium ${
+            currentStock === 0 ? "text-amber-800" : "text-green-800"
+          }`}
+        >
+          {currentStock === 0
+            ? "Extended delivery time"
+            : "Same-day delivery available"}
         </p>
-        <p className={`text-sm ${currentStock === 0 ? "text-amber-600" : "text-green-600"}`}>
+        <p
+          className={`text-sm ${
+            currentStock === 0 ? "text-amber-600" : "text-green-600"
+          }`}
+        >
           Product making time, around 2 hrs
         </p>
       </div>
     </div>
     <div className="flex flex-col items-end">
-      <span className={`text-sm font-medium ${currentStock === 0 ? "text-amber-800" : "text-amber-800"}`}>
+      <span
+        className={`text-sm font-medium ${
+          currentStock === 0 ? "text-amber-800" : "text-amber-800"
+        }`}
+      >
         {currentStock === 0 ? "Today + 4hrs" : "Today"}
       </span>
-      <span className={`text-xs ${currentStock === 0 ? "text-amber-600" : "text-green-600"}`}>
+      <span
+        className={`text-xs ${
+          currentStock === 0 ? "text-amber-600" : "text-green-600"
+        }`}
+      >
         {currentStock === 0 ? "9:00 PM - 11:00 PM" : "5:00 PM - 7:00 PM"}
       </span>
     </div>
   </div>
-)
+);
 
 interface ScheduleDatePickerDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onSelectDateTime: (date: string, time: string) => void // Callback for selected date/time
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectDateTime: (date: string, time: string) => void; // Callback for selected date/time
 }
 
-function ScheduleDatePickerDialog({ isOpen, onClose, onSelectDateTime }: ScheduleDatePickerDialogProps) {
-  const [selectedDate, setSelectedDate] = useState<string>(format(addDays(startOfToday(), 1), "yyyy-MM-dd"))
-  const [selectedTime, setSelectedTime] = useState<string>("10:00 AM - 12:00 PM")
+function ScheduleDatePickerDialog({
+  isOpen,
+  onClose,
+  onSelectDateTime,
+}: ScheduleDatePickerDialogProps) {
+  const [selectedDate, setSelectedDate] = useState<string>(
+    format(addDays(startOfToday(), 1), "yyyy-MM-dd")
+  );
+  const [selectedTime, setSelectedTime] = useState<string>(
+    "10:00 AM - 12:00 PM"
+  );
 
   const handleConfirm = () => {
-    onSelectDateTime(selectedDate, selectedTime)
-    onClose()
-  }
+    onSelectDateTime(selectedDate, selectedTime);
+    onClose();
+  };
 
   const timeSlots = [
     "10:00 AM - 12:00 PM",
@@ -121,35 +173,53 @@ function ScheduleDatePickerDialog({ isOpen, onClose, onSelectDateTime }: Schedul
     "02:00 PM - 04:00 PM",
     "04:00 PM - 06:00 PM",
     "06:00 PM - 08:00 PM",
-  ]
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Select Delivery Date & Time</DialogTitle>
-          <DialogDescription>Choose a preferred date and time for your scheduled delivery.</DialogDescription>
+          <DialogDescription>
+            Choose a preferred date and time for your scheduled delivery.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label className="text-base font-semibold">Select Date (Next 5 Days)</Label>
-            <RadioGroup value={selectedDate} onValueChange={setSelectedDate} className="grid grid-cols-3 gap-2">
+            <Label className="text-base font-semibold">
+              Select Date (Next 5 Days)
+            </Label>
+            <RadioGroup
+              value={selectedDate}
+              onValueChange={setSelectedDate}
+              className="grid grid-cols-3 gap-2"
+            >
               {Array.from({ length: 5 }, (_, i) => {
-                const date = addDays(startOfToday(), i + 1)
-                const dateValue = format(date, "yyyy-MM-dd")
+                const date = addDays(startOfToday(), i + 1);
+                const dateValue = format(date, "yyyy-MM-dd");
                 return (
                   <div key={dateValue}>
-                    <RadioGroupItem value={dateValue} id={`date-${dateValue}`} className="sr-only" />
+                    <RadioGroupItem
+                      value={dateValue}
+                      id={`date-${dateValue}`}
+                      className="sr-only"
+                    />
                     <Label
                       htmlFor={`date-${dateValue}`}
                       className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 [&:has([data-state=checked])]:bg-blue-50 [&:has([data-state=checked])]:text-blue-900"
                     >
-                      <span className="text-xs text-gray-500">{format(date, "EEE")}</span>
-                      <span className="font-medium text-lg">{format(date, "d")}</span>
-                      <span className="text-xs text-gray-500">{format(date, "MMM")}</span>
+                      <span className="text-xs text-gray-500">
+                        {format(date, "EEE")}
+                      </span>
+                      <span className="font-medium text-lg">
+                        {format(date, "d")}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {format(date, "MMM")}
+                      </span>
                     </Label>
                   </div>
-                )
+                );
               })}
             </RadioGroup>
           </div>
@@ -180,7 +250,7 @@ function ScheduleDatePickerDialog({ isOpen, onClose, onSelectDateTime }: Schedul
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 export default function DesktopProductPreview({
@@ -190,8 +260,12 @@ export default function DesktopProductPreview({
   isVeg = true,
   bannerImage = null,
   additionalImages = [],
-  weightOptions = [{ weight: "0.5 Kg", price: "499", stock: "15", isActive: true }],
-  pieceOptions = [{ quantity: "1 piece", price: "100", stock: "10", isActive: true }],
+  weightOptions = [
+    { weight: "0.5 Kg", price: "499", stock: "15", isActive: true },
+  ],
+  pieceOptions = [
+    { quantity: "1 piece", price: "100", stock: "10", isActive: true },
+  ],
   price = "499",
   calories = "360",
   netWeight = "100",
@@ -210,57 +284,69 @@ export default function DesktopProductPreview({
   ingredients = [],
   sellingType = "weight",
 }: ProductPreviewProps) {
-  const [selectedWeight, setSelectedWeight] = useState(0)
-  const [mainImage, setMainImage] = useState(bannerImage || additionalImages[0] || "/placeholder.svg")
-  const [orderType, setOrderType] = useState<"kg" | "piece">(sellingType === "piece" ? "piece" : "kg")
-  const [pieceQuantity, setPieceQuantity] = useState(1)
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-  const [activeDeliveryTab, setActiveDeliveryTab] = useState(deliveryOption === "same-day" ? "same-day" : "schedule")
-  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false)
+  const [selectedWeight, setSelectedWeight] = useState(0);
+  const [mainImage, setMainImage] = useState(
+    bannerImage || additionalImages[0] || "/placeholder.svg"
+  );
+  const [orderType, setOrderType] = useState<"kg" | "piece">(
+    sellingType === "piece" ? "piece" : "kg"
+  );
+  const [pieceQuantity, setPieceQuantity] = useState(1);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [activeDeliveryTab, setActiveDeliveryTab] = useState(
+    deliveryOption === "same-day" ? "same-day" : "schedule"
+  );
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
   useEffect(() => {
     if (deliveryOption === "same-day") {
-      setActiveDeliveryTab("same-day")
+      setActiveDeliveryTab("same-day");
     } else if (deliveryOption === "schedule") {
-      setActiveDeliveryTab("schedule")
+      setActiveDeliveryTab("schedule");
     } else {
-      setActiveDeliveryTab("same-day")
+      setActiveDeliveryTab("same-day");
     }
-  }, [deliveryOption])
+  }, [deliveryOption]);
 
-  const activeWeightOptions = weightOptions.filter((option) => option.isActive && option.weight && option.price)
-  const activePieceOptions = pieceOptions.filter((option) => option.isActive && option.quantity && option.price)
+  const activeWeightOptions = weightOptions.filter(
+    (option) => option.isActive && option.weight && option.price
+  );
+  const activePieceOptions = pieceOptions.filter(
+    (option) => option.isActive && option.quantity && option.price
+  );
 
   useEffect(() => {
     if (activeWeightOptions.length > 0 && selectedWeight === 0) {
-      setSelectedWeight(0)
+      setSelectedWeight(0);
     }
-  }, [activeWeightOptions, selectedWeight])
+  }, [activeWeightOptions, selectedWeight]);
 
   const calculatePrice = () => {
     if (orderType === "kg" && activeWeightOptions.length > 0) {
-      const selectedOption = activeWeightOptions[selectedWeight]
-      return selectedOption ? Number(selectedOption.price) || 0 : 0
+      const selectedOption = activeWeightOptions[selectedWeight];
+      return selectedOption ? Number(selectedOption.price) || 0 : 0;
     } else if (orderType === "piece" && activePieceOptions.length > 0) {
-      const selectedOption = activePieceOptions[0]
-      return selectedOption ? (Number(selectedOption.price) || 0) * pieceQuantity : 0
+      const selectedOption = activePieceOptions[0];
+      return selectedOption
+        ? (Number(selectedOption.price) || 0) * pieceQuantity
+        : 0;
     }
-    return Number(price) || 499
-  }
+    return Number(price) || 499;
+  };
 
   const getCurrentStock = () => {
     if (orderType === "kg" && activeWeightOptions.length > 0) {
-      const selectedOption = activeWeightOptions[selectedWeight]
-      return selectedOption?.stock ? Number(selectedOption.stock) : null
+      const selectedOption = activeWeightOptions[selectedWeight];
+      return selectedOption?.stock ? Number(selectedOption.stock) : null;
     } else if (orderType === "piece" && activePieceOptions.length > 0) {
-      const selectedOption = activePieceOptions[0]
-      return selectedOption?.stock ? Number(selectedOption.stock) : null
+      const selectedOption = activePieceOptions[0];
+      return selectedOption?.stock ? Number(selectedOption.stock) : null;
     }
-    return null
-  }
+    return null;
+  };
 
-  const totalPrice = calculatePrice()
-  const currentStock = getCurrentStock()
+  const totalPrice = calculatePrice();
+  const currentStock = getCurrentStock();
 
   const renderStockStatus = (stock: number | null) => {
     if (stock === null) {
@@ -269,35 +355,41 @@ export default function DesktopProductPreview({
           <Package className="h-4 w-4" />
           <span className="text-sm font-medium">Always Available</span>
         </div>
-      )
+      );
     } else if (stock === 0) {
       return (
         <div className="flex items-center gap-1.5 text-orange-600 mt-2">
           <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Out of Stock (Can be requested)</span>
+          <span className="text-sm font-medium">
+            Out of Stock (Can be requested)
+          </span>
         </div>
-      )
+      );
     } else if (stock <= 3) {
       return (
         <div className="flex items-center gap-1.5 text-amber-600 mt-2">
           <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Only {stock} left in stock - order soon</span>
+          <span className="text-sm font-medium">
+            Only {stock} left in stock - order soon
+          </span>
         </div>
-      )
+      );
     } else {
       return (
         <div className="flex items-center gap-1.5 text-green-600 mt-2">
           <Package className="h-4 w-4" />
-          <span className="text-sm font-medium">In Stock ({stock} available)</span>
+          <span className="text-sm font-medium">
+            In Stock ({stock} available)
+          </span>
         </div>
-      )
+      );
     }
-  }
+  };
 
   const handleSelectScheduledDateTime = (date: string, time: string) => {
-    console.log("Selected Scheduled Date:", date)
-    console.log("Selected Scheduled Time:", time)
-  }
+    console.log("Selected Scheduled Date:", date);
+    console.log("Selected Scheduled Time:", time);
+  };
 
   return (
     <div className="bg-[#f5f5f5] flex flex-col items-center w-full">
@@ -308,7 +400,12 @@ export default function DesktopProductPreview({
             {/* Hero Image */}
             <div className="relative mt-4 rounded-2xl overflow-hidden">
               <div className="relative h-[450px] w-full rounded-2xl overflow-hidden">
-                <Image src={mainImage || "/placeholder.svg"} alt={name} fill className="object-cover rounded-2xl" />
+                <Image
+                  src={mainImage || "/placeholder.svg"}
+                  alt={name}
+                  fill
+                  className="object-cover rounded-2xl"
+                />
 
                 {/* Nav buttons */}
                 <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
@@ -323,7 +420,12 @@ export default function DesktopProductPreview({
                       className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md"
                       onClick={(e) => e.preventDefault()}
                     >
-                      <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-5 h-5 text-gray-800"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -336,7 +438,12 @@ export default function DesktopProductPreview({
                       className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center shadow-md"
                       onClick={(e) => e.preventDefault()}
                     >
-                      <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-5 h-5 text-gray-800"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -352,26 +459,30 @@ export default function DesktopProductPreview({
               {/* Image thumbnails */}
               <div className="absolute bottom-3 left-0 right-0 px-3">
                 <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1">
-                  {[bannerImage, ...additionalImages].filter(Boolean).map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setMainImage(image || "/placeholder.svg")
-                      }}
-                      className={`w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 ${
-                        mainImage === image ? "border-[#560000]" : "border-white"
-                      }`}
-                    >
-                      <Image
-                        src={image || "/placeholder.svg"}
-                        alt={`Thumbnail ${index + 1}`}
-                        width={64}
-                        height={64}
-                        className="object-cover w-full h-full"
-                      />
-                    </button>
-                  ))}
+                  {[bannerImage, ...additionalImages]
+                    .filter(Boolean)
+                    .map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setMainImage(image || "/placeholder.svg");
+                        }}
+                        className={`w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 ${
+                          mainImage === image
+                            ? "border-primary"
+                            : "border-white"
+                        }`}
+                      >
+                        <Image
+                          src={image || "/placeholder.svg"}
+                          alt={`Thumbnail ${index + 1}`}
+                          width={64}
+                          height={64}
+                          className="object-cover w-full h-full"
+                        />
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>
@@ -380,7 +491,9 @@ export default function DesktopProductPreview({
             <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-50">
               {/* Category and Rating */}
               <div className="flex justify-between items-center mb-3">
-                <span className="text-gray-500 text-sm font-medium uppercase tracking-wide">{category}</span>
+                <span className="text-gray-500 text-sm font-medium uppercase tracking-wide">
+                  {category}
+                </span>
                 <div className="flex items-center bg-amber-50 px-3 py-1 rounded-full">
                   <FaStar className="text-amber-500 mr-1.5" />
                   <span className="font-semibold text-amber-800">4.8</span>
@@ -399,30 +512,39 @@ export default function DesktopProductPreview({
 
               {/* Description */}
               <div className="mb-7 mt-4">
-                <h2 className="font-semibold text-lg mb-3 text-gray-800">Description</h2>
+                <h2 className="font-semibold text-lg mb-3 text-gray-800">
+                  Description
+                </h2>
                 <div className="space-y-4">
                   {isDescriptionExpanded ? (
                     <>
-                      <p className="text-gray-700 leading-relaxed">{description}</p>
                       <p className="text-gray-700 leading-relaxed">
-                        A classic dessert perfect for any occasion. Our cake is made with premium ingredients and baked
-                        fresh daily to ensure the best taste and texture.
+                        {description}
+                      </p>
+                      <p className="text-gray-700 leading-relaxed">
+                        A classic dessert perfect for any occasion. Our cake is
+                        made with premium ingredients and baked fresh daily to
+                        ensure the best taste and texture.
                       </p>
                     </>
                   ) : (
-                    <p className="text-gray-700 leading-relaxed line-clamp-2">{description}...</p>
+                    <p className="text-gray-700 leading-relaxed line-clamp-2">
+                      {description}...
+                    </p>
                   )}
                 </div>
                 <button
                   onClick={(e) => {
-                    e.preventDefault()
-                    setIsDescriptionExpanded(!isDescriptionExpanded)
+                    e.preventDefault();
+                    setIsDescriptionExpanded(!isDescriptionExpanded);
                   }}
-                  className="text-sm font-medium text-[#560000] hover:text-[#560000]/80 transition-colors flex items-center mt-3"
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center mt-3"
                 >
                   {isDescriptionExpanded ? "Read less" : "Read more"}
                   <ChevronRight
-                    className={`h-4 w-4 ml-1 transition-transform ${isDescriptionExpanded ? "rotate-90" : ""}`}
+                    className={`h-4 w-4 ml-1 transition-transform ${
+                      isDescriptionExpanded ? "rotate-90" : ""
+                    }`}
                   />
                 </button>
               </div>
@@ -430,12 +552,14 @@ export default function DesktopProductPreview({
               {/* Product Highlights */}
               {highlights && highlights.length > 0 && (
                 <div className="mb-6">
-                  <h2 className="font-semibold text-lg mb-3 text-gray-800">Highlights</h2>
+                  <h2 className="font-semibold text-lg mb-3 text-gray-800">
+                    Highlights
+                  </h2>
                   <div className="flex flex-wrap gap-2">
                     {highlights.map((tag, index) => (
                       <span
                         key={index}
-                        className="bg-[#560000]/10 text-[#560000] px-4 py-1.5 rounded-full text-sm font-medium"
+                        className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-medium"
                       >
                         {tag}
                       </span>
@@ -447,7 +571,9 @@ export default function DesktopProductPreview({
               {/* Ingredients Preview */}
               {ingredients && ingredients.length > 0 && (
                 <div className="mb-6">
-                  <h2 className="font-semibold text-lg mb-3 text-gray-800">Ingredients</h2>
+                  <h2 className="font-semibold text-lg mb-3 text-gray-800">
+                    Ingredients
+                  </h2>
                   <div className="flex flex-wrap gap-3 items-center">
                     {ingredients.map((ingredient, index) => (
                       <span
@@ -469,9 +595,13 @@ export default function DesktopProductPreview({
             <div className="w-full bg-white rounded-3xl p-7 flex flex-col gap-5 h-fit shadow-sm">
               {/* Price display */}
               <div className="flex items-baseline gap-3">
-                <h2 className="text-3xl font-bold text-black">₹{Math.round(totalPrice)}</h2>
+                <h2 className="text-3xl font-bold text-black">
+                  ₹{Math.round(totalPrice)}
+                </h2>
                 {totalPrice > 500 && (
-                  <p className="text-gray-400 line-through text-lg">₹{Math.round(totalPrice * 1.1)}</p>
+                  <p className="text-gray-400 line-through text-lg">
+                    ₹{Math.round(totalPrice * 1.1)}
+                  </p>
                 )}
               </div>
 
@@ -488,22 +618,26 @@ export default function DesktopProductPreview({
                   <div className="flex gap-3 p-1 bg-gray-100 rounded-xl">
                     <button
                       onClick={(e) => {
-                        e.preventDefault()
-                        setOrderType("kg")
+                        e.preventDefault();
+                        setOrderType("kg");
                       }}
                       className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
-                        orderType === "kg" ? "bg-white text-[#560000] shadow-sm" : "text-gray-500"
+                        orderType === "kg"
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-gray-500"
                       }`}
                     >
                       By Weight
                     </button>
                     <button
                       onClick={(e) => {
-                        e.preventDefault()
-                        setOrderType("piece")
+                        e.preventDefault();
+                        setOrderType("piece");
                       }}
                       className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
-                        orderType === "piece" ? "bg-white text-[#560000] shadow-sm" : "text-gray-500"
+                        orderType === "piece"
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-gray-500"
                       }`}
                     >
                       By Piece
@@ -513,7 +647,8 @@ export default function DesktopProductPreview({
               )}
 
               {/* Weight/Quantity Selection */}
-              {orderType === "kg" && (sellingType === "weight" || sellingType === "both") ? (
+              {orderType === "kg" &&
+              (sellingType === "weight" || sellingType === "both") ? (
                 <div>
                   <h2 className="text-gray-500 text-sm mb-3">Select Weight</h2>
                   <div className="grid grid-cols-3 gap-2">
@@ -521,12 +656,12 @@ export default function DesktopProductPreview({
                       <button
                         key={index}
                         onClick={(e) => {
-                          e.preventDefault()
-                          setSelectedWeight(index)
+                          e.preventDefault();
+                          setSelectedWeight(index);
                         }}
                         className={`py-3 rounded-xl text-sm transition-all ${
                           selectedWeight === index
-                            ? "bg-[#560000] text-white font-medium"
+                            ? "bg-primary text-white font-medium"
                             : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                         }`}
                       >
@@ -537,28 +672,38 @@ export default function DesktopProductPreview({
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-gray-500 text-sm mb-3">Select Quantity</h2>
+                  <h2 className="text-gray-500 text-sm mb-3">
+                    Select Quantity
+                  </h2>
                   <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
                     <button
                       onClick={(e) => {
-                        e.preventDefault()
-                        setPieceQuantity(Math.max(1, pieceQuantity - 1))
+                        e.preventDefault();
+                        setPieceQuantity(Math.max(1, pieceQuantity - 1));
                       }}
                       className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${
-                        pieceQuantity > 1 ? "bg-[#560000] text-white shadow-sm" : "text-gray-300 cursor-not-allowed"
+                        pieceQuantity > 1
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-gray-300 cursor-not-allowed"
                       }`}
-                      disabled={currentStock !== null && pieceQuantity >= currentStock}
+                      disabled={
+                        currentStock !== null && pieceQuantity >= currentStock
+                      }
                     >
                       -
                     </button>
-                    <span className="text-xl font-medium text-gray-900">{pieceQuantity}</span>
+                    <span className="text-xl font-medium text-gray-900">
+                      {pieceQuantity}
+                    </span>
                     <button
                       onClick={(e) => {
-                        e.preventDefault()
-                        setPieceQuantity(pieceQuantity + 1)
+                        e.preventDefault();
+                        setPieceQuantity(pieceQuantity + 1);
                       }}
-                      className="w-9 h-9 rounded-lg bg-[#560000] text-white flex items-center justify-center text-lg shadow-sm"
-                      disabled={currentStock !== null && pieceQuantity >= currentStock}
+                      className="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center text-lg shadow-sm"
+                      disabled={
+                        currentStock !== null && pieceQuantity >= currentStock
+                      }
                     >
                       +
                     </button>
@@ -568,7 +713,12 @@ export default function DesktopProductPreview({
 
               {/* Delivery estimate */}
               <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -577,19 +727,30 @@ export default function DesktopProductPreview({
                   />
                 </svg>
                 <div>
-                  <p className="text-sm text-gray-900 font-medium">Delivery Today</p>
-                  <p className="text-xs text-gray-500">Estimated delivery in 1 hr</p>
+                  <p className="text-sm text-gray-900 font-medium">
+                    Delivery Today
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Estimated delivery in 1 hr
+                  </p>
                 </div>
               </div>
 
               {/* Add to Cart button */}
               <button
                 className={`text-white rounded-xl px-6 py-4 items-center justify-center font-medium text-base transition-all flex ${
-                  currentStock === 0 ? "bg-orange-600 hover:bg-orange-700" : "bg-[#560000] hover:bg-[#560000]/90"
+                  currentStock === 0
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "bg-primary hover:bg-primary/90"
                 }`}
                 onClick={(e) => e.preventDefault()}
               >
-                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -597,18 +758,24 @@ export default function DesktopProductPreview({
                     d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6m0 0L5.4 5M7 13h10m0 0v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
                   />
                 </svg>
-                <span className="font-medium">{currentStock === 0 ? "Request Item" : "Add to Cart"}</span>
+                <span className="font-medium">
+                  {currentStock === 0 ? "Request Item" : "Add to Cart"}
+                </span>
               </button>
             </div>
 
             {/* Nutrition Info Card */}
             <div className="p-6 bg-white rounded-2xl shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Macronutrients Breakdown</h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                Macronutrients Breakdown
+              </h2>
               <div>
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-sm text-gray-500">Calories</p>
-                    <p className="text-3xl font-bold text-gray-800">{calories} Cal</p>
+                    <p className="text-3xl font-bold text-gray-800">
+                      {calories} Cal
+                    </p>
                   </div>
                   <div className="text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
                     Net wt: {netWeight} g
@@ -663,8 +830,7 @@ export default function DesktopProductPreview({
             </div>
           </div>
         </div>
-        
       </div>
     </div>
-  )
+  );
 }

@@ -37,7 +37,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     id: "bfdfe079-6592-48bd-8d4d-64b30096ad33",
     name: "Opera (1pc)",
     category: "Cakes",
-    price: "₹450",
+    price: "₹410",
     veg: false,
     image: "/images/homePage-Product/Opera1.jpg",
   },
@@ -45,7 +45,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     id: "608b0154-31b2-44b5-8794-1d06364c1f4e",
     name: "Chilled Blueberry Cheesecake (1pc)",
     category: "Cakes",
-    price: "₹500",
+    price: "₹300",
     veg: true,
     image: "/images/homePage-Product/Chilled-Blueberry-Cheesecake.jpg",
   },
@@ -103,7 +103,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Brownies & Brookies",
     price: "₹150",
     veg: true,
-    image: "/images/homePage-Product/Chocolate-Chocochip-Brookies.jpg",
+    image: "/images/homePage-Product/Chocolate-ChocochipBrookies.png",
   },
 ];
 

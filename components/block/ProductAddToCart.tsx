@@ -1,10 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ShoppingCart, Minus, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ShoppingCart, Minus, Plus, Check } from "lucide-react";
+import { Bag5 } from "@solar-icons/react";
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-6 h-6 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
+import dynamic from "next/dynamic";
 import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSelection } from "@/context/product-selection-context";
+import { useRouter } from "next/navigation";
 // Removed Lottie imports - using simple SVG icons instead
 import {
   Drawer,
@@ -88,8 +100,27 @@ export default function ProductAddToCart({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const router = useRouter();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [showViewCart, setShowViewCart] = useState(false);
+  const [successAnimation, setSuccessAnimation] = useState(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load Lottie animation data dynamically to reduce bundle size
+  useEffect(() => {
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch("/Lottie/Success.json");
+        const animationData = await response.json();
+        setSuccessAnimation(animationData);
+      } catch (error) {
+        console.error("Failed to load success animation:", error);
+      }
+    };
+
+    loadAnimation();
+  }, []);
 
   useEffect(() => {
     // Compute price and originalPrice based on selected option and orderType
@@ -134,6 +165,26 @@ export default function ProductAddToCart({
     pieceQuantity,
   ]);
 
+  // Reset cart button states when product changes
+  useEffect(() => {
+    setIsAddedToCart(false);
+    setShowViewCart(false);
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, [product.id]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleAddToCart = async () => {
     if (!product || !inStock) return;
 
@@ -163,10 +214,11 @@ export default function ProductAddToCart({
       // Show success feedback
       setIsAddedToCart(true);
 
-      // Revert back to default state after 2 seconds
-      setTimeout(() => {
+      // After 2.5 seconds, change to "View Cart" state
+      timeoutRef.current = setTimeout(() => {
         setIsAddedToCart(false);
-      }, 2000);
+        setShowViewCart(true);
+      }, 2500);
     } catch (error) {
       toast({
         title: "Error",
@@ -176,6 +228,10 @@ export default function ProductAddToCart({
     } finally {
       setIsAddingToCart(false);
     }
+  };
+
+  const handleViewCart = () => {
+    router.push("/cart");
   };
 
   const handleWeightOptionChange = (index: number) => {
@@ -198,42 +254,55 @@ export default function ProductAddToCart({
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>
             <div
-              className={`w-[100%] max-w-md rounded-2xl flex items-center justify-between px-6 py-4 shadow-lg cursor-pointer transition-all duration-300 ${
-                isAddedToCart
+              onClick={(e) => {
+                if (showViewCart) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleViewCart();
+                }
+              }}
+              className={`w-[100%] max-w-md rounded-2xl flex items-center px-6 py-4 shadow-lg cursor-pointer transition-all duration-300 ${
+                isAddedToCart || showViewCart
                   ? "bg-green-600 hover:bg-green-700"
-                  : "bg-[#7A0000]"
-              }`}
+                  : "bg-primary"
+              } ${showViewCart ? "justify-center" : "justify-between"}`}
             >
-              <div className="flex items-center gap-3 text-white">
-                {isAddedToCart ? (
-                  <div className="w-6 h-6">
-                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                      <svg
-                        className="w-4 h-4 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
+              {showViewCart ? (
+                <div className="flex items-center gap-3 text-white">
+                  <Bag5 className="h-6 w-6" weight="Bold" />
+                  <span className="font-medium text-lg">View Cart</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 text-white">
+                    {isAddedToCart ? (
+                      <div className="w-6 h-6">
+                        {successAnimation ? (
+                          <Lottie
+                            animationData={successAnimation}
+                            loop={false}
+                            autoplay={true}
+                            style={{ width: "100%", height: "100%" }}
+                          />
+                        ) : (
+                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Bag5 className="h-6 w-6" weight="Bold" />
+                    )}
+                    <span className="font-medium text-lg">
+                      {isAddedToCart ? "Added to Cart!" : "Add To Cart"}
+                    </span>
                   </div>
-                ) : (
-                  <ShoppingCart className="h-6 w-6" />
-                )}
-                <span className="font-medium text-lg">
-                  {isAddedToCart ? "Added to Cart!" : "Add To Cart"}
-                </span>
-              </div>
-              <div className="h-8 w-px bg-white ml-[20px]" />
-              <div className="flex items-center text-white font-bold text-xl">
-                ₹{price}
-              </div>
+                  <div className="h-8 w-px bg-white ml-[20px]" />
+                  <div className="flex items-center text-white font-bold text-xl">
+                    ₹{price}
+                  </div>
+                </>
+              )}
             </div>
           </DrawerTrigger>
           <DrawerContent className="max-h-[80vh]">
@@ -254,7 +323,7 @@ export default function ProductAddToCart({
                       onClick={() => setOrderType("weight")}
                       className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                         orderType === "weight"
-                          ? "bg-white text-[#7A0000] shadow-sm"
+                          ? "bg-white text-primary shadow-sm"
                           : "text-gray-600 hover:text-gray-900"
                       }`}
                     >
@@ -264,7 +333,7 @@ export default function ProductAddToCart({
                       onClick={() => setOrderType("piece")}
                       className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                         orderType === "piece"
-                          ? "bg-white text-[#7A0000] shadow-sm"
+                          ? "bg-white text-primary shadow-sm"
                           : "text-gray-600 hover:text-gray-900"
                       }`}
                     >
@@ -376,7 +445,7 @@ export default function ProductAddToCart({
                             htmlFor={`weight-${index}`}
                             className={`flex-1 flex items-center justify-between p-3 rounded-lg border ${
                               selectedWeightOption === index
-                                ? "border-[#7A0000] bg-[#7A0000]/5"
+                                ? "border-primary bg-primary/5"
                                 : "border-gray-200"
                             } ${
                               !option.isActive || parseInt(option.stock) === 0
@@ -440,7 +509,7 @@ export default function ProductAddToCart({
                 <Button
                   onClick={handleAddToCart}
                   disabled={!inStock || isAddingToCart}
-                  className="flex-1 h-12 rounded-xl bg-[#7A0000] hover:bg-[#7A0000]/90 text-white disabled:opacity-50"
+                  className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white disabled:opacity-50"
                 >
                   {isAddingToCart ? (
                     <>
