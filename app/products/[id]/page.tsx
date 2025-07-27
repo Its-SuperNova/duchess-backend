@@ -225,8 +225,8 @@ export default function ProductPage() {
         } else if ((productData as any).selling_type === "weight") {
           setOrderType("weight");
         } else {
-          // "both" - default to weight
-          setOrderType("weight");
+          // "both" - default to piece
+          setOrderType("piece");
         }
 
         // Set initial selected options

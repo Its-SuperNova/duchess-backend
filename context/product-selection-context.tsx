@@ -26,7 +26,7 @@ export const ProductSelectionProvider = ({
 }) => {
   const [selectedWeightOption, setSelectedWeightOption] = useState(0);
   const [selectedPieceOption, setSelectedPieceOption] = useState(0);
-  const [orderType, setOrderType] = useState<OrderType>("weight");
+  const [orderType, setOrderType] = useState<OrderType>("piece");
   const [pieceQuantity, setPieceQuantity] = useState(1);
 
   return (
