@@ -834,7 +834,7 @@ export default function OrderDetailPage() {
                     <span className="text-muted-foreground">Distance:</span>
                     <span className="font-medium">
                       {order.distance
-                        ? `${order.distance} km`
+                        ? `${(order.distance / 10).toFixed(1)} km`
                         : "Not available"}
                     </span>
                   </div>

@@ -73,13 +73,15 @@ export default function ConfirmationClient() {
     return (
       <div className="min-h-screen bg-[#F5F6FB]">
         {/* Header Skeleton */}
-        <div className="bg-[#F5F6FB] p-4 flex items-center">
-          <div className="mr-4">
-            <div className="bg-white p-2 rounded-full shadow-sm">
-              <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+        <div className="bg-[#F5F6FB] p-4">
+          <div className="max-w-[1200px] mx-auto flex items-center">
+            <div className="mr-4">
+              <div className="bg-white p-2 rounded-full shadow-sm">
+                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+              </div>
             </div>
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
           </div>
-          <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
         </div>
 
         <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-4">
@@ -214,13 +216,25 @@ export default function ConfirmationClient() {
   return (
     <div className="min-h-screen bg-[#F5F6FB]">
       {/* Simple Header */}
-      <div className="bg-[#F5F6FB] p-4 flex items-center">
-        <Link href="/checkout" className="mr-4">
-          <div className="bg-white p-2 rounded-full shadow-sm">
-            <ArrowLeft className="h-5 w-5" />
+      <div className="bg-[#F5F6FB] p-4 ">
+        <div className="max-w-[1200px] mx-auto px-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <Link href="/checkout" className="mr-4">
+              <div className="bg-white p-2 rounded-full shadow-sm">
+                <ArrowLeft className="h-5 w-5" />
+              </div>
+            </Link>
+            <h1 className="text-xl font-semibold">Order Confirmation</h1>
           </div>
-        </Link>
-        <h1 className="text-xl font-semibold">Order Confirmation</h1>
+          <div className="hidden md:block">
+            <Button
+              asChild
+              className="bg-[#523435] hover:bg-[#4a2a2a] rounded-[16px] px-6 py-2"
+            >
+              <Link href="/orders/track">Track Order</Link>
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-4">
@@ -435,18 +449,6 @@ export default function ConfirmationClient() {
             )}
           </div>
         )}
-
-        {/* Action Buttons Section - Desktop */}
-        <div className="hidden md:block bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="flex justify-center">
-            <Button
-              asChild
-              className="bg-[#523435] hover:bg-[#4a2a2a] px-8 py-3"
-            >
-              <Link href="/profile/orders/track">Track Order</Link>
-            </Button>
-          </div>
-        </div>
 
         {/* Mobile spacing for fixed button */}
         <div className="md:hidden h-20"></div>
