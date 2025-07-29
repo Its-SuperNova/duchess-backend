@@ -95,16 +95,18 @@ export async function GET(
       }
 
       // 3. Try word-by-word matching for multi-word categories
-      const searchWords = sName.split(/\s+/).filter((word) => word.length > 0);
+      const searchWords = sName
+        .split(/\s+/)
+        .filter((word: string) => word.length > 0);
       const categoryWords = cName
         .split(/\s+/)
-        .filter((word) => word.length > 0);
+        .filter((word: string) => word.length > 0);
 
       // Check if all search words are present in category words
       if (searchWords.length > 1) {
-        const allSearchWordsFound = searchWords.every((searchWord) =>
+        const allSearchWordsFound = searchWords.every((searchWord: string) =>
           categoryWords.some(
-            (categoryWord) =>
+            (categoryWord: string) =>
               categoryWord === searchWord ||
               categoryWord.includes(searchWord) ||
               searchWord.includes(categoryWord)
