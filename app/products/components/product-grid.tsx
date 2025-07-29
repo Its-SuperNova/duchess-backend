@@ -11,63 +11,12 @@ const ProductGridComponent = ({
   products,
   startIndex = 0,
 }: ProductGridProps) => {
-  const calculatePrice = (product: Product) => {
-    let price = 0;
-    let originalPrice = 0;
-
-    if (
-      product.selling_type === "weight" &&
-      product.weight_options?.length > 0
-    ) {
-      const activeOption = product.weight_options.find(
-        (opt: any) => opt.isActive
-      );
-      if (activeOption) {
-        price = parseFloat(activeOption.price) || 0;
-        originalPrice = price;
-      }
-    } else if (
-      product.selling_type === "piece" &&
-      product.piece_options?.length > 0
-    ) {
-      const activeOption = product.piece_options.find(
-        (opt: any) => opt.isActive
-      );
-      if (activeOption) {
-        price = parseFloat(activeOption.price) || 0;
-        originalPrice = price;
-      }
-    } else if (product.selling_type === "both") {
-      if (product.weight_options?.length > 0) {
-        const activeWeightOption = product.weight_options.find(
-          (opt: any) => opt.isActive
-        );
-        if (activeWeightOption) {
-          price = parseFloat(activeWeightOption.price) || 0;
-          originalPrice = price;
-        }
-      }
-      if (price === 0 && product.piece_options?.length > 0) {
-        const activePieceOption = product.piece_options.find(
-          (opt: any) => opt.isActive
-        );
-        if (activePieceOption) {
-          price = parseFloat(activePieceOption.price) || 0;
-          originalPrice = price;
-        }
-      }
-    }
-
-    if (product.has_offer && product.offer_percentage && price > 0) {
-      originalPrice = price;
-      price = price * (1 - product.offer_percentage / 100);
-    }
-
-    if (price <= 0) {
-      price = 100;
-    }
-
-    return { price, originalPrice };
+  // Price is now pre-calculated on the server
+  const getProductPrice = (product: Product) => {
+    return {
+      price: product.price || 100,
+      originalPrice: product.price || 100,
+    };
   };
 
   if (products.length === 0) {
@@ -87,7 +36,7 @@ const ProductGridComponent = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((product: Product, i) => {
-        const { price, originalPrice } = calculatePrice(product);
+        const { price, originalPrice } = getProductPrice(product);
         const globalIndex = startIndex + i;
 
         return (
@@ -106,8 +55,6 @@ const ProductGridComponent = ({
                 ? product.categories[0]?.name
                 : product.categories?.name || undefined
             }
-            hasOffer={product.has_offer}
-            offerPercentage={product.offer_percentage}
             priority={globalIndex < 4} // Only prioritize first 4 images
           />
         );

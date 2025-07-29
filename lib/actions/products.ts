@@ -2,6 +2,7 @@
 
 import { supabaseAdmin, withRetry } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { getProductPrice } from "@/lib/utils";
 
 // Get all products with category information
 export async function getProducts() {
@@ -563,9 +564,23 @@ export async function getProductsByCategorySlug(categorySlug: string) {
         throw new Error(`Database error: ${productsError.message}`);
       }
 
+      // Calculate price for each product and return optimized data
+      const productsWithPrice =
+        products?.map((product) => {
+          const { price } = getProductPrice(product);
+          return {
+            id: product.id,
+            name: product.name,
+            is_veg: product.is_veg,
+            banner_image: product.banner_image,
+            categories: product.categories,
+            price: price,
+          };
+        }) || [];
+
       console.log("Products found:", products?.length || 0);
       console.log("=== END CATEGORY SEARCH DEBUG ===\n");
-      return products || [];
+      return productsWithPrice;
     });
   } catch (error) {
     console.error("Error in getProductsByCategorySlug:", error);
@@ -745,11 +760,25 @@ export async function getPaginatedProductsByCategorySlug(
         throw new Error(`Database error: ${productsError.message}`);
       }
 
+      // Calculate price for each product and return optimized data
+      const productsWithPrice =
+        products?.map((product) => {
+          const { price } = getProductPrice(product);
+          return {
+            id: product.id,
+            name: product.name,
+            is_veg: product.is_veg,
+            banner_image: product.banner_image,
+            categories: product.categories,
+            price: price,
+          };
+        }) || [];
+
       const hasMore =
         (products?.length || 0) === limit && offset + limit < (totalCount || 0);
 
       return {
-        products: products || [],
+        products: productsWithPrice,
         totalCount: totalCount || 0,
         hasMore,
         category: {

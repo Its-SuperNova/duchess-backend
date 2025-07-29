@@ -10,11 +10,7 @@ interface Product {
   name: string;
   banner_image: string;
   is_veg: boolean;
-  has_offer: boolean;
-  offer_percentage: number;
-  weight_options: any[];
-  piece_options: any[];
-  selling_type: string;
+  price: number;
   categories:
     | {
         name: string;
@@ -32,65 +28,18 @@ interface ProductListProps {
   initialHasMore: boolean;
 }
 
-// Memoized price calculation function
-const calculatePrice = (product: Product) => {
-  let price = 0;
-  let originalPrice = 0;
-
-  if (product.selling_type === "weight" && product.weight_options?.length > 0) {
-    const activeOption = product.weight_options.find(
-      (opt: any) => opt.isActive
-    );
-    if (activeOption) {
-      price = parseFloat(activeOption.price) || 0;
-      originalPrice = price;
-    }
-  } else if (
-    product.selling_type === "piece" &&
-    product.piece_options?.length > 0
-  ) {
-    const activeOption = product.piece_options.find((opt: any) => opt.isActive);
-    if (activeOption) {
-      price = parseFloat(activeOption.price) || 0;
-      originalPrice = price;
-    }
-  } else if (product.selling_type === "both") {
-    if (product.weight_options?.length > 0) {
-      const activeWeightOption = product.weight_options.find(
-        (opt: any) => opt.isActive
-      );
-      if (activeWeightOption) {
-        price = parseFloat(activeWeightOption.price) || 0;
-        originalPrice = price;
-      }
-    }
-    if (price === 0 && product.piece_options?.length > 0) {
-      const activePieceOption = product.piece_options.find(
-        (opt: any) => opt.isActive
-      );
-      if (activePieceOption) {
-        price = parseFloat(activePieceOption.price) || 0;
-        originalPrice = price;
-      }
-    }
-  }
-
-  if (product.has_offer && product.offer_percentage && price > 0) {
-    originalPrice = price;
-    price = price * (1 - product.offer_percentage / 100);
-  }
-
-  if (price <= 0) {
-    price = 100;
-  }
-
-  return { price, originalPrice };
+// Price is now pre-calculated on the server, so we can use it directly
+const getProductPrice = (product: Product) => {
+  return {
+    price: product.price || 100,
+    originalPrice: product.price || 100, // Since price is already calculated with offers applied
+  };
 };
 
 // Memoized ProductCard component for better performance
 const MemoizedProductCard = memo(
   ({ product, index }: { product: Product; index: number }) => {
-    const { price, originalPrice } = calculatePrice(product);
+    const { price, originalPrice } = getProductPrice(product);
 
     return (
       <ProductCard
@@ -108,8 +57,6 @@ const MemoizedProductCard = memo(
             ? product.categories[0]?.name
             : product.categories?.name || undefined
         }
-        hasOffer={product.has_offer}
-        offerPercentage={product.offer_percentage}
         priority={index < 4}
       />
     );

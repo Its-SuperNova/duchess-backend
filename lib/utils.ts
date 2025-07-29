@@ -25,7 +25,7 @@ export interface ProcessedProduct {
   };
 }
 
-// Extract the minimum price from weight or piece options
+// Extract the minimum price from piece options first, then weight options
 export function getProductPrice(product: any): {
   price: number;
   originalPrice?: number;
@@ -33,30 +33,30 @@ export function getProductPrice(product: any): {
   let minPrice = 0;
   let originalPrice: number | undefined;
 
-  // Check weight options first
-  if (product.weight_options && product.weight_options.length > 0) {
-    const activeWeightOptions = product.weight_options.filter(
-      (opt: any) => opt.isActive
-    );
-    if (activeWeightOptions.length > 0) {
-      minPrice = Math.min(
-        ...activeWeightOptions.map((opt: any) => parseInt(opt.price) || 0)
-      );
-    }
-  }
-
-  // Check piece options if no weight options or weight options have no price
-  if (
-    minPrice === 0 &&
-    product.piece_options &&
-    product.piece_options.length > 0
-  ) {
+  // Check piece options first (prioritize piece prices)
+  if (product.piece_options && product.piece_options.length > 0) {
     const activePieceOptions = product.piece_options.filter(
       (opt: any) => opt.isActive
     );
     if (activePieceOptions.length > 0) {
       minPrice = Math.min(
         ...activePieceOptions.map((opt: any) => parseInt(opt.price) || 0)
+      );
+    }
+  }
+
+  // Check weight options if no piece options or piece options have no price
+  if (
+    minPrice === 0 &&
+    product.weight_options &&
+    product.weight_options.length > 0
+  ) {
+    const activeWeightOptions = product.weight_options.filter(
+      (opt: any) => opt.isActive
+    );
+    if (activeWeightOptions.length > 0) {
+      minPrice = Math.min(
+        ...activeWeightOptions.map((opt: any) => parseInt(opt.price) || 0)
       );
     }
   }

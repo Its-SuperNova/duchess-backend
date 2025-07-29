@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getProductPrice } from "@/lib/utils";
 
 export async function GET(
   request: NextRequest,
@@ -174,6 +175,20 @@ export async function GET(
       );
     }
 
+    // Calculate price for each product
+    const productsWithPrice =
+      products?.map((product) => {
+        const { price } = getProductPrice(product);
+        return {
+          id: product.id,
+          name: product.name,
+          is_veg: product.is_veg,
+          banner_image: product.banner_image,
+          categories: product.categories,
+          price: price,
+        };
+      }) || [];
+
     // 3. Get total count
     const { count: totalCount } = await supabase
       .from("products")
@@ -184,7 +199,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: true,
-        products: products ?? [],
+        products: productsWithPrice,
         pagination: {
           page,
           limit,

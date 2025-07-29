@@ -20,8 +20,6 @@ interface ProductCardProps {
   isVeg: boolean;
   description?: string;
   category?: string;
-  hasOffer?: boolean;
-  offerPercentage?: number;
   priority?: boolean; // Add priority loading prop
 }
 
@@ -35,8 +33,6 @@ const ProductCard = memo(function ProductCard({
   isVeg,
   description,
   category,
-  hasOffer,
-  offerPercentage,
   priority,
 }: ProductCardProps) {
   const { toast } = useToast();
