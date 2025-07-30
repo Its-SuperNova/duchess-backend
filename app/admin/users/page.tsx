@@ -61,7 +61,6 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { LuChefHat } from "react-icons/lu";
-import { MdDeliveryDining } from "react-icons/md";
 
 type UserWithAddress = UserType & {
   address: string | null;
@@ -84,9 +83,9 @@ export default function UsersPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState<{
     userId: string;
-    newRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+    newRole: "user" | "admin" | "shop_worker";
     userName: string;
-    originalRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+    originalRole: "user" | "admin" | "shop_worker";
   } | null>(null);
 
   // Delete confirmation dialog state
@@ -102,8 +101,8 @@ export default function UsersPage() {
   const [pendingEdit, setPendingEdit] = useState<{
     userId: string;
     userName: string;
-    currentRole: "user" | "admin" | "delivery_agent" | "shop_worker";
-    newRole: "user" | "admin" | "delivery_agent" | "shop_worker";
+    currentRole: "user" | "admin" | "shop_worker";
+    newRole: "user" | "admin" | "shop_worker";
   } | null>(null);
 
   useEffect(() => {
@@ -178,7 +177,7 @@ export default function UsersPage() {
 
   const handleRoleChange = async (
     userId: string,
-    newRole: "user" | "admin" | "delivery_agent" | "shop_worker"
+    newRole: "user" | "admin" | "shop_worker"
   ) => {
     try {
       const userToUpdate = users.find((u) => u.id === userId);
@@ -212,7 +211,7 @@ export default function UsersPage() {
 
   const initiateRoleChange = (
     userId: string,
-    newRole: "user" | "admin" | "delivery_agent" | "shop_worker",
+    newRole: "user" | "admin" | "shop_worker",
     userName: string
   ) => {
     const originalRole = users.find((u) => u.id === userId)?.role || "user";
@@ -283,7 +282,7 @@ export default function UsersPage() {
   const initiateEditUser = (
     userId: string,
     userName: string,
-    currentRole: "user" | "admin" | "delivery_agent" | "shop_worker"
+    currentRole: "user" | "admin" | "shop_worker"
   ) => {
     setPendingEdit({
       userId,
@@ -353,8 +352,6 @@ export default function UsersPage() {
     switch (role) {
       case "admin":
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "delivery_agent":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "shop_worker":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
       case "user":
@@ -368,8 +365,6 @@ export default function UsersPage() {
     switch (role) {
       case "admin":
         return <Shield className="h-4 w-4" />;
-      case "delivery_agent":
-        return <MdDeliveryDining className="h-4 w-4" />;
       case "shop_worker":
         return <LuChefHat className="h-4 w-4" />;
       case "user":
@@ -604,11 +599,10 @@ export default function UsersPage() {
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="delivery_agent">Delivery Agent</SelectItem>
                   <SelectItem value="shop_worker">Shop Worker</SelectItem>
                 </SelectContent>
               </Select>
@@ -616,7 +610,7 @@ export default function UsersPage() {
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by gender" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   {genderOptions.map((gender) => (
                     <SelectItem key={gender} value={gender}>
                       {gender === "all" ? "All Genders" : gender}
@@ -628,7 +622,7 @@ export default function UsersPage() {
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by address" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   {addressOptions.map((address) => (
                     <SelectItem key={address} value={address}>
                       {address === "all" ? "All Addresses" : address}
@@ -871,9 +865,7 @@ export default function UsersPage() {
                 <label className="text-sm font-medium">Select Role:</label>
                 <Select
                   value={pendingEdit?.newRole}
-                  onValueChange={(
-                    value: "user" | "admin" | "delivery_agent" | "shop_worker"
-                  ) => {
+                  onValueChange={(value: "user" | "admin" | "shop_worker") => {
                     setPendingEdit((prev) =>
                       prev ? { ...prev, newRole: value } : null
                     );
@@ -882,12 +874,9 @@ export default function UsersPage() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="delivery_agent">
-                      Delivery Agent
-                    </SelectItem>
                     <SelectItem value="shop_worker">Shop Worker</SelectItem>
                   </SelectContent>
                 </Select>

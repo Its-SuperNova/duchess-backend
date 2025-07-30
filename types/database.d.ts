@@ -163,7 +163,7 @@ declare global {
           // Delivery logistics
           estimated_time_delivery: string | null;
           delivery_zone: string | null;
-          delivery_partner_id: string | null;
+          delivery_partner_id: string | null; // This will be removed
           // Payment information
           payment_method: "online" | "cod" | "card" | "upi" | "wallet";
           payment_transaction_id: string | null;
@@ -186,31 +186,7 @@ declare global {
         Update: Partial<Tables["orders"]["Insert"]>;
       };
 
-      delivery_partners: {
-        Row: {
-          id: string;
-          name: string;
-          phone: string;
-          email: string | null;
-          vehicle_type: string | null;
-          vehicle_number: string | null;
-          license_number: string | null;
-          is_active: boolean;
-          current_location: any;
-          rating: number;
-          total_deliveries: number;
-          joining_date: string;
-          emergency_contact: string | null;
-          profile_image: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Omit<
-          Tables["delivery_partners"]["Row"],
-          "id" | "created_at" | "updated_at" | "rating" | "total_deliveries"
-        >;
-        Update: Partial<Tables["delivery_partners"]["Insert"]>;
-      };
+      // delivery_partners table removed
 
       addresses: {
         Row: {

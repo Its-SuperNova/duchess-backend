@@ -189,7 +189,7 @@ export async function GET(
       distance: addressData?.distance || null, // From address relationship
       duration: addressData?.duration || null, // From address relationship
       delivery_zone: order.delivery_zone,
-      delivery_partner_id: order.delivery_partner_id,
+      delivery_partner_id: null,
 
       // Payment information
       payment_method: order.payment_method,
