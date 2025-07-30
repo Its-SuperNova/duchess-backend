@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,6 +96,7 @@ interface Order {
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,24 +107,93 @@ export default function OrderDetailPage() {
     description: string;
   } | null>(null);
   const [confirmText, setConfirmText] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Function to update order status
-  const updateOrderStatus = (newStatus: string) => {
-    if (order) {
-      setOrder({
-        ...order,
-        orderStatus: newStatus,
+  const updateOrderStatus = async (newStatus: string) => {
+    if (!order) return;
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update order status");
+      }
+
+      if (result.success) {
+        setOrder({
+          ...order,
+          orderStatus: newStatus,
+        });
+        toast({
+          title: "Success",
+          description: `Order status updated to ${newStatus}`,
+        });
+      } else {
+        throw new Error(result.error || "Failed to update order status");
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update order status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   // Function to update payment status
-  const updatePaymentStatus = (newStatus: string) => {
-    if (order) {
-      setOrder({
-        ...order,
-        paymentStatus: newStatus,
+  const updatePaymentStatus = async (newStatus: string) => {
+    if (!order) return;
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ payment_status: newStatus }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update payment status");
+      }
+
+      if (result.success) {
+        setOrder({
+          ...order,
+          paymentStatus: newStatus,
+        });
+        toast({
+          title: "Success",
+          description: `Payment status updated to ${newStatus}`,
+        });
+      } else {
+        throw new Error(result.error || "Failed to update payment status");
+      }
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update payment status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -138,25 +209,30 @@ export default function OrderDetailPage() {
   };
 
   // Function to handle confirmation
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (pendingAction) {
-      switch (pendingAction.type) {
-        case "payment":
-          console.log("Mark payment as paid");
-          updatePaymentStatus("paid");
-          break;
-        case "processing":
-          console.log("Mark order as processing");
-          updateOrderStatus("processing");
-          break;
-        case "delivery":
-          console.log("Mark order as out for delivery");
-          updateOrderStatus("out for delivery");
-          break;
-        case "delivered":
-          console.log("Mark order as delivered");
-          updateOrderStatus("delivered");
-          break;
+      try {
+        switch (pendingAction.type) {
+          case "payment":
+            await updatePaymentStatus("paid");
+            break;
+          case "processing":
+            await updateOrderStatus("preparing");
+            break;
+          case "delivery":
+            await updateOrderStatus("out_for_delivery");
+            break;
+          case "delivered":
+            await updateOrderStatus("delivered");
+            break;
+        }
+      } catch (error) {
+        console.error("Error updating order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update order status",
+          variant: "destructive",
+        });
       }
     }
     setShowConfirmDialog(false);
@@ -176,8 +252,6 @@ export default function OrderDetailPage() {
         }
 
         const data = await response.json();
-        console.log("Order data received:", data.order);
-        console.log("Customer data:", data.order?.customer);
         setOrder(data.order);
       } catch (err) {
         console.error("Error fetching order:", err);
@@ -297,9 +371,9 @@ export default function OrderDetailPage() {
                     className={`h-full transition-all duration-500 ${
                       order.orderStatus === "delivered"
                         ? "bg-green-500"
-                        : order.orderStatus === "out for delivery"
+                        : order.orderStatus === "out_for_delivery"
                         ? "bg-blue-500"
-                        : order.orderStatus === "processing"
+                        : order.orderStatus === "preparing"
                         ? "bg-green-500"
                         : order.paymentStatus === "paid"
                         ? "bg-green-500"
@@ -309,9 +383,9 @@ export default function OrderDetailPage() {
                       width:
                         order.orderStatus === "delivered"
                           ? "100%"
-                          : order.orderStatus === "out for delivery"
+                          : order.orderStatus === "out_for_delivery"
                           ? "80%"
-                          : order.orderStatus === "processing"
+                          : order.orderStatus === "preparing"
                           ? "60%"
                           : order.paymentStatus === "paid"
                           ? "40%"
@@ -357,8 +431,8 @@ export default function OrderDetailPage() {
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                         order.paymentStatus === "paid" ||
-                        order.orderStatus === "processing" ||
-                        order.orderStatus === "out for delivery" ||
+                        order.orderStatus === "preparing" ||
+                        order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                           ? "bg-green-500 text-white shadow-lg"
                           : "bg-gray-100 text-gray-400"
@@ -395,8 +469,8 @@ export default function OrderDetailPage() {
                       }}
                       disabled={
                         order.paymentStatus === "paid" ||
-                        order.orderStatus === "processing" ||
-                        order.orderStatus === "out for delivery" ||
+                        order.orderStatus === "preparing" ||
+                        order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                       }
                     >
@@ -410,8 +484,8 @@ export default function OrderDetailPage() {
                   <div className="flex flex-col items-center">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        order.orderStatus === "processing" ||
-                        order.orderStatus === "out for delivery" ||
+                        order.orderStatus === "preparing" ||
+                        order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                           ? "bg-green-500 text-white shadow-lg"
                           : "bg-gray-100 text-gray-400"
@@ -435,13 +509,13 @@ export default function OrderDetailPage() {
                         });
                       }}
                       disabled={
-                        order.orderStatus === "processing" ||
-                        order.orderStatus === "out for delivery" ||
+                        order.orderStatus === "preparing" ||
+                        order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                       }
                     >
-                      {order.orderStatus === "processing" ||
-                      order.orderStatus === "out for delivery" ||
+                      {order.orderStatus === "preparing" ||
+                      order.orderStatus === "out_for_delivery" ||
                       order.orderStatus === "delivered"
                         ? "Completed"
                         : "Start Preparing"}
@@ -452,7 +526,7 @@ export default function OrderDetailPage() {
                   <div className="flex flex-col items-center">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        order.orderStatus === "out for delivery" ||
+                        order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                           ? "bg-green-500 text-white shadow-lg"
                           : "bg-gray-100 text-gray-400"
@@ -476,11 +550,11 @@ export default function OrderDetailPage() {
                         });
                       }}
                       disabled={
-                        order.orderStatus === "out for delivery" ||
+                        order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                       }
                     >
-                      {order.orderStatus === "out for delivery" ||
+                      {order.orderStatus === "out_for_delivery" ||
                       order.orderStatus === "delivered"
                         ? "Completed"
                         : "Start Delivery"}
@@ -742,7 +816,7 @@ export default function OrderDetailPage() {
                 <span className="text-sm">Delivery Status:</span>
                 <Badge
                   className={
-                    order.orderStatus === "out for delivery"
+                    order.orderStatus === "out_for_delivery"
                       ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
                       : order.orderStatus === "delivered"
                       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
@@ -750,7 +824,7 @@ export default function OrderDetailPage() {
                   }
                   variant="outline"
                 >
-                  {order.orderStatus === "out for delivery"
+                  {order.orderStatus === "out_for_delivery"
                     ? "Out for Delivery"
                     : order.orderStatus === "delivered"
                     ? "Delivered"
@@ -975,13 +1049,20 @@ export default function OrderDetailPage() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
-              disabled={confirmText.toLowerCase() !== "confirm"}
+              disabled={confirmText.toLowerCase() !== "confirm" || isUpdating}
               className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
             >
-              Confirm
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Confirm"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

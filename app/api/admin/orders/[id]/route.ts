@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(
   request: Request,
@@ -228,6 +229,141 @@ export async function GET(
     return NextResponse.json({ order: formattedOrder });
   } catch (error) {
     console.error("Error in admin order detail API:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: orderId } = await params;
+    const body = await request.json();
+
+    console.log("PUT request received:", { orderId, body });
+
+    if (!orderId) {
+      return NextResponse.json(
+        { error: "Order ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { status, payment_status, estimated_time_delivery } = body;
+
+    // Validate status values
+    const validStatuses = [
+      "pending",
+      "confirmed",
+      "preparing",
+      "ready",
+      "out_for_delivery",
+      "delivered",
+      "cancelled",
+    ];
+
+    const validPaymentStatuses = [
+      "pending",
+      "paid",
+      "failed",
+      "refunded",
+      "partially_paid",
+    ];
+
+    if (status && !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid order status" },
+        { status: 400 }
+      );
+    }
+
+    if (payment_status && !validPaymentStatuses.includes(payment_status)) {
+      return NextResponse.json(
+        { error: "Invalid payment status" },
+        { status: 400 }
+      );
+    }
+
+    // Prepare update data
+    const updateData: any = {};
+
+    if (status) {
+      updateData.status = status;
+
+      // Update relevant timestamps based on status
+      const now = new Date().toISOString();
+      switch (status) {
+        case "preparing":
+          updateData.cooking_started_at = now;
+          break;
+        case "ready":
+          updateData.ready_at = now;
+          break;
+        case "out_for_delivery":
+          updateData.picked_up_at = now;
+          break;
+        case "delivered":
+          updateData.delivered_at = now;
+          break;
+      }
+    }
+
+    if (payment_status) {
+      updateData.payment_status = payment_status;
+    }
+
+    if (estimated_time_delivery) {
+      updateData.estimated_time_delivery = estimated_time_delivery;
+    }
+
+    console.log("Update data prepared:", updateData);
+
+    // Update the order in the database
+    console.log("Attempting to update order with ID:", orderId);
+    console.log("Update data:", updateData);
+
+    // First, let's check if the order exists
+    const { data: existingOrder, error: fetchError } = await supabaseAdmin
+      .from("orders")
+      .select("id, status, payment_status")
+      .eq("id", orderId)
+      .single();
+
+    console.log("Existing order check:", { existingOrder, fetchError });
+
+    if (fetchError) {
+      console.error("Error fetching existing order:", fetchError);
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+      .from("orders")
+      .update(updateData)
+      .eq("id", orderId)
+      .select()
+      .single();
+
+    console.log("Update result:", { updatedOrder, updateError });
+
+    if (updateError) {
+      console.error("Error updating order:", updateError);
+      return NextResponse.json(
+        { error: "Failed to update order" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Order updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error in admin order update API:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
