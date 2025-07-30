@@ -329,7 +329,16 @@ export async function searchProducts(query: string) {
 export async function getActiveProducts({
   limit = 24,
   offset = 0,
-}: { limit?: number; offset?: number } = {}) {
+}: { limit?: number; offset?: number } = {}): Promise<
+  {
+    id: string;
+    name: string;
+    banner_image: string;
+    is_veg: boolean;
+    price: number;
+    categories: { name: string } | { name: string }[] | null;
+  }[]
+> {
   try {
     return await withRetry(
       async () => {
@@ -363,7 +372,21 @@ export async function getActiveProducts({
           throw new Error(`Database error: ${error.message}`);
         }
 
-        return products || [];
+        // Calculate price for each product and return optimized data
+        const productsWithPrice =
+          products?.map((product) => {
+            const { price } = getProductPrice(product);
+            return {
+              id: product.id,
+              name: product.name,
+              is_veg: product.is_veg,
+              banner_image: product.banner_image,
+              categories: product.categories,
+              price: price,
+            };
+          }) || [];
+
+        return productsWithPrice;
       },
       2,
       5000 // Increased timeout to 5 seconds
