@@ -31,7 +31,6 @@ import {
   Search,
   ShoppingBag,
   Loader2,
-  Mail,
 } from "lucide-react";
 import { MaximizeSquare3 } from "@solar-icons/react";
 import Lottie from "lottie-react";
@@ -121,52 +120,7 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const router = useRouter();
-
-  // Function to send test email
-  const sendTestEmail = async (orderId: string) => {
-    try {
-      setSendingEmail(orderId);
-
-      // Dummy data for testing
-      const dummyData = {
-        email: "its.ashwin.23@gmail.com",
-        orderId: orderId,
-        items: [
-          { name: "Chocolate Cake", quantity: 2, price: 450 },
-          { name: "Vanilla Cupcakes", quantity: 6, price: 80 },
-          { name: "Butter Cookies", quantity: 12, price: 25 },
-          { name: "Red Velvet Cake", quantity: 1, price: 600 },
-        ],
-      };
-
-      const response = await fetch("/api/order/confirm", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dummyData),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log("Test email sent successfully:", result);
-        alert("Test email sent successfully to its.ashwin.23@gmail.com");
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to send test email:", errorData);
-        alert(
-          `Failed to send test email: ${errorData.error || "Unknown error"}`
-        );
-      }
-    } catch (error) {
-      console.error("Error sending test email:", error);
-      alert("Error sending test email. Please try again.");
-    } finally {
-      setSendingEmail(null);
-    }
-  };
 
   // Fetch orders from database
   useEffect(() => {
@@ -423,33 +377,15 @@ export default function OrdersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            router.push(`/admin/orders/${order.id}`)
-                          }
-                          className="h-8 w-8 p-0 hover:bg-primary/10"
-                          title="View Details"
-                        >
-                          <MaximizeSquare3 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => sendTestEmail(order.id)}
-                          disabled={sendingEmail === order.id}
-                          className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600"
-                          title="Send Test Email"
-                        >
-                          {sendingEmail === order.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Mail className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/admin/orders/${order.id}`)}
+                        className="h-8 w-8 p-0 hover:bg-primary/10"
+                        title="View Details"
+                      >
+                        <MaximizeSquare3 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
