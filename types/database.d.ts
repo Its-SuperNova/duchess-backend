@@ -163,7 +163,9 @@ declare global {
           // Delivery logistics
           estimated_time_delivery: string | null;
           delivery_zone: string | null;
-          delivery_partner_id: string | null; // This will be removed
+          // Delivery person information
+          delivery_person_name: string | null;
+          delivery_person_contact: string | null;
           // Payment information
           payment_method: "online" | "cod" | "card" | "upi" | "wallet";
           payment_transaction_id: string | null;

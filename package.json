@@ -60,6 +60,7 @@
     "react-hook-form": "latest",
     "react-icons": "latest",
     "react-resizable-panels": "^2.1.7",
+    "react-timekeeper": "^2.2.1",
     "recharts": "2.15.0",
     "sonner": "latest",
     "styled-components": "^6.1.19",

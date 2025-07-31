@@ -189,7 +189,8 @@ export async function GET(
       distance: addressData?.distance || null, // From address relationship
       duration: addressData?.duration || null, // From address relationship
       delivery_zone: order.delivery_zone,
-      delivery_partner_id: null,
+      delivery_person_name: order.delivery_person_name,
+      delivery_person_contact: order.delivery_person_contact,
 
       // Payment information
       payment_method: order.payment_method,
@@ -253,7 +254,13 @@ export async function PUT(
       );
     }
 
-    const { status, payment_status, estimated_time_delivery } = body;
+    const {
+      status,
+      payment_status,
+      estimated_time_delivery,
+      delivery_person_name,
+      delivery_person_contact,
+    } = body;
 
     // Validate status values
     const validStatuses = [
@@ -318,6 +325,14 @@ export async function PUT(
 
     if (estimated_time_delivery) {
       updateData.estimated_time_delivery = estimated_time_delivery;
+    }
+
+    if (delivery_person_name !== undefined) {
+      updateData.delivery_person_name = delivery_person_name;
+    }
+
+    if (delivery_person_contact !== undefined) {
+      updateData.delivery_person_contact = delivery_person_contact;
     }
 
     console.log("Update data prepared:", updateData);

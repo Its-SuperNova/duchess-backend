@@ -72,8 +72,6 @@ export async function POST(request: NextRequest) {
       restaurantNotes,
       isSameDayDelivery,
       coordinates,
-      deliveryPartner,
-      deliveryPartnerId,
     } = body || {};
 
     console.log("Extracted enhanced order data:", {
@@ -315,7 +313,6 @@ export async function POST(request: NextRequest) {
       estimated_time_delivery:
         estimatedTimeDelivery || estimatedDeliveryTime || null,
       delivery_zone: finalDeliveryZone || null,
-      delivery_partner_id: null,
 
       // Payment information
       payment_method: paymentMethod || "online",

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import TimeKeeper from "react-timekeeper";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +85,8 @@ interface Order {
   distance?: number;
   duration?: number;
   delivery_zone?: string;
+  delivery_person_name?: string;
+  delivery_person_contact?: string;
   payment_method: string;
   notes?: string;
   // Legacy fields for backward compatibility
@@ -108,6 +111,55 @@ export default function OrderDetailPage() {
   } | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [deliveryPersonName, setDeliveryPersonName] = useState("");
+  const [deliveryPersonContact, setDeliveryPersonContact] = useState("");
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [isUpdatingContact, setIsUpdatingContact] = useState(false);
+
+  // Function to format timestamp to readable time
+  const formatTimeForDisplay = (timestamp: string | null) => {
+    if (!timestamp) return "";
+
+    try {
+      // Handle both ISO format and local time format
+      let date: Date;
+
+      if (timestamp.includes("T") || timestamp.includes("Z")) {
+        // ISO format (UTC)
+        date = new Date(timestamp);
+      } else {
+        // Local time format (YYYY-MM-DD HH:MM:SS)
+        date = new Date(timestamp + "T00:00:00");
+      }
+
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const period = hours >= 12 ? "pm" : "am";
+      const displayHours = hours % 12 || 12;
+      const displayMinutes = minutes.toString().padStart(2, "0");
+
+      return `${displayHours}:${displayMinutes} ${period}`;
+    } catch (error) {
+      return timestamp; // Return original if parsing fails
+    }
+  };
+
+  // Close time picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showTimePicker && !target.closest(".time-picker-container")) {
+        setShowTimePicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showTimePicker]);
 
   // Function to update order status
   const updateOrderStatus = async (newStatus: string) => {
@@ -150,6 +202,185 @@ export default function OrderDetailPage() {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Function to update estimated delivery time
+  const updateEstimatedDeliveryTime = async (newTime: string) => {
+    if (!order) return;
+
+    setIsUpdating(true);
+    try {
+      // Convert time string to proper timestamp format
+      const convertTimeToTimestamp = (timeStr: string) => {
+        // Parse time like "6:30 am" or "2:45 pm"
+        const timeMatch = timeStr.match(/(\d+):(\d+)\s*(am|pm)/i);
+        if (!timeMatch) return null;
+
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const period = timeMatch[3].toLowerCase();
+
+        // Convert to 24-hour format
+        if (period === "pm" && hours !== 12) {
+          hours += 12;
+        } else if (period === "am" && hours === 12) {
+          hours = 0;
+        }
+
+        // Create a date object for today with the specified time in local timezone
+        const today = new Date();
+        today.setHours(hours, minutes, 0, 0);
+
+        // Format as local time string to preserve timezone
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        const hour = String(hours).padStart(2, "0");
+        const minute = String(minutes).padStart(2, "0");
+
+        // Return in format: "2024-01-15 18:30:00" (local time)
+        return `${year}-${month}-${day} ${hour}:${minute}:00`;
+      };
+
+      const timestamp = convertTimeToTimestamp(newTime);
+      if (!timestamp) {
+        throw new Error("Invalid time format");
+      }
+
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ estimated_time_delivery: timestamp }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update delivery time");
+      }
+
+      if (result.success) {
+        setOrder({
+          ...order,
+          estimated_time_delivery: newTime,
+        });
+        toast({
+          title: "Success",
+          description: `Delivery time updated to ${newTime}`,
+        });
+      } else {
+        throw new Error(result.error || "Failed to update delivery time");
+      }
+    } catch (error) {
+      console.error("Error updating delivery time:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update delivery time",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Function to update delivery person name
+  const updateDeliveryPersonName = async (name: string) => {
+    if (!order) return;
+
+    setIsUpdatingName(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ delivery_person_name: name }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Failed to update delivery person name"
+        );
+      }
+
+      if (result.success) {
+        setOrder({
+          ...order,
+          delivery_person_name: name,
+        });
+        setDeliveryPersonName(""); // Clear the input field
+        toast({
+          title: "Success",
+          description: `Delivery person name updated to ${name}`,
+        });
+      } else {
+        throw new Error(
+          result.error || "Failed to update delivery person name"
+        );
+      }
+    } catch (error) {
+      console.error("Error updating delivery person name:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update delivery person name",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
+
+  // Function to update delivery person contact
+  const updateDeliveryPersonContact = async (contact: string) => {
+    if (!order) return;
+
+    setIsUpdatingContact(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ delivery_person_contact: contact }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Failed to update delivery person contact"
+        );
+      }
+
+      if (result.success) {
+        setOrder({
+          ...order,
+          delivery_person_contact: contact,
+        });
+        setDeliveryPersonContact(""); // Clear the input field
+        toast({
+          title: "Success",
+          description: `Delivery person contact updated to ${contact}`,
+        });
+      } else {
+        throw new Error(
+          result.error || "Failed to update delivery person contact"
+        );
+      }
+    } catch (error) {
+      console.error("Error updating delivery person contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update delivery person contact",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingContact(false);
     }
   };
 
@@ -747,16 +978,79 @@ export default function OrderDetailPage() {
                 <Calendar className="h-4 w-4" />
                 Estimated Delivery Time
               </div>
-              <div className="flex gap-2">
-                <Input
-                  type="time"
-                  placeholder="Delivery time"
-                  className="flex-1"
-                  defaultValue={order.estimated_time_delivery || ""}
-                />
-                <Button size="sm" variant="outline">
-                  Update
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Select delivery time"
+                    className="flex-1"
+                    value={
+                      selectedTime ||
+                      formatTimeForDisplay(order.estimated_time_delivery) ||
+                      ""
+                    }
+                    readOnly
+                    onClick={() => setShowTimePicker(!showTimePicker)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowTimePicker(!showTimePicker)}
+                  >
+                    {showTimePicker ? "Close" : "Select Time"}
+                  </Button>
+                </div>
+
+                {showTimePicker && (
+                  <div className="relative z-50 time-picker-container">
+                    <div className="absolute top-2 left-0 bg-white border rounded-lg shadow-xl p-4 min-w-[280px]">
+                      <div className="space-y-3">
+                        <TimeKeeper
+                          time={
+                            selectedTime ||
+                            formatTimeForDisplay(
+                              order.estimated_time_delivery
+                            ) ||
+                            "12:00pm"
+                          }
+                          onChange={(data) => setSelectedTime(data.formatted12)}
+                          closeOnMinuteSelect={false}
+                          hour24Mode={false}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowTimePicker(false)}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (selectedTime) {
+                                updateEstimatedDeliveryTime(selectedTime);
+                                setShowTimePicker(false);
+                              }
+                            }}
+                            disabled={!selectedTime || isUpdating}
+                            className="flex-1"
+                          >
+                            {isUpdating ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              "Update Time"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -774,14 +1068,38 @@ export default function OrderDetailPage() {
                 <label className="text-xs font-medium text-muted-foreground">
                   Name
                 </label>
+                {!deliveryPersonName && order.delivery_person_name && (
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Current: {order.delivery_person_name}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     type="text"
                     placeholder="Enter delivery person name"
                     className="flex-1"
+                    value={deliveryPersonName}
+                    onChange={(e) => setDeliveryPersonName(e.target.value)}
+                    onFocus={() => {
+                      if (!deliveryPersonName && order.delivery_person_name) {
+                        setDeliveryPersonName(order.delivery_person_name);
+                      }
+                    }}
                   />
-                  <Button size="sm" variant="outline">
-                    Save
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateDeliveryPersonName(deliveryPersonName)}
+                    disabled={!deliveryPersonName.trim() || isUpdatingName}
+                  >
+                    {isUpdatingName ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -791,14 +1109,45 @@ export default function OrderDetailPage() {
                 <label className="text-xs font-medium text-muted-foreground">
                   Contact Number
                 </label>
+                {!deliveryPersonContact && order.delivery_person_contact && (
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Current: {order.delivery_person_contact}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     type="tel"
                     placeholder="Enter contact number"
                     className="flex-1"
+                    value={deliveryPersonContact}
+                    onChange={(e) => setDeliveryPersonContact(e.target.value)}
+                    onFocus={() => {
+                      if (
+                        !deliveryPersonContact &&
+                        order.delivery_person_contact
+                      ) {
+                        setDeliveryPersonContact(order.delivery_person_contact);
+                      }
+                    }}
                   />
-                  <Button size="sm" variant="outline">
-                    Save
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      updateDeliveryPersonContact(deliveryPersonContact)
+                    }
+                    disabled={
+                      !deliveryPersonContact.trim() || isUpdatingContact
+                    }
+                  >
+                    {isUpdatingContact ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save"
+                    )}
                   </Button>
                 </div>
               </div>
