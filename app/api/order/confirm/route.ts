@@ -31,17 +31,35 @@ export async function POST(req: Request) {
       );
     }
 
+    // Calculate totals
+    const subtotal = items.reduce((sum: number, item: any) => {
+      const price = item.price || 0;
+      const quantity = item.quantity || 0;
+      return sum + price * quantity;
+    }, 0);
+
+    const deliveryCharge = 50; // Fixed delivery charge
+    const gst = subtotal * 0.18; // 18% GST
+    const total = subtotal + deliveryCharge + gst;
+
     const orderDetails = items
       .map(
         (item: any) => `
           <tr>
             <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0;">
-              <div style="font-weight: 500; color: #1a1a1a; margin-bottom: 4px;">${item.name}</div>
+              <div style="font-weight: 500; color: #1a1a1a; margin-bottom: 4px;">${
+                item.name
+              }</div>
             </td>
-            <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
+            <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-align: center;">
               <span style="background: #f8f9fa; color: #6b7280; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">
                 Qty: ${item.quantity}
               </span>
+            </td>
+            <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
+              <div style="font-weight: 600; color: #2d3748;">₹${
+                (item.price || 0) * (item.quantity || 0)
+              }</div>
             </td>
           </tr>
         `
@@ -95,7 +113,7 @@ export async function POST(req: Request) {
               text-transform: uppercase; 
             }
             .content { 
-              padding: 48px 40px; 
+              padding: 48px 20px; 
             }
             .greeting { 
               font-size: 24px; 
@@ -231,10 +249,47 @@ export async function POST(req: Request) {
               
               <h2 class="section-title">Order Summary</h2>
               <table class="items-table">
+                <thead>
+                  <tr>
+                    <th style="text-align: left; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">Item</th>
+                    <th style="text-align: center; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">Qty</th>
+                    <th style="text-align: right; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">Total</th>
+                  </tr>
+                </thead>
                 <tbody>
                   ${orderDetails}
                 </tbody>
               </table>
+              
+              <div class="bill-details" style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin: 24px 0;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #2d3748;">Bill Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Subtotal:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${subtotal.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Delivery Charge:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${deliveryCharge.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">GST (18%):</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${gst.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr style="border-top: 1px solid #e2e8f0;">
+                    <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 16px; text-align: left;">Total Amount:</td>
+                    <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 18px; text-align: right;">₹${total.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                </table>
+              </div>
               
               <div class="next-steps">
                 <h3 style="margin: 0 0 24px 0; font-size: 16px; font-weight: 600; color: #2d3748;">What happens next?</h3>
@@ -267,14 +322,244 @@ export async function POST(req: Request) {
               </div>
             </div>
             
-            
+            <div class="footer">
+              <div class="footer-brand">Duchess Pastry</div>
+              <p class="footer-text">Crafting moments of sweetness since day one</p>
+            </div>
           </div>
         </body>
         </html>
       `
     );
 
-    console.log("Email sent successfully to:", email);
+    // Send admin notification email
+    await sendMail(
+      "hello@duchesspastry.com",
+      `New Order Received - Duchess Pastry #${orderId}`,
+      `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Order Notification - Duchess Pastry</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+              line-height: 1.6; 
+              color: #1a1a1a; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f8f9fa; 
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 40px auto; 
+              background: white; 
+              border-radius: 16px; 
+              overflow: hidden; 
+              box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            }
+            .header { 
+              background: linear-gradient(135deg, #059669 0%, #10b981 100%); 
+              color: white; 
+              padding: 48px 40px; 
+              text-align: center; 
+            }
+            .logo { 
+              font-size: 32px; 
+              font-weight: 700; 
+              letter-spacing: -0.5px; 
+              margin-bottom: 8px; 
+            }
+            .tagline { 
+              font-size: 14px; 
+              opacity: 0.8; 
+              font-weight: 400; 
+              letter-spacing: 0.5px; 
+              text-transform: uppercase; 
+            }
+            .content { 
+              padding: 48px 20px; 
+            }
+            .greeting { 
+              font-size: 24px; 
+              font-weight: 600; 
+              color: #2d3748; 
+              margin: 0 0 24px 0; 
+            }
+            .order-card { 
+              background: #f0fdf4; 
+              border: 1px solid #bbf7d0; 
+              border-radius: 12px; 
+              padding: 32px; 
+              margin: 32px 0; 
+              text-align: center; 
+            }
+            .order-label { 
+              font-size: 14px; 
+              color: #6b7280; 
+              font-weight: 500; 
+              margin-bottom: 8px; 
+              text-transform: uppercase; 
+              letter-spacing: 0.5px; 
+            }
+            .order-number { 
+              font-size: 28px; 
+              font-weight: 700; 
+              color: #059669; 
+              letter-spacing: -0.5px; 
+            }
+            .section-title { 
+              font-size: 18px; 
+              font-weight: 600; 
+              color: #2d3748; 
+              margin: 40px 0 24px 0; 
+            }
+            .items-table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 24px 0; 
+            }
+            .customer-info { 
+              background: #f8f9fa; 
+              border-radius: 12px; 
+              padding: 24px; 
+              margin: 24px 0; 
+            }
+            .customer-title { 
+              font-size: 16px; 
+              font-weight: 600; 
+              color: #2d3748; 
+              margin-bottom: 16px; 
+            }
+            .customer-details { 
+              color: #6b7280; 
+              line-height: 1.8; 
+            }
+            .action-section { 
+              background: #fef3c7; 
+              border: 1px solid #fde68a; 
+              border-radius: 12px; 
+              padding: 32px; 
+              margin: 32px 0; 
+              text-align: center; 
+            }
+            .action-title { 
+              font-size: 16px; 
+              font-weight: 600; 
+              color: #92400e; 
+              margin-bottom: 16px; 
+            }
+            .action-steps { 
+              color: #92400e; 
+              line-height: 1.8; 
+            }
+            .footer { 
+              text-align: center; 
+              padding: 32px 40px; 
+              background: #f8f9fa; 
+              border-top: 1px solid #e2e8f0; 
+            }
+            .footer-brand { 
+              font-size: 18px; 
+              font-weight: 600; 
+              color: #2d3748; 
+              margin-bottom: 8px; 
+            }
+            .footer-text { 
+              font-size: 14px; 
+              color: #6b7280; 
+              margin: 0; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">Duchess Pastry</div>
+              <div class="tagline">New Order Alert</div>
+            </div>
+            
+            <div class="content">
+              <h1 class="greeting">New Order Received! 🎉</h1>
+              <p style="color: #6b7280; font-size: 16px; margin-bottom: 0;">
+                A new order has been placed and requires your attention. Please review the details below and begin processing.
+              </p>
+              
+              <div class="order-card">
+                <div class="order-label">Order Reference</div>
+                <div class="order-number">#${orderId}</div>
+              </div>
+              
+              <div class="customer-info">
+                <div class="customer-title">Customer Information</div>
+                <div class="customer-details">
+                  <strong>Email:</strong> ${email}<br>
+                  <strong>Order Date:</strong> ${new Date().toLocaleDateString(
+                    "en-IN"
+                  )}<br>
+                  <strong>Order Time:</strong> ${new Date().toLocaleTimeString(
+                    "en-IN"
+                  )}
+                </div>
+              </div>
+              
+              <h2 class="section-title">Order Summary</h2>
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th style="text-align: left; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">Item</th>
+                    <th style="text-align: center; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">Qty</th>
+                    <th style="text-align: right; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${orderDetails}
+                </tbody>
+              </table>
+              
+              <div class="bill-details" style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin: 24px 0;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #2d3748;">Bill Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Subtotal:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${subtotal.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Delivery Charge:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${deliveryCharge.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">GST (18%):</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${gst.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr style="border-top: 1px solid #e2e8f0;">
+                    <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 16px; text-align: left;">Total Amount:</td>
+                    <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 18px; text-align: right;">₹${total.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <div class="footer-brand">Duchess Pastry</div>
+              <p class="footer-text">Admin Notification System</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    );
+
     return NextResponse.json({
       success: true,
       message: "Email sent successfully",

@@ -131,13 +131,13 @@ export default function OrdersPage() {
 
       // Dummy data for testing
       const dummyData = {
-        email: "hello@duchesspastry.com",
+        email: "its.ashwin.23@gmail.com",
         orderId: orderId,
         items: [
-          { name: "Chocolate Cake", quantity: 2 },
-          { name: "Vanilla Cupcakes", quantity: 6 },
-          { name: "Butter Cookies", quantity: 12 },
-          { name: "Red Velvet Cake", quantity: 1 },
+          { name: "Chocolate Cake", quantity: 2, price: 450 },
+          { name: "Vanilla Cupcakes", quantity: 6, price: 80 },
+          { name: "Butter Cookies", quantity: 12, price: 25 },
+          { name: "Red Velvet Cake", quantity: 1, price: 600 },
         ],
       };
 
@@ -152,7 +152,7 @@ export default function OrdersPage() {
       if (response.ok) {
         const result = await response.json();
         console.log("Test email sent successfully:", result);
-        alert("Test email sent successfully to hello@duchesspastry.com");
+        alert("Test email sent successfully to its.ashwin.23@gmail.com");
       } else {
         const errorData = await response.json();
         console.error("Failed to send test email:", errorData);

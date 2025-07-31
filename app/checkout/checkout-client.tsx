@@ -765,6 +765,7 @@ export default function CheckoutClient() {
           items: cart.map((item) => ({
             name: item.name,
             quantity: item.quantity,
+            price: item.price,
           })),
         });
 
@@ -777,6 +778,7 @@ export default function CheckoutClient() {
             items: cart.map((item) => ({
               name: item.name,
               quantity: item.quantity,
+              price: item.price,
             })),
           }),
         });
