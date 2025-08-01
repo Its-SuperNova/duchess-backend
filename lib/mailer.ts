@@ -20,6 +20,13 @@ export const sendMail = async (to: string, subject: string, html: string) => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    // Add proper headers to reduce spam likelihood
+    headers: {
+      "X-Priority": "1",
+      "X-MSMail-Priority": "High",
+      Importance: "high",
+      "X-Mailer": "Duchess Pastry Order System",
+    },
   });
 
   try {
