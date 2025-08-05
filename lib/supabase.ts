@@ -187,6 +187,25 @@ export interface Favorite {
   updated_at: string;
 }
 
+export interface Coupon {
+  id: string;
+  code: string;
+  type: "flat" | "percentage";
+  value: number;
+  min_order_amount: number;
+  max_discount_cap: number | null;
+  usage_limit: number | null;
+  usage_per_user: number;
+  valid_from: string;
+  valid_until: string;
+  applicable_categories: string[] | null;
+  is_active: boolean;
+  total_redemptions: number;
+  total_revenue: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -229,6 +248,11 @@ export interface Database {
         Row: Favorite;
         Insert: Omit<Favorite, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<Favorite, "id" | "created_at" | "updated_at">>;
+      };
+      coupons: {
+        Row: Coupon;
+        Insert: Omit<Coupon, "id" | "created_at" | "updated_at" | "total_redemptions" | "total_revenue">;
+        Update: Partial<Omit<Coupon, "id" | "created_at" | "updated_at" | "total_redemptions" | "total_revenue">>;
       };
     };
   };
