@@ -68,7 +68,6 @@ const formSchema = z.object({
   validFrom: z.date(),
   validUntil: z.date(),
   applicableCategories: z.array(z.number()).optional(),
-  isActive: z.boolean().default(true),
 });
 
 export default function CreateCouponPage() {
@@ -89,7 +88,6 @@ export default function CreateCouponPage() {
       validFrom: new Date(),
       validUntil: new Date(new Date().setMonth(new Date().getMonth() + 1)),
       applicableCategories: [],
-      isActive: true,
     },
   });
 
@@ -109,7 +107,6 @@ export default function CreateCouponPage() {
         validUntil: values.validUntil.toISOString(),
         applicableCategories:
           values.applicableCategories?.map((id) => id.toString()) || [],
-        isActive: values.isActive,
       };
 
       const response = await fetch("/api/coupons", {
@@ -138,11 +135,7 @@ export default function CreateCouponPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => router.back()}
-        >
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl sm:text-3xl font-bold">Create New Coupon</h1>
@@ -157,10 +150,7 @@ export default function CreateCouponPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-6"
-            >
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <FormField
                   control={form.control}
@@ -198,9 +188,7 @@ export default function CreateCouponPage() {
                           <SelectItem value="percentage">
                             Percentage (%)
                           </SelectItem>
-                          <SelectItem value="flat">
-                            Flat Amount (₹)
-                          </SelectItem>
+                          <SelectItem value="flat">Flat Amount (₹)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -264,8 +252,8 @@ export default function CreateCouponPage() {
                           </div>
                         </FormControl>
                         <FormDescription>
-                          Maximum discount amount for percentage discounts (0 for
-                          no cap)
+                          Maximum discount amount for percentage discounts (0
+                          for no cap)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -384,9 +372,7 @@ export default function CreateCouponPage() {
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
-                            disabled={(date) =>
-                              date < form.watch("validFrom")
-                            }
+                            disabled={(date) => date < form.watch("validFrom")}
                           />
                         </PopoverContent>
                       </Popover>
@@ -436,8 +422,7 @@ export default function CreateCouponPage() {
                                             ])
                                           : field.onChange(
                                               field.value?.filter(
-                                                (value) =>
-                                                  value !== category.id
+                                                (value) => value !== category.id
                                               )
                                             );
                                       }}
@@ -456,29 +441,6 @@ export default function CreateCouponPage() {
                         Leave all unchecked to apply to all products
                       </FormDescription>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Coupon Status
-                        </FormLabel>
-                        <FormDescription>
-                          Enable or disable this coupon
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -503,4 +465,4 @@ export default function CreateCouponPage() {
       </Card>
     </div>
   );
-} 
+}

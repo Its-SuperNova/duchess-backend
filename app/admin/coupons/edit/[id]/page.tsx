@@ -69,7 +69,6 @@ const formSchema = z.object({
   validFrom: z.date(),
   validUntil: z.date(),
   applicableCategories: z.array(z.number()).optional(),
-  isActive: z.boolean().default(true),
 });
 
 export default function EditCouponPage({ params }: { params: { id: string } }) {
@@ -92,7 +91,6 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
       validFrom: new Date(),
       validUntil: new Date(new Date().setMonth(new Date().getMonth() + 1)),
       applicableCategories: [],
-      isActive: true,
     },
   });
 
@@ -122,7 +120,6 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
             couponData.applicable_categories?.map((cat: string) =>
               parseInt(cat)
             ) || [],
-          isActive: couponData.is_active,
         });
       } catch (error) {
         console.error("Error fetching coupon:", error);
@@ -152,7 +149,6 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
         validUntil: values.validUntil.toISOString(),
         applicableCategories:
           values.applicableCategories?.map((id) => id.toString()) || [],
-        isActive: values.isActive,
       };
 
       const response = await fetch(`/api/coupons/${params.id}`, {
@@ -516,29 +512,6 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
                         Leave all unchecked to apply to all products
                       </FormDescription>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Coupon Status
-                        </FormLabel>
-                        <FormDescription>
-                          Enable or disable this coupon
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
                     </FormItem>
                   )}
                 />

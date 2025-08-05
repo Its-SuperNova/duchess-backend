@@ -25,24 +25,8 @@ interface TopbarProps {
 
 export default function Topbar({ sidebarExpanded = true }: TopbarProps) {
   const { data: session, status } = useSession();
-  const [title, setTitle] = useState("Dashboard");
   const [isMobile, setIsMobile] = useState(false);
   const isAuthenticated = status === "authenticated";
-
-  // Update title based on pathname
-  useEffect(() => {
-    const pathname = window.location.pathname;
-    if (pathname === "/admin") setTitle("Dashboard");
-    else if (pathname.includes("/admin/orders")) setTitle("Orders");
-    else if (pathname.includes("/admin/products")) setTitle("Products");
-    else if (pathname.includes("/admin/categories")) setTitle("Categories");
-    else if (pathname.includes("/admin/users")) setTitle("Users");
-    else if (pathname.includes("/admin/banners")) setTitle("Banners");
-    else if (pathname.includes("/admin/payments")) setTitle("Payments");
-    else if (pathname.includes("/admin/reviews")) setTitle("Reviews");
-    else if (pathname.includes("/admin/coupons")) setTitle("Coupons");
-    else if (pathname.includes("/admin/settings")) setTitle("Settings");
-  }, []);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -65,7 +49,7 @@ export default function Topbar({ sidebarExpanded = true }: TopbarProps) {
         sidebarExpanded ? "lg:pl-4" : "lg:pl-4"
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-1">
         {isMobile && (
           <Button
             variant="ghost"
@@ -78,12 +62,9 @@ export default function Topbar({ sidebarExpanded = true }: TopbarProps) {
             <span className="sr-only">Toggle sidebar</span>
           </Button>
         )}
-        <h1 className="text-xl font-semibold">{title}</h1>
-      </div>
 
-      {!isMobile && (
-        <div className="flex-1 mx-2 sm:mx-4 md:mx-8">
-          <div className="relative max-w-md mx-auto">
+        {!isMobile && (
+          <div className="relative max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -91,8 +72,8 @@ export default function Topbar({ sidebarExpanded = true }: TopbarProps) {
               className="w-full pl-8 rounded-md"
             />
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
         <Link href="/">

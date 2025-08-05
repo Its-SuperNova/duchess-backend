@@ -9,14 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   Select,
   SelectContent,
@@ -27,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,17 +36,18 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import { HiOutlineSquares2X2 } from "react-icons/hi2";
+import { CiCircleList } from "react-icons/ci";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Coupon } from "@/lib/supabase";
-
-
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
 
   // Fetch coupons from database
   const fetchCoupons = async () => {
@@ -88,8 +84,6 @@ export default function CouponsPage() {
     return matchesSearch && matchesStatus;
   });
 
-
-
   // Handle delete coupon
   const handleDeleteCoupon = async (id: string) => {
     if (!confirm("Are you sure you want to delete this coupon?")) {
@@ -110,6 +104,36 @@ export default function CouponsPage() {
     } catch (error) {
       console.error("Error deleting coupon:", error);
       toast.error("Failed to delete coupon");
+    }
+  };
+
+  // Handle toggle coupon status
+  const handleToggleCouponStatus = async (
+    id: string,
+    currentStatus: boolean
+  ) => {
+    try {
+      const response = await fetch(`/api/coupons/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          is_active: !currentStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update coupon status");
+      }
+
+      toast.success(
+        `Coupon ${!currentStatus ? "enabled" : "disabled"} successfully!`
+      );
+      await fetchCoupons();
+    } catch (error) {
+      console.error("Error updating coupon status:", error);
+      toast.error("Failed to update coupon status");
     }
   };
 
@@ -155,338 +179,303 @@ export default function CouponsPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Coupons Management</h1>
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">Coupons Management</h1>
+          <p className="text-md text-muted-foreground">
+            Manage your discount coupons and promotional offers
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              window.location.href = "/admin/coupons/analytics";
+            }}
+            className="w-full sm:w-auto"
+          >
+            <BarChart3 className="mr-2 h-4 w-4" /> Analytics
+          </Button>
+          <Button
+            onClick={() => {
+              window.location.href = "/admin/coupons/create";
+            }}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Coupon
+          </Button>
+        </div>
       </div>
-
-      <Tabs defaultValue="all-coupons">
-        <TabsList className="mb-4">
-          <TabsTrigger value="all-coupons">All Coupons</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        {/* All Coupons Tab */}
-        <TabsContent value="all-coupons">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Coupons</CardTitle>
-              <CardDescription>
-                Manage your discount coupons and promotional offers
-              </CardDescription>
-              <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search coupons..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={() => {
-                      window.location.href = "/admin/coupons/create";
-                    }}
-                    className="w-full sm:w-auto"
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Add Coupon
-                  </Button>
-                </div>
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search coupons..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={viewMode === "card" ? "bg-muted" : ""}
+                  onClick={() => setViewMode("card")}
+                >
+                  <HiOutlineSquares2X2 className="h-5 w-5" />
+                  <span className="sr-only">Card View</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={viewMode === "table" ? "bg-muted" : ""}
+                  onClick={() => setViewMode("table")}
+                >
+                  <CiCircleList className="h-5 w-5" />
+                  <span className="sr-only">Table View</span>
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border overflow-hidden">
-                <Table className="admin-table">
-                  <TableHeader>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <div>
+          {viewMode === "table" ? (
+            <div className="rounded-md border overflow-hidden">
+              <Table className="admin-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Coupon Code</TableHead>
+                    <TableHead>Discount</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Min. Order
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Usage Limit
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Valid Period
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-center">
+                      Enable/Disable
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCoupons.length === 0 ? (
                     <TableRow>
-                      <TableHead>Coupon Code</TableHead>
-                      <TableHead>Discount</TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Min. Order
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Usage Limit
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Valid Period
-                      </TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        No coupons found
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCoupons.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center py-8 text-muted-foreground"
-                        >
-                          No coupons found
+                  ) : (
+                    filteredCoupons.map((coupon) => (
+                      <TableRow key={coupon.id}>
+                        <TableCell className="font-medium">
+                          {coupon.code}
+                        </TableCell>
+                        <TableCell>
+                          {coupon.type === "percentage"
+                            ? `${coupon.value}%`
+                            : `₹${coupon.value}`}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          ₹{coupon.min_order_amount}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {coupon.usage_limit === null
+                            ? "Unlimited"
+                            : coupon.usage_limit}
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({coupon.usage_per_user}/user)
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {format(new Date(coupon.valid_from), "MMM d, yyyy")} -
+                          {format(new Date(coupon.valid_until), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <StatusBadge coupon={coupon} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={coupon.is_active}
+                            onCheckedChange={() =>
+                              handleToggleCouponStatus(
+                                coupon.id,
+                                coupon.is_active
+                              )
+                            }
+                            className="data-[state=checked]:bg-green-600"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  window.location.href = `/admin/coupons/edit/${coupon.id}`;
+                                }}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleDeleteCoupon(coupon.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredCoupons.map((coupon) => (
-                        <TableRow key={coupon.id}>
-                          <TableCell className="font-medium">
-                            {coupon.code}
-                          </TableCell>
-                          <TableCell>
-                            {coupon.type === "percentage"
-                              ? `${coupon.value}%`
-                              : `₹${coupon.value}`}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            ₹{coupon.min_order_amount}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {coupon.usage_limit === null
-                              ? "Unlimited"
-                              : coupon.usage_limit}
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({coupon.usage_per_user}/user)
-                            </span>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {format(new Date(coupon.valid_from), "MMM d, yyyy")}{" "}
-                            -
-                            {format(
-                              new Date(coupon.valid_until),
-                              "MMM d, yyyy"
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <StatusBadge coupon={coupon} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Actions</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    window.location.href = `/admin/coupons/edit/${coupon.id}`;
-                                  }}
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => handleDeleteCoupon(coupon.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Coupons
-                </CardTitle>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  className="h-4 w-4 text-muted-foreground"
-                >
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{coupons.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {coupons.filter((c) => c.is_active).length} active
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Redemptions
-                </CardTitle>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  className="h-4 w-4 text-muted-foreground"
-                >
-                  <rect width="20" height="14" x="2" y="5" rx="2" />
-                  <path d="M2 10h20" />
-                </svg>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {coupons.reduce(
-                    (sum, coupon) => sum + coupon.total_redemptions,
-                    0
+                    ))
                   )}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCoupons.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  No coupons found
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  +20% from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Revenue Generated
-                </CardTitle>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  className="h-4 w-4 text-muted-foreground"
-                >
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ₹
-                  {coupons
-                    .reduce((sum, coupon) => sum + coupon.total_revenue, 0)
-                    .toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  +15% from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Avg. Discount
-                </CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {coupons.filter((c) => c.type === "percentage").length > 0
-                    ? `${Math.round(
-                        coupons
-                          .filter((c) => c.type === "percentage")
-                          .reduce((sum, c) => sum + c.value, 0) /
-                          coupons.filter((c) => c.type === "percentage").length
-                      )}%`
-                    : "N/A"}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Based on percentage discounts
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Used Coupons</CardTitle>
-                <CardDescription>
-                  Top performing coupons by redemption count
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Coupon</TableHead>
-                      <TableHead>Redemptions</TableHead>
-                      <TableHead>Revenue</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...coupons]
-                      .sort((a, b) => b.total_redemptions - a.total_redemptions)
-                      .slice(0, 5)
-                      .map((coupon) => (
-                        <TableRow key={coupon.id}>
-                          <TableCell className="font-medium">
-                            {coupon.code}
-                          </TableCell>
-                          <TableCell>{coupon.total_redemptions}</TableCell>
-                          <TableCell>
-                            ₹{coupon.total_revenue.toLocaleString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Coupon Performance</CardTitle>
-                <CardDescription>
-                  Redemption rate and revenue impact
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <BarChart3 className="mx-auto h-12 w-12 opacity-50" />
-                    <p className="mt-2">
-                      Chart visualization would appear here
-                    </p>
-                    <p className="text-sm">
-                      Showing redemption rates over time
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              ) : (
+                filteredCoupons.map((coupon) => (
+                  <Card key={coupon.id} className="relative">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-semibold">
+                          {coupon.code}
+                        </CardTitle>
+                        <StatusBadge coupon={coupon} />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Discount:
+                        </span>
+                        <span className="font-medium">
+                          {coupon.type === "percentage"
+                            ? `${coupon.value}%`
+                            : `₹${coupon.value}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Min Order:
+                        </span>
+                        <span className="font-medium">
+                          ₹{coupon.min_order_amount}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Usage Limit:
+                        </span>
+                        <span className="font-medium">
+                          {coupon.usage_limit === null
+                            ? "Unlimited"
+                            : coupon.usage_limit}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Per User:
+                        </span>
+                        <span className="font-medium">
+                          {coupon.usage_per_user}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Valid Period:
+                        </span>
+                        <span className="font-medium text-xs">
+                          {format(new Date(coupon.valid_from), "MMM d, yyyy")} -
+                          {format(new Date(coupon.valid_until), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          Status:
+                        </span>
+                        <Switch
+                          checked={coupon.is_active}
+                          onCheckedChange={() =>
+                            handleToggleCouponStatus(
+                              coupon.id,
+                              coupon.is_active
+                            )
+                          }
+                          className="data-[state=checked]:bg-green-600"
+                        />
+                      </div>
+                    </CardContent>
+                    <div className="absolute top-3 right-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              window.location.href = `/admin/coupons/edit/${coupon.id}`;
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteCoupon(coupon.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
