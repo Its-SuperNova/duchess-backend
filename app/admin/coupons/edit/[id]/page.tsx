@@ -206,7 +206,12 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => router.back()}
+          className="text-[#e6e6e8] border-[#e6e6e8] hover:bg-[#e6e6e8]/10"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl sm:text-3xl font-bold">Edit Coupon</h1>
@@ -460,9 +465,32 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
                   render={() => (
                     <FormItem>
                       <div className="mb-4">
-                        <FormLabel className="text-base">
-                          Applicable Categories
-                        </FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-base">
+                            Applicable Categories
+                          </FormLabel>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const selected =
+                                form.watch("applicableCategories") || [];
+                              const allIds = categories.map((c) => c.id);
+                              const isAllSelected =
+                                selected.length === allIds.length;
+                              form.setValue(
+                                "applicableCategories",
+                                isAllSelected ? [] : allIds
+                              );
+                            }}
+                          >
+                            {(form.watch("applicableCategories")?.length ||
+                              0) === categories.length
+                              ? "Deselect All"
+                              : "Select All"}
+                          </Button>
+                        </div>
                         <FormDescription>
                           Select which product categories this coupon can be
                           applied to
@@ -485,6 +513,7 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
                                       checked={field.value?.includes(
                                         category.id
                                       )}
+                                      className="data-[state=checked]:bg-[#2664eb] data-[state=checked]:border-[#2664eb] focus-visible:ring-[#2664eb]"
                                       onCheckedChange={(checked) => {
                                         return checked
                                           ? field.onChange([
@@ -523,10 +552,15 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
                   variant="outline"
                   onClick={() => router.back()}
                   disabled={loading}
+                  className="text-[#2664eb] border-[#2664eb] hover:bg-[#2664eb]/10"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-[#2664eb] hover:bg-[#1f55c8]"
+                >
                   {loading ? "Updating..." : "Update Coupon"}
                 </Button>
               </div>
