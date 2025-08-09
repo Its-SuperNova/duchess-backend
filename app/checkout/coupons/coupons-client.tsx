@@ -22,14 +22,13 @@ export default function CouponsClient() {
   const fetchCoupons = async () => {
     try {
       setLoading(true);
-      // Use test endpoint for debugging
-      const response = await fetch("/api/coupons/test");
+      // Fetch only active and currently valid coupons
+      const response = await fetch("/api/coupons/active");
       if (!response.ok) {
         throw new Error("Failed to fetch coupons");
       }
       const data = await response.json();
-      console.log("Test endpoint response:", data); // Debug log
-      setCoupons(data.coupons || []);
+      setCoupons(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching coupons:", error);
       toast.error("Failed to fetch coupons");
@@ -42,11 +41,13 @@ export default function CouponsClient() {
     fetchCoupons();
   }, []);
 
-  // Show all coupons for now to debug the display issue
-  const availableCoupons = coupons;
-
-  console.log("All coupons (no filtering):", availableCoupons); // Debug log
-  console.log("Coupons length:", coupons.length); // Debug log
+  // Only show coupons that are active and valid now (defensive, API already filters)
+  const now = new Date();
+  const availableCoupons = coupons.filter((c) => {
+    const validFrom = new Date(c.valid_from);
+    const validUntil = new Date(c.valid_until);
+    return c.is_active && now >= validFrom && now <= validUntil;
+  });
 
   const handleApplyCoupon = (code: string) => {
     // Find the coupon in the available coupons
@@ -161,7 +162,6 @@ export default function CouponsClient() {
               </div>
             ) : (
               availableCoupons.map((coupon, index) => {
-                console.log("Rendering coupon:", coupon.code, index); // Debug log
                 const needsMore = coupon.min_order_amount > currentSubtotal;
                 const moreNeeded = coupon.min_order_amount - currentSubtotal;
 

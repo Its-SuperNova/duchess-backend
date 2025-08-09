@@ -103,6 +103,55 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+
+    // Only allow specific fields for partial updates (start with is_active toggle)
+    const updates: Record<string, unknown> = {};
+
+    if (typeof body.is_active === "boolean") {
+      updates.is_active = body.is_active;
+    } else if (typeof body.isActive === "boolean") {
+      updates.is_active = body.isActive;
+    }
+
+    // If no valid fields provided
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields provided for update" },
+        { status: 400 }
+      );
+    }
+
+    const { data: coupon, error } = await supabaseAdmin
+      .from("coupons")
+      .update(updates)
+      .eq("id", params.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error partially updating coupon:", error);
+      return NextResponse.json(
+        { error: "Failed to update coupon" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(coupon);
+  } catch (error) {
+    console.error("Error in coupon PATCH:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
