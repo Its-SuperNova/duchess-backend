@@ -210,7 +210,7 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
           variant="outline"
           size="icon"
           onClick={() => router.back()}
-          className="text-[#e6e6e8] border-[#e6e6e8] hover:bg-[#e6e6e8]/10"
+          className="text-[black] border-[#e6e6e8] "
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

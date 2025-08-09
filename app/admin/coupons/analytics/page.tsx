@@ -64,12 +64,13 @@ export default function CouponsAnalyticsPage() {
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
+            size="icon"
             onClick={() => {
               window.location.href = "/admin/coupons";
             }}
-            className="w-auto"
+            aria-label="Back to Coupons"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Coupons
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl sm:text-3xl font-bold">Coupons Analytics</h1>
         </div>

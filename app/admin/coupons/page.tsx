@@ -226,6 +226,7 @@ export default function CouponsPage() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              className="bg-[#2664eb] hover:bg-[#1f55c8] text-white"
               disabled={isToggleLoading}
               onClick={async () => {
                 if (toggleConfirm) {
@@ -275,7 +276,7 @@ export default function CouponsPage() {
             onClick={() => {
               window.location.href = "/admin/coupons/create";
             }}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto bg-[#2664eb] hover:bg-[#1f55c8] text-white"
           >
             <Plus className="mr-2 h-4 w-4" /> Add Coupon
           </Button>
