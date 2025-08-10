@@ -6,9 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import DesktopHeader from "@/components/block/DesktopHeader";
 import BottomNav from "@/components/block/BottomNav";
-import UserSidebar from "@/components/user-sidebar";
 import CartSidebar from "@/components/cart-sidebar";
 import { CartProvider, useCart } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
@@ -22,12 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 // Inner component that can use cart and layout context
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const { isCartOpen, closeCart } = useCart();
-  const {
-    isUserSidebarCollapsed,
-    setIsUserSidebarCollapsed,
-    setIsCartSidebarOpen,
-    getLayoutClasses,
-  } = useLayout();
+  const { isUserSidebarCollapsed, setIsCartSidebarOpen } = useLayout();
 
   const pathname = usePathname();
   const { data: session, status } = useSession();
@@ -43,29 +36,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isProductPage = pathname.startsWith("/products/");
   const isCheckoutRoute = pathname.startsWith("/checkout");
 
-  // Layout component visibility - updated logic for mobile/desktop header behavior
-  const showHeader = (() => {
-    // Don't show header on these routes regardless of device
-    if (
-      isAdminRoute ||
-      isFAQPage ||
-      isAuthRoute ||
-      isOnboardingPage ||
-      isCheckoutRoute
-    ) {
-      return false;
-    }
-
-    // For mobile devices: only show header on home page
-    if (isMobile) {
-      return isHomePage;
-    }
-
-    // For desktop: show header on all allowed pages
-    return true;
-  })();
-  const showSidebar =
-    !isAdminRoute && !isAuthRoute && !isOnboardingPage && !isCheckoutRoute;
+  // Hide header and user sidebar on all non-admin pages
+  const showHeader = false;
+  const showSidebar = false;
   const showBottomNav =
     !isAdminRoute &&
     !isFAQPage &&
@@ -73,6 +46,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     !isOnboardingPage &&
     !isCheckoutRoute;
   const useSidebarLayout = showSidebar;
+
+  // Apply top padding only if header is shown
+  const topPaddingClass = showHeader ? "lg:pt-16" : "";
 
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -83,8 +59,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     setIsCartSidebarOpen(isCartOpen);
   }, [isCartOpen, setIsCartSidebarOpen]);
 
-  // Get layout classes
-  const { mainContentClasses, isCompact, isVeryCompact } = getLayoutClasses();
+  // Layout classes no longer used after removing header/sidebar
 
   // Check if user has seen onboarding before
   const hasSeenOnboarding = () => {
@@ -166,28 +141,19 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         <>
           <AuthNotification />
 
-          {/* Desktop Header */}
-          {showHeader && <DesktopHeader />}
+          {/* Header removed */}
 
           <div className="flex w-full">
-            {/* User Sidebar */}
-            {showSidebar && (
-              <UserSidebar
-                isCollapsed={isUserSidebarCollapsed}
-                setIsCollapsed={setIsUserSidebarCollapsed}
-              />
-            )}
+            {/* User Sidebar removed */}
 
             {/* Main Content */}
             <main
               className={`${
                 useSidebarLayout
-                  ? `flex-1 transition-all duration-300 ${
-                      !isAdminRoute && !isCheckoutRoute ? "lg:pt-16" : ""
-                    } ${isUserSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`
-                  : `flex-1 ${
-                      !isAdminRoute && !isCheckoutRoute ? "lg:pt-16" : ""
+                  ? `flex-1 transition-all duration-300 ${topPaddingClass} ${
+                      isUserSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
                     }`
+                  : `flex-1 ${topPaddingClass}`
               }`}
               style={{
                 marginRight:
