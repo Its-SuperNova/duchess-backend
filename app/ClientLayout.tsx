@@ -160,7 +160,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                   useSidebarLayout && isCartOpen ? "24rem" : undefined,
               }}
             >
-              {children}
+              {isHomePage ? (
+                <div className="mx-auto w-full max-w-[1200px]">{children}</div>
+              ) : (
+                children
+              )}
             </main>
 
             {/* Cart Sidebar */}
