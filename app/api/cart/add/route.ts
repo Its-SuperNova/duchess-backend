@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const body = await request.json();
     const {
       id,

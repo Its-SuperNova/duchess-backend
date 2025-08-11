@@ -6,11 +6,14 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useSearchParams } from "next/navigation";
 
 export default function ConfirmationClient() {
+  const searchParams = useSearchParams();
+  const createdOrderId = searchParams.get("orderId") || undefined;
   // Sample order details
   const order = {
-    id: "ORD-12345",
+    id: createdOrderId || "ORD-12345",
     date: "April 13, 2025",
     estimatedDelivery: "Today, 5:30 PM - 6:00 PM",
     total: 67.99,

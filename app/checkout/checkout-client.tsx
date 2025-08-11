@@ -121,6 +121,23 @@ export default function CheckoutClient() {
   const deliveryFee = subtotal > 0 ? 49 : 0;
   const total = subtotal - discount + deliveryFee;
 
+  // Persist lightweight checkout context for payment step
+  useEffect(() => {
+    try {
+      const ctx = {
+        subtotal,
+        discount,
+        deliveryFee,
+        note,
+        addressText,
+        couponCode: selectedCoupon,
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("checkoutContext", JSON.stringify(ctx));
+      }
+    } catch {}
+  }, [subtotal, discount, deliveryFee, note, addressText, selectedCoupon]);
+
   // Redirect to home if cart is empty
   if (cart.length === 0) {
     return (
@@ -605,7 +622,10 @@ export default function CheckoutClient() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Link href="/checkout/confirmation" className="w-full">
+                    <Link
+                      href={`/checkout/payment?amount=${total.toFixed(2)}`}
+                      className="w-full"
+                    >
                       <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto">
                         Proceed to Payment
                       </Button>
@@ -629,7 +649,10 @@ export default function CheckoutClient() {
         {/* Fixed bottom Place Order bar (mobile only) */}
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
           <div className="mx-auto px-4 py-3 w-full max-w-screen-xl">
-            <Link href="/checkout/confirmation" className="w-full">
+            <Link
+              href={`/checkout/payment?amount=${total.toFixed(2)}`}
+              className="w-full"
+            >
               <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto">
                 Proceed to Payment
               </Button>

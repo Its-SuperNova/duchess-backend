@@ -32,6 +32,7 @@ interface CartContextType {
   openCart: () => void;
   closeCart: () => void;
   isLoading: boolean;
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -280,6 +281,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartOpen(false);
   };
 
+  const clearCart = () => {
+    setCart([]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("cart");
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -292,6 +300,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         openCart,
         closeCart,
         isLoading,
+        clearCart,
       }}
     >
       {children}
