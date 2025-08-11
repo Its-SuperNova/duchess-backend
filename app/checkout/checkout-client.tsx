@@ -1,17 +1,8 @@
 "use client";
 
-import {
-  Clock,
-  Home,
-  Ticket,
-  FileText,
-  ChevronRight,
-  Minus,
-  Plus,
-  X,
-} from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
-import { Trash2 } from "lucide-react";
+// removed Trash2, using Solar icon via Iconify
 import { TiDocumentText } from "react-icons/ti";
 import { TbPaperBag } from "react-icons/tb";
 import Link from "next/link";
@@ -155,7 +146,7 @@ export default function CheckoutClient() {
     <div className="min-h-screen bg-[#F5F6FB] pb-28">
       {/* Header */}
       <div className="bg-[#F5F6FB]">
-        <div className="max-w-screen-md mx-auto px-4 py-4">
+        <div className="max-w-screen-xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between md:justify-start md:gap-4">
             <Link href="/">
               <div className="bg-white p-3 md:p-2 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
@@ -176,13 +167,16 @@ export default function CheckoutClient() {
           <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
             {/* Note Section (moves below Order Summary on mobile) */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
-              {/* Mobile - Drawer */}
-              <div className="lg:hidden">
+              {/* Note Drawer (all screens, full-width) */}
+              <div>
                 <Drawer modal={true} onOpenChange={setIsNoteDrawerOpen}>
                   <DrawerTrigger asChild>
                     <button className="w-full flex items-center justify-between text-left">
                       <div className="flex items-center">
-                        <FileText className="h-5 w-5 mr-3 text-gray-600 dark:text-gray-400" />
+                        <Icon
+                          icon="solar:document-add-broken"
+                          className="h-5 w-5 mr-3 text-black"
+                        />
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                           {note ? note : "Add a note"}
                         </span>
@@ -197,8 +191,8 @@ export default function CheckoutClient() {
                       </div>
                     </button>
                   </DrawerTrigger>
-                  <DrawerContent className="h-[550px] lg:max-w-96 lg:fixed lg:right-0 lg:left-auto lg:rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
-                    <DrawerHeader className="text-left">
+                  <DrawerContent className="h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
+                    <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <div className="flex items-center justify-between w-full">
                         <DrawerTitle className="text-[20px]">
                           Add a Note to your order
@@ -213,7 +207,7 @@ export default function CheckoutClient() {
                         </DrawerClose>
                       </div>
                     </DrawerHeader>
-                    <div className="px-4 ">
+                    <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <Textarea
                         placeholder="E.g., Special cake message, delivery instructions, dietary preferences, etc."
                         value={note}
@@ -221,7 +215,23 @@ export default function CheckoutClient() {
                         className="min-h-[150px] rounded-[18px] placeholder:text-[#C0C0C0] placeholder:font-normal"
                       />
                     </div>
-                    <DrawerFooter className="pt-2 pb-6">
+                    {/* Desktop action row under textarea */}
+                    <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNote("")}
+                        className="h-9 px-5 rounded-[12px]"
+                      >
+                        Clear
+                      </Button>
+                      <DrawerClose asChild>
+                        <Button size="sm" className="h-9 px-5 rounded-[12px]">
+                          Save
+                        </Button>
+                      </DrawerClose>
+                    </div>
+                    <DrawerFooter className="pt-2 pb-6 lg:hidden">
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
@@ -245,15 +255,15 @@ export default function CheckoutClient() {
                 </Drawer>
               </div>
 
-              {/* Address Change Drawer (mobile) */}
-              <div className="lg:hidden mt-3">
+              {/* Address Change Drawer (all screens; full-width on desktop) */}
+              <div className="">
                 <Drawer
                   modal={true}
                   open={isAddressDrawerOpen}
                   onOpenChange={setIsAddressDrawerOpen}
                 >
-                  <DrawerContent className="h-[550px] overflow-y-auto lg:max-w-96 lg:fixed lg:right-0 lg:left-auto lg:rounded-t-2xl bg-[#F5F6FB]">
-                    <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                  <DrawerContent className="h-[550px] overflow-y-auto scrollbar-hide rounded-t-2xl bg-[#F5F6FB]">
+                    <div className="px-4 py-3 flex items-center justify-between lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <h2 className="text-[18px] font-semibold text-gray-800">
                         Select an address
                       </h2>
@@ -266,7 +276,7 @@ export default function CheckoutClient() {
                         </button>
                       </DrawerClose>
                     </div>
-                    <div className="px-4">
+                    <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <button className="w-full flex items-center justify-between bg-white rounded-[14px] px-4 py-3 shadow-sm">
                         <span className="flex items-center gap-3 text-[#570000] font-medium">
                           <span className="h-6 w-6 flex items-center justify-center rounded-full text-[#570000] text-lg leading-none">
@@ -277,14 +287,14 @@ export default function CheckoutClient() {
                         <span className="text-[#570000]">›</span>
                       </button>
                     </div>
-                    <div className="px-4 mt-4">
+                    <div className="px-4 mt-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <div className="flex items-center gap-3 text-gray-400 font-semibold tracking-[0.15em] text-xs">
                         <div className="h-px flex-1 bg-gray-200" />
                         <span>SAVED ADDRESS</span>
                         <div className="h-px flex-1 bg-gray-200" />
                       </div>
                     </div>
-                    <div className="px-4 mt-3">
+                    <div className="px-4 mt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       {addresses.map((addr) => (
                         <div
                           key={addr.id}
@@ -327,67 +337,16 @@ export default function CheckoutClient() {
                   </DrawerContent>
                 </Drawer>
               </div>
-
-              {/* Desktop - Expandable Text Box */}
-              <div className="hidden lg:block">
-                <button
-                  onClick={() => setIsNoteDrawerOpen(!isNoteDrawerOpen)}
-                  className="w-full flex items-center justify-between text-left"
-                >
-                  <div className="flex items-center">
-                    <FileText className="h-5 w-5 mr-3 text-gray-600 dark:text-gray-400" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                      {note ? note : "Add a note"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {note && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Edit
-                      </span>
-                    )}
-                    <IoIosArrowForward
-                      className={`h-5 w-5 text-gray-600  transition-transform duration-200 ${
-                        isNoteDrawerOpen ? "rotate-90" : ""
-                      }`}
-                    />
-                  </div>
-                </button>
-
-                {isNoteDrawerOpen && (
-                  <div className="mt-4 space-y-3">
-                    <Textarea
-                      placeholder="E.g., Special cake message, delivery instructions, dietary preferences, etc."
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      className="min-h-[100px] resize-none"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setNote("")}
-                      >
-                        Clear
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setIsNoteDrawerOpen(false)}
-                      >
-                        Done
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
-
             {/* Coupons Section */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
               <Link href="/checkout/coupons">
                 <button className="w-full flex items-center justify-between text-left">
                   <div className="flex items-center">
-                    <Ticket className="h-5 w-5 mr-3 text-gray-600 dark:text-gray-400" />
+                    <Icon
+                      icon="solar:ticket-sale-broken"
+                      className="h-5 w-5 mr-3 text-black"
+                    />
                     <span className="font-medium text-gray-700 dark:text-gray-300">
                       {selectedCoupon ? selectedCoupon : "View all coupons"}
                     </span>
@@ -403,7 +362,10 @@ export default function CheckoutClient() {
             {/* Delivery Info */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
               <div className="flex items-start mb-4">
-                <Clock className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-gray-600 dark:text-gray-400" />
+                <Icon
+                  icon="solar:clock-circle-broken"
+                  className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
+                />
                 <div>
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Delivery in 32 mins
@@ -415,7 +377,10 @@ export default function CheckoutClient() {
               </div>
 
               <div className="flex items-start mb-4">
-                <Home className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-gray-600 dark:text-gray-400" />
+                <Icon
+                  icon="solar:home-smile-angle-broken"
+                  className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
+                />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Delivery at Home
@@ -438,20 +403,10 @@ export default function CheckoutClient() {
               </div>
 
               <div className="flex items-start">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-3 mt-1 flex-shrink-0 text-gray-600 dark:text-gray-400"
-                >
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                </svg>
+                <Icon
+                  icon="solar:phone-broken"
+                  className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black"
+                />
                 <div>
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Contact
@@ -463,10 +418,25 @@ export default function CheckoutClient() {
               </div>
             </div>
 
+            {/* Desktop cancellation policy under delivery info */}
+            <div className="hidden lg:block mx-4 mt-4 text-[#9AA3C7]">
+              <h4 className="uppercase tracking-wide font-semibold text-[14px]">
+                Cancellation Policy
+              </h4>
+              <p className="mt-2 text-sm">
+                Once your order is placed, it cannot be cancelled or modified.
+                We do not offer refunds for cancelled orders under any
+                circumstances.
+              </p>
+            </div>
+
             {/* Bill Details (mobile-only, strictly at bottom below delivery info) */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600 lg:hidden">
-              <div className="flex items-center mb-3">
-                <TiDocumentText className="h-5 w-5 mr-2 text-primary" />
+              <div className="flex items-center mb-3 gap-2">
+                <Icon
+                  icon="solar:bill-list-broken"
+                  className="h-5 w-5 text-[#570000]"
+                />
                 <h3 className="font-medium text-gray-800 dark:text-gray-200">
                   Bill Details
                 </h3>
@@ -488,7 +458,8 @@ export default function CheckoutClient() {
                   <span>Delivery Fee</span>
                   <span>₹{deliveryFee.toFixed(2)}</span>
                 </div>
-                <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+                <div className="pt-2 mt-2">
+                  <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
                   <div className="flex justify-between font-semibold text-gray-800 dark:text-gray-200 mt-2">
                     <span>To Pay</span>
                     <span>₹{total.toFixed(2)}</span>
@@ -500,137 +471,166 @@ export default function CheckoutClient() {
 
           {/* Right Column - Order Summary (top on mobile, right on desktop) */}
           <div className="lg:col-span-1 order-1 lg:order-2">
-            <div className="bg-white mx-4 p-3 rounded-[22px] border border-gray-200 dark:border-gray-600 sticky top-4 overflow-hidden">
-              <div className="space-y-4">
-                {cart.map((item) => {
-                  const uid = (item.uniqueId ||
-                    `${item.id}-${item.variant}`) as string;
-                  const qty = item.quantity || 1;
-                  return (
-                    <div key={uid} className="flex items-start justify-between">
-                      <div className="flex w-full min-w-0 pr-3">
-                        {/* product image */}
-                        <div className="relative h-[88px] w-[88px] rounded-[20px] overflow-hidden mr-3 shrink-0">
-                          <Image
-                            src={
-                              item.image ||
-                              "/placeholder.svg?height=88&width=88&query=food%20thumbnail"
-                            }
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-
-                        {/* product details */}
-                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                          {/* top row */}
-                          <div className="flex items-start justify-between w-full gap-2 max-w-full min-w-0">
-                            {/* name and category */}
-                            <div className="flex-1 w-full min-w-0">
-                              {/* Single-line name with ellipsis */}
-                              <h3
-                                className="block truncate text-[15px] leading-tight font-medium text-black dark:text-gray-200"
-                                title={item.name}
-                              >
-                                {item.name}
-                              </h3>
-                              <p className="text-[14px] text-gray-500 dark:text-gray-400 truncate max-w-full">
-                                {item.category ?? item.variant}
-                              </p>
-                            </div>
-
-                            {/* remove button */}
-                            <button
-                              aria-label="Remove item"
-                              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 self-start"
-                              onClick={() => removeFromCart(uid)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </button>
+            <div className="space-y-4">
+              <div className="bg-white mx-4 p-3 rounded-[22px] border border-gray-200 dark:border-gray-600 sticky top-4 overflow-hidden">
+                <div className="space-y-4">
+                  {cart.map((item) => {
+                    const uid = (item.uniqueId ||
+                      `${item.id}-${item.variant}`) as string;
+                    const qty = item.quantity || 1;
+                    return (
+                      <div
+                        key={uid}
+                        className="flex items-start justify-between"
+                      >
+                        <div className="flex w-full min-w-0">
+                          {/* product image */}
+                          <div className="relative h-[88px] w-[88px] rounded-[20px] overflow-hidden mr-3 shrink-0">
+                            <Image
+                              src={
+                                item.image ||
+                                "/placeholder.svg?height=88&width=88&query=food%20thumbnail"
+                              }
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                            />
                           </div>
 
-                          {/* bottom row */}
-                          <div className="flex items-center justify-between w-full">
-                            {/* price */}
-                            <p className="text-[16px] font-semibold text-black dark:text-gray-100">
-                              {"₹"}
-                              {item.price.toFixed(2)}
-                            </p>
+                          {/* product details */}
+                          <div className="flex flex-col justify-between flex-1 min-w-0">
+                            {/* top row */}
+                            <div className="flex items-start justify-between w-full gap-2 max-w-full min-w-0">
+                              {/* name and category */}
+                              <div className="flex-1 w-full min-w-0">
+                                {/* Single-line name with ellipsis */}
+                                <h3
+                                  className="block truncate text-[15px] leading-tight font-medium text-black dark:text-gray-200"
+                                  title={item.name}
+                                >
+                                  {item.name}
+                                </h3>
+                                <p className="text-[14px] text-gray-500 dark:text-gray-400 truncate max-w-full">
+                                  {item.category ?? item.variant}
+                                </p>
+                              </div>
 
-                            {/* quantity controls */}
-                            <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
+                              {/* remove button */}
                               <button
-                                aria-label="Decrease quantity"
-                                className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
-                                onClick={() =>
-                                  updateQuantity(uid, Math.max(1, qty - 1))
-                                }
+                                aria-label="Remove item"
+                                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 self-start"
+                                onClick={() => removeFromCart(uid)}
                               >
-                                <Minus className="h-3 w-3 text-gray-600" />
+                                <Icon
+                                  icon="solar:trash-bin-trash-broken"
+                                  className="h-5 w-5 text-red-600"
+                                />
                               </button>
-                              <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
-                                {String(qty).padStart(2, "0")}
-                              </span>
-                              <button
-                                aria-label="Increase quantity"
-                                className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
-                                onClick={() => updateQuantity(uid, qty + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
+                            </div>
+
+                            {/* bottom row */}
+                            <div className="flex items-center justify-between w-full">
+                              {/* price */}
+                              <p className="text-[16px] font-semibold text-black dark:text-gray-100">
+                                {"₹"}
+                                {item.price.toFixed(2)}
+                              </p>
+
+                              {/* quantity controls */}
+                              <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
+                                <button
+                                  aria-label="Decrease quantity"
+                                  className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
+                                  onClick={() =>
+                                    updateQuantity(uid, Math.max(1, qty - 1))
+                                  }
+                                >
+                                  <Minus className="h-3 w-3 text-gray-600" />
+                                </button>
+                                <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
+                                  {String(qty).padStart(2, "0")}
+                                </span>
+                                <button
+                                  aria-label="Increase quantity"
+                                  className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                                  onClick={() => updateQuantity(uid, qty + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bill Details (desktop) */}
-              <div className="hidden lg:block mt-6">
-                <div className="flex items-center mb-3">
-                  <TiDocumentText className="h-5 w-5 mr-2 text-primary" />
-                  <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                    Bill Details
-                  </h3>
+                    );
+                  })}
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                    <span>Item Total</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
+                {/* Place Order Button moved to fixed bottom bar */}
+              </div>
+
+              {/* Bill Details (desktop in separate card) */}
+              <div className="hidden lg:block">
+                <div className="bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center mb-3 gap-2">
+                    <Icon
+                      icon="solar:bill-list-broken"
+                      className="h-5 w-5 text-[#570000]"
+                    />
+                    <h3 className="font-medium text-gray-800 dark:text-gray-200">
+                      Bill Details
+                    </h3>
                   </div>
-                  {/* GST & Taxes removed per request */}
-                  {discount > 0 && (
-                    <div className="flex justify-between text-green-600 text-sm">
-                      <span>Discount</span>
-                      <span>-₹{discount.toFixed(2)}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+                      <span>Item Total</span>
+                      <span>₹{subtotal.toFixed(2)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                    <span>Delivery Fee</span>
-                    <span>₹{deliveryFee.toFixed(2)}</span>
+                    {discount > 0 && (
+                      <div className="flex justify-between text-green-600 text-sm">
+                        <span>Discount</span>
+                        <span>-₹{discount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+                      <span>Delivery Fee</span>
+                      <span>₹{deliveryFee.toFixed(2)}</span>
+                    </div>
+                    <div className="pt-2 mt-2">
+                      <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
+                      <div className="flex justify-between font-semibold text-gray-800 dark:text-gray-200 mt-2">
+                        <span>To Pay</span>
+                        <span>₹{total.toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
-                    <div className="flex justify-between font-semibold text-gray-800 dark:text-gray-200 mt-2">
-                      <span>To Pay</span>
-                      <span>₹{total.toFixed(2)}</span>
-                    </div>
+                  <div className="mt-4">
+                    <Link href="/checkout/confirmation" className="w-full">
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto">
+                        Proceed to Payment
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
-
-              {/* Place Order Button moved to fixed bottom bar */}
             </div>
           </div>
         </div>
-        {/* Fixed bottom Place Order bar */}
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200">
+        {/* Disclaimer (mobile-only at page bottom) */}
+        <div className="mx-4 lg:hidden mt-6 text-[#9AA3C7]">
+          <h4 className="uppercase tracking-wide font-semibold text-[14px]">
+            Cancellation Policy
+          </h4>
+          <p className="mt-2 text-sm">
+            Once your order is placed, it cannot be cancelled or modified. We do
+            not offer refunds for cancelled orders under any circumstances.
+          </p>
+        </div>
+        {/* Fixed bottom Place Order bar (mobile only) */}
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
           <div className="mx-auto px-4 py-3 w-full max-w-screen-xl">
             <Link href="/checkout/confirmation" className="w-full">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-lg font-medium h-auto">
+              <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto">
                 Proceed to Payment
               </Button>
             </Link>
