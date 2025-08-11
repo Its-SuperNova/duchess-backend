@@ -85,12 +85,29 @@ export default function CouponsClient() {
         : coupon.value;
 
     // Here you would typically update the cart context with the applied coupon
-    // For now, we'll just show a success message
+    // For now, persist the applied coupon for checkout to consume
+    try {
+      const toStore = {
+        code: coupon.code,
+        type: coupon.type,
+        value: coupon.value,
+        min_order_amount: coupon.min_order_amount,
+        max_discount_cap: coupon.max_discount_cap,
+        valid_from: coupon.valid_from,
+        valid_until: coupon.valid_until,
+      };
+      localStorage.setItem("appliedCoupon", JSON.stringify(toStore));
+    } catch {}
+
+    // Show a success message
     toast.success(
       `Coupon ${code} applied! You'll save ₹${Math.round(discountAmount)}`
     );
 
-    // You can add logic here to update the cart context with the applied coupon
+    // Navigate back to checkout
+    try {
+      window.history.back();
+    } catch {}
     console.log("Applying coupon:", code, "Discount:", discountAmount);
   };
 
