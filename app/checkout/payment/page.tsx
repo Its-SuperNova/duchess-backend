@@ -1,12 +1,13 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { IoIosArrowBack } from "react-icons/io";
 import { useMemo, useState } from "react";
 import { useCart } from "@/context/cart-context";
 
-export default function DummyPaymentPage() {
+function PaymentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const amountParam = searchParams.get("amount");
@@ -143,5 +144,13 @@ export default function DummyPaymentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DummyPaymentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentPageContent />
+    </Suspense>
   );
 }

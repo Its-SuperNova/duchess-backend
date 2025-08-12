@@ -12,7 +12,6 @@ import { User, Save, Edit } from "lucide-react";
 import { IoIosArrowBack } from "react-icons/io";
 import { getUserByEmail, updateUserProfile } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
-import { refreshSession } from "@/lib/actions/auth";
 
 interface ProfileData {
   full_name: string;
@@ -182,13 +181,6 @@ export default function ProfileEditPage() {
 
       if (updatedUser) {
         console.log("Profile updated successfully:", updatedUser);
-
-        // Try to refresh the session
-        try {
-          await refreshSession();
-        } catch (sessionError) {
-          console.warn("Failed to refresh session:", sessionError);
-        }
 
         toast({
           title: "Profile Updated",
