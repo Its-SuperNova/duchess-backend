@@ -2,83 +2,28 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light";
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: "light" | "dark";
+  resolvedTheme: "light";
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const [theme] = useState<Theme>("light");
+  const [resolvedTheme] = useState<"light">("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Get theme from localStorage or default to system
-    const savedTheme = localStorage.getItem("theme") as Theme;
-    if (savedTheme && ["light", "dark", "system"].includes(savedTheme)) {
-      setThemeState(savedTheme);
-    } else {
-      setThemeState("system");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    let currentTheme: "light" | "dark";
-
-    if (theme === "system") {
-      currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    } else {
-      currentTheme = theme;
-    }
-
-    setResolvedTheme(currentTheme);
-
-    // Update document class and localStorage
+    // Always set light theme
     const root = document.documentElement;
     root.classList.remove("light", "dark");
-    root.classList.add(currentTheme);
-    localStorage.setItem("theme", theme);
-  }, [theme, mounted]);
-
-  // Listen for system theme changes when using system theme
-  useEffect(() => {
-    if (theme !== "system" || !mounted) return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      const newTheme = mediaQuery.matches ? "dark" : "light";
-      setResolvedTheme(newTheme);
-      const root = document.documentElement;
-      root.classList.remove("light", "dark");
-      root.classList.add(newTheme);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme, mounted]);
-
-  const toggleTheme = () => {
-    setThemeState((prev) => {
-      if (prev === "light") return "dark";
-      if (prev === "dark") return "system";
-      return "light";
-    });
-  };
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-  };
+    root.classList.add("light");
+    localStorage.setItem("theme", "light");
+  }, []);
 
   // Prevent hydration mismatch
   if (!mounted) {
@@ -87,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, toggleTheme, setTheme, resolvedTheme }}
+      value={{ theme, resolvedTheme }}
     >
       {children}
     </ThemeContext.Provider>
