@@ -74,7 +74,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     !isCheckoutRoute;
   const useSidebarLayout = showSidebar;
 
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const previousStatus = useRef<string | null>(null);
 
@@ -123,9 +123,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Show splash screen on every reload/initial load
+  // Do not show splash or onboarding on initial load
   useEffect(() => {
-    setShowSplash(true);
+    setShowSplash(false);
     setShowOnboarding(false);
   }, []);
 
