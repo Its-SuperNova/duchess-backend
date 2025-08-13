@@ -40,7 +40,7 @@ export async function createCoupon(couponData: {
     const { data: existingCoupon } = await supabaseAdmin
       .from("coupons")
       .select("id")
-      .eq("code", couponData.code.toUpperCase())
+      .eq("code", couponData.code.toUpperCase() as any)
       .single();
 
     if (existingCoupon) {
@@ -61,7 +61,7 @@ export async function createCoupon(couponData: {
         valid_until: couponData.validUntil,
         applicable_categories: couponData.applicableCategories || null,
         is_active: couponData.isActive,
-      })
+      } as any)
       .select()
       .single();
 
@@ -98,8 +98,8 @@ export async function updateCoupon(
     const { data: existingCoupon } = await supabaseAdmin
       .from("coupons")
       .select("id")
-      .eq("code", couponData.code.toUpperCase())
-      .neq("id", id)
+      .eq("code", couponData.code.toUpperCase() as any)
+      .neq("id", id as any)
       .single();
 
     if (existingCoupon) {
@@ -120,8 +120,8 @@ export async function updateCoupon(
         valid_until: couponData.validUntil,
         applicable_categories: couponData.applicableCategories || null,
         is_active: couponData.isActive,
-      })
-      .eq("id", id)
+      } as any)
+      .eq("id", id as any)
       .select()
       .single();
 
@@ -139,7 +139,10 @@ export async function updateCoupon(
 
 export async function deleteCoupon(id: string) {
   try {
-    const { error } = await supabaseAdmin.from("coupons").delete().eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("coupons")
+      .delete()
+      .eq("id", id as any);
 
     if (error) {
       console.error("Error deleting coupon:", error);
@@ -158,7 +161,7 @@ export async function getCouponById(id: string) {
     const { data: coupon, error } = await supabaseAdmin
       .from("coupons")
       .select("*")
-      .eq("id", id)
+      .eq("id", id as any)
       .single();
 
     if (error) {

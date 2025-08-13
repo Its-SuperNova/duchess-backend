@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     if (userError || !user) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { data: favorites, error: favoritesError } = await supabaseAdmin
       .from("favorites")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .order("created_at", { ascending: false });
 
     if (favoritesError) {
@@ -38,16 +38,16 @@ export async function GET(request: NextRequest) {
     // Return raw database data for debugging
     return NextResponse.json({
       success: true,
-      user_id: user.id,
+      user_id: (user as any)?.id,
       user_email: session.user.email,
       raw_favorites: favorites,
       favorite_count: favorites?.length || 0,
       product_id_formats:
         favorites?.map((fav) => ({
-          raw_product_id: fav.product_id,
-          product_id_type: typeof fav.product_id,
-          product_name: fav.product_name,
-          cleaned_id: parseInt(fav.product_id.replace(/\D/g, "")) || 0,
+          raw_product_id: (fav as any).product_id,
+          product_id_type: typeof (fav as any).product_id,
+          product_name: (fav as any).product_name,
+          cleaned_id: parseInt((fav as any).product_id.replace(/\D/g, "")) || 0,
         })) || [],
     });
   } catch (error) {

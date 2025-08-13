@@ -50,7 +50,7 @@ export async function getProductById(id: string) {
           )
         `
         )
-        .eq("id", id)
+        .eq("id", id as any)
         .single();
 
       if (error) {
@@ -93,10 +93,7 @@ export async function createProduct(productData: any) {
 // Update a product
 export async function updateProduct(id: string, productData: any) {
   try {
-    console.log("=== UPDATE PRODUCT SERVER ACTION ===");
-    console.log("Product ID:", id);
-    console.log("Product Data Keys:", Object.keys(productData));
-    console.log("Product Data:", JSON.stringify(productData, null, 2));
+    // Removed debug logging for production security
 
     // Validate required fields
     if (!id) {
@@ -127,7 +124,6 @@ export async function updateProduct(id: string, productData: any) {
           productData[field] = parseInt(productData[field]);
         }
         if (isNaN(productData[field])) {
-          console.error(`Invalid ${field}:`, productData[field]);
           throw new Error(`Invalid ${field}: must be a number`);
         }
       }
@@ -145,7 +141,6 @@ export async function updateProduct(id: string, productData: any) {
     for (const field of decimalFields) {
       if (productData[field] !== null && productData[field] !== undefined) {
         if (isNaN(productData[field])) {
-          console.error(`Invalid ${field}:`, productData[field]);
           throw new Error(`Invalid ${field}: must be a number`);
         }
       }
@@ -172,8 +167,8 @@ export async function updateProduct(id: string, productData: any) {
     return await withRetry(async () => {
       const { data: product, error } = await supabaseAdmin
         .from("products")
-        .update(productData)
-        .eq("id", id)
+        .update(productData as any)
+        .eq("id", id as any)
         .select()
         .single();
 
@@ -187,7 +182,7 @@ export async function updateProduct(id: string, productData: any) {
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log("Product updated successfully:", product?.id);
+      console.log("Product updated successfully:", (product as any)?.id);
       revalidatePath("/admin/products");
       revalidatePath(`/admin/products/edit/${id}`);
       return product;
@@ -208,7 +203,7 @@ export async function deleteProduct(id: string) {
       const { error } = await supabaseAdmin
         .from("products")
         .delete()
-        .eq("id", id);
+        .eq("id", id as any);
 
       if (error) {
         console.error("Error deleting product:", error);
@@ -230,8 +225,8 @@ export async function toggleProductVisibility(id: string, isActive: boolean) {
     return await withRetry(async () => {
       const { data: product, error } = await supabaseAdmin
         .from("products")
-        .update({ is_active: isActive })
-        .eq("id", id)
+        .update({ is_active: isActive } as any)
+        .eq("id", id as any)
         .select()
         .single();
 
@@ -265,8 +260,8 @@ export async function getProductsByCategory(categoryId: string) {
           )
         `
         )
-        .eq("category_id", categoryId)
-        .eq("is_active", true)
+        .eq("category_id", categoryId as any)
+        .eq("is_active", true as any)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -301,7 +296,7 @@ export async function searchProducts(query: string) {
         .or(
           `name.ilike.%${query}%,short_description.ilike.%${query}%,long_description.ilike.%${query}%`
         )
-        .eq("is_active", true)
+        .eq("is_active", true as any)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -344,7 +339,7 @@ export async function getActiveProducts() {
           )
         `
           )
-          .eq("is_active", true)
+          .eq("is_active", true as any)
           .order("created_at", { ascending: false })
           .limit(24); // Increase to 24 for better grid layout
 

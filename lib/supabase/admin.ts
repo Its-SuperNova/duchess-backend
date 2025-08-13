@@ -30,6 +30,13 @@ export const supabaseAdmin = createClient<Database>(
         // Add connection pooling headers
         "x-connection-string": "pooled",
       },
+      fetch: (url: string | Request | URL, options: RequestInit = {}) => {
+        return fetch(url, {
+          ...options,
+          // Add timeout for queries
+          signal: AbortSignal.timeout(15000), // 15 second timeout
+        });
+      },
     },
     db: {
       schema: "public",
@@ -38,16 +45,6 @@ export const supabaseAdmin = createClient<Database>(
     realtime: {
       params: {
         eventsPerSecond: 10,
-      },
-    },
-    // Add fetch options for better performance
-    options: {
-      fetch: (url, options = {}) => {
-        return fetch(url, {
-          ...options,
-          // Add timeout for queries
-          signal: AbortSignal.timeout(15000), // 15 second timeout
-        });
       },
     },
   }

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     if (userError || !user) {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const { data: existingFavorite } = await supabaseAdmin
       .from("favorites")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .eq("product_id", productId)
       .single();
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const { data: favorite, error: favoriteError } = await supabaseAdmin
       .from("favorites")
       .insert({
-        user_id: user.id,
+        user_id: (user as any)?.id,
         product_id: productId,
         product_name: name,
         product_price: price,
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         product_description: description,
         product_rating: rating,
         is_veg: isVeg || true,
-      })
+      } as any)
       .select()
       .single();
 
@@ -80,16 +80,16 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Added to favorites",
       favorite: {
-        id: parseInt(favorite.product_id.replace(/\D/g, "")) || 0,
-        name: favorite.product_name,
-        price: parseFloat(favorite.product_price.toString()),
-        image: favorite.product_image,
-        isVeg: favorite.is_veg,
-        description: favorite.product_description,
-        rating: favorite.product_rating
-          ? parseFloat(favorite.product_rating.toString())
+        id: parseInt((favorite as any).product_id.replace(/\D/g, "")) || 0,
+        name: (favorite as any).product_name,
+        price: parseFloat((favorite as any).product_price.toString()),
+        image: (favorite as any).product_image,
+        isVeg: (favorite as any).is_veg,
+        description: (favorite as any).product_description,
+        rating: (favorite as any).product_rating
+          ? parseFloat((favorite as any).product_rating.toString())
           : undefined,
-        category: favorite.product_category,
+        category: (favorite as any).product_category,
       },
     });
   } catch (error) {

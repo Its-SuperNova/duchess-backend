@@ -23,14 +23,14 @@ export function useSupabaseUser(email: string | null) {
         const { data, error } = await supabaseAdmin
           .from("users")
           .select("*")
-          .eq("email", email)
+          .eq("email", email as any)
           .single();
 
         if (error) {
           setError(error.message);
           setUser(null);
         } else {
-          setUser(data);
+          setUser(data as any);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");

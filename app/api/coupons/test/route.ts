@@ -16,22 +16,22 @@ export async function GET() {
       );
     }
 
-         // Add debug info
-     const debugInfo = {
-       totalCoupons: coupons?.length || 0,
-       activeCoupons: coupons?.filter((c) => c.is_active).length || 0,
-       coupons: coupons?.map((c) => ({
-         id: c.id,
-         code: c.code,
-         is_active: c.is_active,
-         valid_from: c.valid_from,
-         valid_until: c.valid_until,
-         type: c.type,
-         value: c.value,
-         min_order_amount: c.min_order_amount,
-         max_discount_cap: c.max_discount_cap,
-       })),
-     };
+    // Add debug info
+    const debugInfo = {
+      totalCoupons: coupons?.length || 0,
+      activeCoupons: coupons?.filter((c: any) => c.is_active).length || 0,
+      coupons: coupons?.map((c: any) => ({
+        id: c.id,
+        code: c.code,
+        is_active: c.is_active,
+        valid_from: c.valid_from,
+        valid_until: c.valid_until,
+        type: c.type,
+        value: c.value,
+        min_order_amount: c.min_order_amount,
+        max_discount_cap: c.max_discount_cap,
+      })),
+    };
 
     return NextResponse.json(debugInfo);
   } catch (error) {

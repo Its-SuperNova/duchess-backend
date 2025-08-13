@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     if (userError || !user) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { data: favorites, error: favoritesError } = await supabaseAdmin
       .from("favorites")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .order("created_at", { ascending: false });
 
     if (favoritesError) {
@@ -36,18 +36,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform favorites to match frontend Product interface
-    const transformedFavorites = favorites.map((fav) => ({
-      id: parseInt(fav.product_id.replace(/\D/g, "")) || 0,
-      name: fav.product_name,
-      price: parseFloat(fav.product_price.toString()),
-      image: fav.product_image,
-      isVeg: fav.is_veg,
-      description: fav.product_description,
-      rating: fav.product_rating
-        ? parseFloat(fav.product_rating.toString())
-        : undefined,
-      category: fav.product_category,
-    }));
+    const transformedFavorites =
+      favorites?.map((fav: any) => ({
+        id: parseInt(fav.product_id?.replace(/\D/g, "") || "0") || 0,
+        name: fav.product_name || "",
+        price: parseFloat(fav.product_price?.toString() || "0"),
+        image: fav.product_image || "",
+        isVeg: fav.is_veg || false,
+        description: fav.product_description || "",
+        rating: fav.product_rating
+          ? parseFloat(fav.product_rating.toString())
+          : 0,
+        category: fav.product_category || "",
+      })) || [];
 
     return NextResponse.json(
       {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
           // Use private cache since favorites are user-specific
           "Cache-Control": "private, max-age=120, stale-while-revalidate=600",
           // Add ETag for conditional requests
-          ETag: `"favorites-${user.id}-${Date.now()}"`,
+          ETag: `"favorites-${(user as any)?.id}-${Date.now()}"`,
         },
       }
     );

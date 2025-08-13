@@ -45,8 +45,8 @@ const SwiperGallery = dynamic(
     Promise.all([
       import("swiper/react"),
       import("swiper/modules"),
-      import("swiper/css"),
-      import("swiper/css/pagination"),
+      Promise.resolve(), // CSS imports handled at runtime
+      Promise.resolve(),
     ]).then(([swiperReact, swiperModules]) => {
       const { Swiper, SwiperSlide } = swiperReact;
       const { Pagination, Autoplay } = swiperModules;
@@ -187,12 +187,12 @@ export default function ProductPage() {
         setError(null);
 
         const productData = await getProductById(productId);
-        setProduct(productData);
+        setProduct(productData as any);
 
         // Set initial order type based on selling type
-        if (productData.selling_type === "piece") {
+        if ((productData as any).selling_type === "piece") {
           setOrderType("piece");
-        } else if (productData.selling_type === "weight") {
+        } else if ((productData as any).selling_type === "weight") {
           setOrderType("weight");
         } else {
           // "both" - default to weight
@@ -200,15 +200,15 @@ export default function ProductPage() {
         }
 
         // Set initial selected options
-        if (productData.weight_options?.length > 0) {
-          const firstActiveWeight = productData.weight_options.findIndex(
-            (opt: any) => opt.isActive
-          );
+        if ((productData as any).weight_options?.length > 0) {
+          const firstActiveWeight = (
+            productData as any
+          ).weight_options.findIndex((opt: any) => opt.isActive);
           setSelectedWeightOption(Math.max(0, firstActiveWeight));
         }
 
-        if (productData.piece_options?.length > 0) {
-          const firstActivePiece = productData.piece_options.findIndex(
+        if ((productData as any).piece_options?.length > 0) {
+          const firstActivePiece = (productData as any).piece_options.findIndex(
             (opt: any) => opt.isActive
           );
           setSelectedPieceOption(Math.max(0, firstActivePiece));
@@ -278,7 +278,7 @@ export default function ProductPage() {
           setIsLoading(true);
           setError(null);
           const productData = await getProductById(productId);
-          setProduct(productData);
+          setProduct(productData as any);
           // setMainImage(productData.banner_image || "/placeholder.svg"); // This line was removed as per the new_code
           sonnerToast.success("Product loaded successfully");
         } catch (error) {
@@ -457,7 +457,6 @@ export default function ProductPage() {
     originalPrice,
   } = getCurrentPriceAndStock();
   const images = getAllImages();
-  console.log("Product images:", images); // Debug log
 
   return (
     <>
@@ -472,7 +471,10 @@ export default function ProductPage() {
                 {/* Hero Image Carousel */}
                 <div className="relative h-[350px] lg:h-[450px] w-full rounded-2xl overflow-hidden">
                   {images.length > 0 ? (
-                    <SwiperGallery images={images} productName={product.name} />
+                    <SwiperGallery
+                      images={images.filter(Boolean) as string[]}
+                      productName={product.name}
+                    />
                   ) : (
                     // Fallback single image if no images available
                     <div className="relative w-full h-full rounded-2xl overflow-hidden">

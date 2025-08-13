@@ -24,7 +24,7 @@ export async function DELETE(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", session.user.email as any)
       .single();
 
     if (userError || !user) {
@@ -35,7 +35,7 @@ export async function DELETE(request: NextRequest) {
     const { data: cart, error: cartError } = await supabase
       .from("carts")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", (user as any)?.id)
       .single();
 
     if (cartError) {

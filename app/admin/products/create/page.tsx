@@ -35,6 +35,7 @@ export default function CreateProductPage() {
     category: "",
     isVeg: true,
     hasOffer: false,
+    offer: "", // Add missing offer field
     offerPercentage: "",
     offerUpToPrice: "", // New field
     price: "",
@@ -103,6 +104,7 @@ export default function CreateProductPage() {
         category: cakesCategory?.id || categories?.[0]?.id || "",
         isVeg: true,
         hasOffer: true,
+        offer: "20% Off Special Deal", // Add missing offer field
         offerPercentage: "20",
         offerUpToPrice: "",
         price: "",
@@ -170,9 +172,7 @@ export default function CreateProductPage() {
 
   // Handle form input changes
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | React.ChangeEvent<HTMLTextAreaElement>
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData({

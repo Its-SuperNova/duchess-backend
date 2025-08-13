@@ -36,7 +36,7 @@ export async function getCategoryById(id: string) {
       const { data: category, error } = await supabaseAdmin
         .from("categories")
         .select("*")
-        .eq("id", id)
+        .eq("id", id as any)
         .single();
 
       if (error) {
@@ -89,8 +89,8 @@ export async function updateCategory(id: string, categoryData: any) {
     return await withRetry(async () => {
       const { data: category, error } = await supabaseAdmin
         .from("categories")
-        .update(categoryData)
-        .eq("id", id)
+        .update(categoryData as any)
+        .eq("id", id as any)
         .select()
         .single();
 
@@ -123,7 +123,7 @@ export async function deleteCategory(id: string) {
       const { data: products, error: productsError } = await supabaseAdmin
         .from("products")
         .select("id")
-        .eq("category_id", id)
+        .eq("category_id", id as any)
         .limit(1);
 
       if (productsError) {
@@ -140,7 +140,7 @@ export async function deleteCategory(id: string) {
       const { error } = await supabaseAdmin
         .from("categories")
         .delete()
-        .eq("id", id);
+        .eq("id", id as any);
 
       if (error) {
         console.error("Error deleting category:", error);
@@ -162,8 +162,8 @@ export async function toggleCategoryVisibility(id: string, isActive: boolean) {
     return await withRetry(async () => {
       const { data: category, error } = await supabaseAdmin
         .from("categories")
-        .update({ is_active: isActive })
-        .eq("id", id)
+        .update({ is_active: isActive } as any)
+        .eq("id", id as any)
         .select()
         .single();
 
@@ -205,8 +205,8 @@ export async function getCategoriesWithProductCounts() {
       // Transform the data to include product count
       const categoriesWithCounts =
         categories?.map((category) => ({
-          ...category,
-          products_count: category.products?.length || 0,
+          ...(category as any),
+          products_count: (category as any).products?.length || 0,
         })) || [];
 
       return categoriesWithCounts;

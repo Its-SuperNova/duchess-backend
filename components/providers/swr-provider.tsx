@@ -13,15 +13,19 @@ export default function SWRProvider({ children }: SWRProviderProps) {
       value={{
         // Global error handler
         onError: (error, key) => {
-          console.error("SWR Error:", { error, key });
+          if (process.env.NODE_ENV === "development") {
+            console.error("SWR Error:", { error, key });
+          }
         },
         // Global loading indicator could be added here
         onLoadingSlow: (key) => {
-          console.warn("SWR Slow loading:", key);
+          if (process.env.NODE_ENV === "development") {
+            console.warn("SWR Slow loading:", key);
+          }
         },
         // Global success handler
         onSuccess: (data, key) => {
-          // Optional: Log successful fetches in development
+          // Optional: Log successful fetches in development only
           if (process.env.NODE_ENV === "development") {
             console.log("SWR Success:", key);
           }

@@ -81,7 +81,7 @@ export async function validateAddressForCoimbatoreDelivery(address: {
     }
 
     // Check if it's in Coimbatore area
-    if (!pincodeValidation.isCoimbatoreArea) {
+    if (!(pincodeValidation as any).isCoimbatoreArea) {
       return {
         isValid: false,
         isCoimbatoreArea: false,

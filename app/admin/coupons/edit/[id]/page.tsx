@@ -71,11 +71,23 @@ const formSchema = z.object({
   applicableCategories: z.array(z.number()).optional(),
 });
 
-export default function EditCouponPage({ params }: { params: { id: string } }) {
+export default function EditCouponPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [fetching, setFetching] = useState(true);
+  const [couponId, setCouponId] = useState<string>("");
+
+  // Handle async params
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setCouponId(resolvedParams.id);
+    });
+  }, [params]);
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -96,9 +108,11 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
 
   // Fetch coupon data
   useEffect(() => {
+    if (!couponId) return;
+
     const fetchCoupon = async () => {
       try {
-        const response = await fetch(`/api/coupons/${params.id}`);
+        const response = await fetch(`/api/coupons/${couponId}`);
         if (!response.ok) {
           throw new Error("Failed to fetch coupon");
         }
@@ -131,7 +145,7 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
     };
 
     fetchCoupon();
-  }, [params.id, form, router]);
+  }, [couponId, form, router]);
 
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -151,7 +165,7 @@ export default function EditCouponPage({ params }: { params: { id: string } }) {
           values.applicableCategories?.map((id) => id.toString()) || [],
       };
 
-      const response = await fetch(`/api/coupons/${params.id}`, {
+      const response = await fetch(`/api/coupons/${couponId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(couponData),

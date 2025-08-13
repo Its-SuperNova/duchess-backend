@@ -11,7 +11,7 @@ function PaymentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const amountParam = searchParams.get("amount");
-  const { clearCart } = useCart();
+  const { clearCart } = useCart() || { clearCart: () => {} };
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

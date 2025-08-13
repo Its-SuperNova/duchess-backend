@@ -110,7 +110,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Show onboarding for unauthenticated users after splash */}
       {!showSplash && showOnboarding && status === "unauthenticated" && (
-        <OnboardingPage onOnboardingComplete={handleOnboardingComplete} />
+        <OnboardingPage />
       )}
 
       {/* Only render main UI when splash screen and onboarding are not showing */}
