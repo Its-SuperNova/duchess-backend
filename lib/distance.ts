@@ -339,7 +339,7 @@ export function calculateRealisticTravelTime(
       averageSpeed = 20; // Slow city traffic
     } else if (distance <= 20) {
       averageSpeed = 25; // Moderate city traffic
-    } else if (distance <= 30) {
+    } else if (distance <= 50) {
       averageSpeed = 30; // Mixed city and highway
     } else {
       averageSpeed = 35; // Highway speeds
@@ -348,7 +348,7 @@ export function calculateRealisticTravelTime(
     // Rural/highway speeds
     if (distance <= 10) {
       averageSpeed = 25;
-    } else if (distance <= 30) {
+    } else if (distance <= 50) {
       averageSpeed = 40;
     } else {
       averageSpeed = 50;
@@ -616,7 +616,7 @@ export const SHOP_LOCATION = {
 };
 
 // Delivery radius in kilometers
-export const DELIVERY_RADIUS_KM = 30;
+export const DELIVERY_RADIUS_KM = 50;
 
 // Shop pincode
 export const SHOP_PINCODE = "641035";
@@ -789,4 +789,26 @@ export async function calculateDistanceForAddress(
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+/**
+ * Calculate delivery fee based on distance using the tiered pricing structure
+ * @param distance Distance in kilometers
+ * @returns Delivery fee in Indian Rupees
+ */
+export function calculateDeliveryFee(distance: number): number {
+  // Distance-based delivery fee structure
+  if (distance <= 5) return 40;
+  if (distance <= 10) return 60;
+  if (distance <= 15) return 80;
+  if (distance <= 20) return 100;
+  if (distance <= 25) return 130;
+  if (distance <= 30) return 160;
+  if (distance <= 35) return 200;
+  if (distance <= 40) return 240;
+  if (distance <= 45) return 280;
+  if (distance <= 50) return 320;
+
+  // If distance is beyond 50km, return the maximum fee
+  return 320;
 }

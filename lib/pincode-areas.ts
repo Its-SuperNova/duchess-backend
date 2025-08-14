@@ -1,6 +1,6 @@
 // coimbatore_pincodes.ts
 export const COIMBATORE_PINCODE_AREAS: { [code: string]: string } = {
-  "641001": "Coimbatore HO / Town Hall", // Coimbatore HO & West SO :contentReference[oaicite:2]{index=2}
+  "641001": "Coimbatore HO / Town Hall", 
   "641003": "Lawley Road SO",
   "641004": "Peelamedu SO",
   "641005": "Singanallur SO",

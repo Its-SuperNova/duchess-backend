@@ -624,7 +624,7 @@ export default function EditAddressPage() {
                       Coimbatore Area Only
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      We only deliver within 30km of Coimbatore city
+                      We only deliver within 50km of Coimbatore city
                     </p>
                   </div>
                 </div>

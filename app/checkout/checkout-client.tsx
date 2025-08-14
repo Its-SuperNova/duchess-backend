@@ -22,6 +22,7 @@ import {
   Routing,
   Card,
   ListCheckMinimalistic,
+  InfoCircle,
 } from "@solar-icons/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -59,6 +60,7 @@ import {
   getDisplayDistance,
   getUserAddresses,
 } from "@/lib/address-utils";
+import { calculateDeliveryFee } from "@/lib/distance";
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -124,6 +126,77 @@ export default function CheckoutClient() {
   });
   const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
   const [tempContactInfo, setTempContactInfo] = useState(contactInfo);
+
+  // Load checkout context from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedContext = localStorage.getItem("checkoutContext");
+        if (savedContext) {
+          const parsedContext = JSON.parse(savedContext);
+          if (parsedContext.contactInfo) {
+            setContactInfo(parsedContext.contactInfo);
+            setTempContactInfo(parsedContext.contactInfo);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading checkout context:", error);
+      }
+    }
+  }, []);
+
+  // Update tempContactInfo when contactInfo changes
+  useEffect(() => {
+    setTempContactInfo(contactInfo);
+  }, [contactInfo]);
+
+  // Function to clear checkout context
+  const clearCheckoutContext = () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("checkoutContext");
+      } catch (error) {
+        console.error("Error clearing checkout context:", error);
+      }
+    }
+  };
+
+  // Clear checkout context when component unmounts (order completed or user leaves)
+  useEffect(() => {
+    return () => {
+      // Only clear if we're not in the middle of an order
+      if (typeof window !== "undefined") {
+        try {
+          const savedContext = localStorage.getItem("checkoutContext");
+          if (savedContext) {
+            const parsedContext = JSON.parse(savedContext);
+            // Keep the context for a while in case user comes back
+            // It will be cleared after order completion or manually
+          }
+        } catch (error) {
+          console.error("Error handling checkout context cleanup:", error);
+        }
+      }
+    };
+  }, []);
+
+  // Add beforeunload event listener to clear context when user leaves the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Clear checkout context when user leaves the page
+      clearCheckoutContext();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", handleBeforeUnload);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      }
+    };
+  }, []);
   const [isAddAddressDrawerOpen, setIsAddAddressDrawerOpen] = useState(false);
   const [newAddress, setNewAddress] = useState({
     addressName: "",
@@ -406,8 +479,58 @@ export default function CheckoutClient() {
       }
     }
   } catch {}
-  const deliveryFee = subtotal > 0 ? 49 : 0;
+  // Calculate delivery fee based on selected address distance
+  const calculateDeliveryFeeFromAddress = () => {
+    if (!addressText || addresses.length === 0) return 0;
+
+    // Find the current address from the addresses list
+    const currentAddress = addresses.find(
+      (addr) => addr.full_address === addressText
+    );
+
+    if (!currentAddress?.distance) {
+      // If no distance info, use a default fee (could be based on pincode or area)
+      return 80; // Default to ₹80 for unknown distances
+    }
+
+    // Convert stored distance (integer * 10) back to display format
+    const distanceInKm = currentAddress.distance / 10;
+
+    // Calculate delivery fee based on distance
+    return calculateDeliveryFee(distanceInKm);
+  };
+
+  const deliveryFee = subtotal > 0 ? calculateDeliveryFeeFromAddress() : 0;
   const total = subtotal - discount + deliveryFee;
+
+  // Helper function to get delivery fee breakdown information
+  const getDeliveryFeeBreakdown = () => {
+    if (!addressText || addresses.length === 0) return null;
+
+    const currentAddress = addresses.find(
+      (addr) => addr.full_address === addressText
+    );
+
+    if (!currentAddress?.distance) {
+      // Return default breakdown for addresses without distance info
+      return {
+        distance: null,
+        fee: 80,
+        formattedDistance: "Unknown distance",
+      };
+    }
+
+    const distanceInKm = currentAddress.distance / 10;
+    const fee = calculateDeliveryFee(distanceInKm);
+
+    return {
+      distance: distanceInKm,
+      fee,
+      formattedDistance: `${distanceInKm.toFixed(1)} km`,
+    };
+  };
+
+  const deliveryBreakdown = getDeliveryFeeBreakdown();
 
   // Persist lightweight checkout context for payment step
   useEffect(() => {
@@ -434,6 +557,7 @@ export default function CheckoutClient() {
     deliveryFee,
     note,
     addressText,
+    addresses,
     selectedCoupon,
     customizationOptions,
     cakeText,
@@ -468,7 +592,13 @@ export default function CheckoutClient() {
       <div className="bg-[#F5F6FB]">
         <div className="max-w-[1200px] mx-auto px-4 py-4">
           <div className="flex items-center justify-between md:justify-start md:gap-4">
-            <Link href="/">
+            <Link
+              href="/"
+              onClick={() => {
+                // Clear checkout context when going back to home
+                clearCheckoutContext();
+              }}
+            >
               <div className="bg-white p-3 md:p-2 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>
@@ -1379,25 +1509,70 @@ export default function CheckoutClient() {
                   >
                     Reset
                   </Button>
+                  <Button
+                    size="sm"
+                    className="h-9 px-5 rounded-[12px]"
+                    onClick={() => {
+                      // Update state first
+                      setContactInfo(tempContactInfo);
+
+                      // Save to localStorage immediately
+                      if (typeof window !== "undefined") {
+                        try {
+                          const savedContext =
+                            localStorage.getItem("checkoutContext");
+                          const currentContext = savedContext
+                            ? JSON.parse(savedContext)
+                            : {};
+                          const updatedContext = {
+                            ...currentContext,
+                            contactInfo: tempContactInfo,
+                          };
+                          localStorage.setItem(
+                            "checkoutContext",
+                            JSON.stringify(updatedContext)
+                          );
+                        } catch (error) {
+                          console.error(
+                            "Error saving contact info to localStorage:",
+                            error
+                          );
+                        }
+                      }
+
+                      // If this is a new contact, also update the user profile
+                      if (!tempContactInfo.name || !tempContactInfo.phone) {
+                        // Update user profile with new contact info
+                        if (session?.user?.email) {
+                          updateUserProfile(session.user.email, {
+                            name: tempContactInfo.name,
+                            phone_number: tempContactInfo.phone,
+                          });
+                        }
+                      }
+
+                      // Show success message
+                      toast({
+                        title: "Contact information saved",
+                        description:
+                          "Your contact details have been updated successfully.",
+                      });
+
+                      // Close drawer after state update
+                      setIsContactDrawerOpen(false);
+                    }}
+                  >
+                    {tempContactInfo.name && tempContactInfo.phone
+                      ? "Save"
+                      : "Add"}
+                  </Button>
                   <DrawerClose asChild>
                     <Button
+                      variant="outline"
                       size="sm"
                       className="h-9 px-5 rounded-[12px]"
-                      onClick={() => {
-                        setContactInfo(tempContactInfo);
-                        // If this is a new contact, also update the user profile
-                        if (!contactInfo.name || !contactInfo.phone) {
-                          // Update user profile with new contact info
-                          if (session?.user?.email) {
-                            updateUserProfile(session.user.email, {
-                              name: tempContactInfo.name,
-                              phone_number: tempContactInfo.phone,
-                            });
-                          }
-                        }
-                      }}
                     >
-                      {contactInfo.name && contactInfo.phone ? "Save" : "Add"}
+                      Cancel
                     </Button>
                   </DrawerClose>
                 </div>
@@ -1411,25 +1586,70 @@ export default function CheckoutClient() {
                     >
                       Reset
                     </Button>
+                    <Button
+                      size="xl"
+                      className="flex-1 py-5 rounded-[20px] text-[16px]"
+                      onClick={() => {
+                        // Update state first
+                        setContactInfo(tempContactInfo);
+
+                        // Save to localStorage immediately
+                        if (typeof window !== "undefined") {
+                          try {
+                            const savedContext =
+                              localStorage.getItem("checkoutContext");
+                            const currentContext = savedContext
+                              ? JSON.parse(savedContext)
+                              : {};
+                            const updatedContext = {
+                              ...currentContext,
+                              contactInfo: tempContactInfo,
+                            };
+                            localStorage.setItem(
+                              "checkoutContext",
+                              JSON.stringify(updatedContext)
+                            );
+                          } catch (error) {
+                            console.error(
+                              "Error saving contact info to localStorage:",
+                              error
+                            );
+                          }
+                        }
+
+                        // If this is a new contact, also update the user profile
+                        if (!tempContactInfo.name || !tempContactInfo.phone) {
+                          // Update user profile with new contact info
+                          if (session?.user?.email) {
+                            updateUserProfile(session.user.email, {
+                              name: tempContactInfo.name,
+                              phone_number: tempContactInfo.phone,
+                            });
+                          }
+                        }
+
+                        // Show success message
+                        toast({
+                          title: "Contact information saved",
+                          description:
+                            "Your contact details have been updated successfully.",
+                        });
+
+                        // Close drawer after state update
+                        setIsContactDrawerOpen(false);
+                      }}
+                    >
+                      {tempContactInfo.name && tempContactInfo.phone
+                        ? "Save"
+                        : "Add"}
+                    </Button>
                     <DrawerClose asChild>
                       <Button
+                        variant="outline"
                         size="xl"
                         className="flex-1 py-5 rounded-[20px] text-[16px]"
-                        onClick={() => {
-                          setContactInfo(tempContactInfo);
-                          // If this is a new contact, also update the user profile
-                          if (!contactInfo.name || !contactInfo.phone) {
-                            // Update user profile with new contact info
-                            if (session?.user?.email) {
-                              updateUserProfile(session.user.email, {
-                                name: tempContactInfo.name,
-                                phone_number: tempContactInfo.phone,
-                              });
-                            }
-                          }
-                        }}
                       >
-                        {contactInfo.name && contactInfo.phone ? "Save" : "Add"}
+                        Cancel
                       </Button>
                     </DrawerClose>
                   </div>
@@ -1512,8 +1732,7 @@ export default function CheckoutClient() {
                     Contact
                   </h3>
                   <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
-                    {contactInfo.name !== "Ashwin C S" &&
-                    contactInfo.phone !== "+91-8248669086" ? (
+                    {contactInfo.name && contactInfo.phone ? (
                       <>
                         <p className="text-gray-500 dark:text-gray-400 text-sm truncate min-w-0">
                           {contactInfo.name}, {contactInfo.phone}
@@ -1705,9 +1924,28 @@ export default function CheckoutClient() {
                       </div>
                     )}
                     <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                      <span>Delivery Fee</span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                          <span>Delivery Fee</span>
+                          <Link
+                            href="/legal/shipping-delivery#delivery-fees"
+                            className="text-blue-500 hover:text-blue-600 transition-colors"
+                            title="Click to view delivery fee details"
+                          >
+                            <InfoCircle className="h-4 w-4" />
+                          </Link>
+                        </div>
+                        {deliveryBreakdown && (
+                          <span className="text-xs text-gray-500">
+                            {deliveryBreakdown.distance
+                              ? `${deliveryBreakdown.formattedDistance} from shop`
+                              : "Default fee (distance unknown)"}
+                          </span>
+                        )}
+                      </div>
                       <span>₹{deliveryFee.toFixed(2)}</span>
                     </div>
+
                     <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
                       <span>CGST (9%)</span>
                       <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
@@ -1728,6 +1966,11 @@ export default function CheckoutClient() {
                     <Link
                       href={`/checkout/payment?amount=${total.toFixed(2)}`}
                       className="w-full"
+                      onClick={() => {
+                        // Clear checkout context when proceeding to payment
+                        // This indicates the user has completed the checkout form
+                        clearCheckoutContext();
+                      }}
                     >
                       <Button
                         className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1735,8 +1978,8 @@ export default function CheckoutClient() {
                           !addressText ||
                           addressText ===
                             "2nd street, Barathipuram, Kannampalayam" ||
-                          contactInfo.name === "Ashwin C S" ||
-                          contactInfo.phone === "+91-8248669086"
+                          !contactInfo.name ||
+                          !contactInfo.phone
                         }
                       >
                         Proceed to Payment
@@ -1782,9 +2025,28 @@ export default function CheckoutClient() {
                 </div>
               )}
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Delivery Fee</span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span>Delivery Fee</span>
+                    <Link
+                      href="/legal/shipping-delivery#delivery-fees"
+                      className="text-blue-500 hover:text-blue-600 transition-colors"
+                      title="Click to view delivery fee details"
+                    >
+                      <InfoCircle className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  {deliveryBreakdown && (
+                    <span className="text-xs text-gray-500">
+                      {deliveryBreakdown.distance
+                        ? `${deliveryBreakdown.formattedDistance} from shop`
+                        : "Default fee (distance unknown)"}
+                    </span>
+                  )}
+                </div>
                 <span>₹{deliveryFee}</span>
               </div>
+
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>CGST (9%)</span>
                 <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
@@ -1857,14 +2119,19 @@ export default function CheckoutClient() {
             <Link
               href={`/checkout/payment?amount=${total.toFixed(2)}`}
               className="w-full"
+              onClick={() => {
+                // Clear checkout context when proceeding to payment
+                // This indicates the user has completed the checkout form
+                clearCheckoutContext();
+              }}
             >
               <Button
                 className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={
                   !addressText ||
                   addressText === "2nd street, Barathipuram, Kannampalayam" ||
-                  contactInfo.name === "Ashwin C S" ||
-                  contactInfo.phone === "+91-8248669086"
+                  !contactInfo.name ||
+                  !contactInfo.phone
                 }
               >
                 Proceed to Payment

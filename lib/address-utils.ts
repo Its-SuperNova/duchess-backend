@@ -236,7 +236,7 @@ export async function createAddress(
         address: null,
         error:
           validationResult.error ||
-          "Address is outside our Coimbatore delivery area. We currently deliver within 30km of Coimbatore city.",
+          "Address is outside our Coimbatore delivery area. We currently deliver within 50km of Coimbatore city.",
       };
     }
 
@@ -365,7 +365,7 @@ export async function updateAddress(
             address: null,
             error:
               validationResult.error ||
-              "Updated address is outside our Coimbatore delivery area. We currently deliver within 30km of Coimbatore city.",
+              "Updated address is outside our Coimbatore delivery area. We currently deliver within 50km of Coimbatore city.",
           };
         }
 

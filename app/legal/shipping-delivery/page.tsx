@@ -85,110 +85,175 @@ export default function ShippingDeliveryPage() {
                   <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">
                     2. Service Area & Zones
                   </h2>
-                  <p className="text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">
-                    We currently deliver within Coimbatore city limits, covering
-                    the following zones:
-                  </p>
-                  <div className="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm scrollbar-hide">
+                  <div className="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm scrollbar-hide mb-4">
                     {/* Mobile scroll hint */}
                     <div className="sm:hidden text-xs text-gray-500 p-2 bg-gray-50 border-b border-gray-200">
                       ← Scroll horizontally to view all columns →
                     </div>
-                    <table className="w-full min-w-[600px]">
+                    <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-3 sm:px-4 sm:py-3 text-left font-medium text-gray-900 border-b border-gray-200 text-xs sm:text-sm">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
                             Zone
                           </th>
-                          <th className="px-3 py-3 sm:px-4 sm:py-3 text-left font-medium text-gray-900 border-b border-gray-200 text-xs sm:text-sm">
-                            Distance
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                            Distance Range
                           </th>
-                          <th className="px-3 py-3 sm:px-4 sm:py-3 text-left font-medium text-gray-900 border-b border-gray-200 text-xs sm:text-sm">
-                            Fee
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                            Delivery Fee (&#8377;)
                           </th>
-                          <th className="px-3 py-3 sm:px-4 sm:py-3 text-left font-medium text-gray-900 border-b border-gray-200 text-xs sm:text-sm">
-                            ETA
-                          </th>
-                          <th className="px-3 py-3 sm:px-4 sm:py-3 text-left font-medium text-gray-900 border-b border-gray-200 text-xs sm:text-sm min-w-[140px]">
-                            Areas
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                            Estimated ETA (minutes)
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 bg-white">
-                        <tr className="hover:bg-gray-50">
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 font-medium text-gray-900 text-xs sm:text-sm">
-                            A
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone A
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            0–10 km
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            0–5 km
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            ₹70–100
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;40
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            20–30m
-                          </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm">
-                            Peelamedu, Kalapatti, Vilankurichi, Ganapathy
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            20–30 mins
                           </td>
                         </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 font-medium text-gray-900 text-xs sm:text-sm">
-                            B
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone B
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            10–20 km
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            5–10 km
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            ₹120–150
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;60
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            30–45m
-                          </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm">
-                            RS Puram, Gandhipuram, Saibaba Colony
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            25–35 mins
                           </td>
                         </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 font-medium text-gray-900 text-xs sm:text-sm">
-                            C
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone C
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            20–40 km
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            10–15 km
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            ₹200–300
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;80
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            45–75m
-                          </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm">
-                            Singanallur, Podanur, Periyanaickenpalayam
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            30–40 mins
                           </td>
                         </tr>
-                        <tr className="hover:bg-gray-50">
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 font-medium text-gray-900 text-xs sm:text-sm">
-                            D
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone D
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            40–60 km
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            15–20 km
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            ₹350–500
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;100
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm whitespace-nowrap">
-                            75–120m
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            35–50 mins
                           </td>
-                          <td className="px-3 py-3 sm:px-4 sm:py-3 text-gray-700 text-xs sm:text-sm">
-                            Pollachi Road end, Mettupalayam, Sulur, Karamadai
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone E
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            20–25 km
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;130
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            40–60 mins
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone F
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            25–30 km
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;160
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            50–70 mins
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone G
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            30–35 km
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;200
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            60–80 mins
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone H
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            35–40 km
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;240
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            70–90 mins
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone I
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            40–45 km
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;280
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            80–100 mins
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            Zone J
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            45–50 km
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            &#8377;320
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            90–120 mins
                           </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                   <p className="text-gray-700 mt-3 sm:mt-4 text-sm sm:text-base">
-                    Orders outside these zones will be declined at checkout
-                    (online) or by our support team (on-call).
+                    Orders beyond 50 km will be declined at checkout (online) or
+                    by our support team (on-call).
                   </p>
                 </div>
 
@@ -283,7 +348,7 @@ export default function ShippingDeliveryPage() {
                 </div>
 
                 {/* Delivery Fees & Minimums */}
-                <div>
+                <div id="delivery-fees">
                   <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">
                     5. Delivery Fees & Minimums
                   </h2>
@@ -301,8 +366,8 @@ export default function ShippingDeliveryPage() {
                         Minimum Order Value
                       </h3>
                       <p className="text-gray-700 text-sm sm:text-base">
-                        ₹150 per order. Orders below this amount will incur a
-                        ₹50 small-order surcharge.
+                        &#8377;150 per order. Orders below this amount will
+                        incur a &#8377;50 small-order surcharge.
                       </p>
                     </div>
                   </div>
