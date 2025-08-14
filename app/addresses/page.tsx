@@ -260,7 +260,6 @@ export default function ManageAddressPage() {
           </Link>
         </div>
 
-<<<<<<< HEAD
         {/* Saved Addresses Title */}
         <div className="px-4 mb-4">
           <div className="flex items-center justify-center gap-4">
@@ -269,71 +268,6 @@ export default function ManageAddressPage() {
               SAVED ADDRESSES
             </span>
             <div className="h-[1px] flex-1 bg-gray-200"></div>
-=======
-        <div className="flex-1 p-4">
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="animate-pulse space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center space-x-3">
-                  <div className="h-5 w-5 bg-gray-200 rounded-full"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F5F6FB] flex flex-col">
-      {/* Back Button and Title */}
-      <div className="p-4 flex items-center">
-        <Link href="/profile" className="inline-block">
-          <div className="bg-white p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
-            <IoIosArrowBack className="h-5 w-5 text-gray-700" />
-          </div>
-        </Link>
-        <h1 className="text-xl font-semibold ml-4">My Addresses</h1>
-      </div>
-
-      {/* Add New Address Button */}
-      <div className="px-4 mb-4">
-        <Link href="/addresses/new">
-          <Button
-            variant="ghost"
-            className="w-full bg-white rounded-2xl shadow-sm p-4 py-6 flex items-center justify-between text-[#7A0000] border border-gray-200"
-          >
-            <div className="flex items-center gap-4">
-              <Plus className="h-5 w-5 text-[#7A0000]" />
-              <span className="text-[#7A0000]">Add New Address</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-[#7A0000]" />
-          </Button>
-        </Link>
-      </div>
-
-      {/* Saved Addresses Title */}
-      <div className="px-4 mb-4">
-        <div className="flex items-center justify-center gap-4">
-          <div className="h-[1px] flex-1 bg-gray-200"></div>
-          <span className="text-gray-500 text-sm font-medium tracking-wider">
-            SAVED ADDRESSES
-          </span>
-          <div className="h-[1px] flex-1 bg-gray-200"></div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 p-4">
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
->>>>>>> 0d25ba92d958630254d6f1a4a2ebb45f53fe5a35
           </div>
         </div>
 
@@ -346,7 +280,11 @@ export default function ManageAddressPage() {
           )}
 
           {addresses.length === 0 ? (
-            <></>
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No addresses found. Add your first address above.
+              </p>
+            </div>
           ) : (
             <>
               {/* Addresses List */}
@@ -416,7 +354,6 @@ export default function ManageAddressPage() {
                             }`}
                           />
                         </button>
-<<<<<<< HEAD
                         <button
                           onClick={() =>
                             router.push(`/addresses/edit/${address.id}`)
@@ -432,48 +369,6 @@ export default function ManageAddressPage() {
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
-=======
-                      )}
-
-                      {/* Default tag */}
-                      {address.is_default && (
-                        <div className="mt-3">
-                          <span className="px-2 py-1 text-xs bg-[#7A0000] text-white rounded-full">
-                            Default
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleRecalculateDistance(address.id)}
-                        disabled={recalculating === address.id}
-                        className="p-2 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
-                        title="Recalculate distance and time"
-                      >
-                        <RefreshCw
-                          className={`h-4 w-4 ${
-                            recalculating === address.id ? "animate-spin" : ""
-                          }`}
-                        />
-                      </button>
-                      <button
-                        onClick={() =>
-                          router.push(`/addresses/edit/${address.id}`)
-                        }
-                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAddress(address.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
->>>>>>> 0d25ba92d958630254d6f1a4a2ebb45f53fe5a35
                     </div>
                   </div>
                 ))}
