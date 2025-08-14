@@ -323,6 +323,7 @@ export default function NewAddressPage() {
           className: "bg-green-50 border-green-200 text-green-800",
         });
 
+<<<<<<< HEAD
         // If returning to checkout, pass the new address data
         if (returnTo === "/checkout") {
           // Store the new address data in sessionStorage for checkout to use
@@ -338,6 +339,9 @@ export default function NewAddressPage() {
         }
 
         router.push(returnTo);
+=======
+        router.push("/addresses");
+>>>>>>> 0d25ba92d958630254d6f1a4a2ebb45f53fe5a35
       } else {
         setError(result.error || "Failed to create address. Please try again.");
       }
@@ -405,7 +409,11 @@ export default function NewAddressPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
+<<<<<<< HEAD
             <Link href={returnTo}>
+=======
+            <Link href="/addresses">
+>>>>>>> 0d25ba92d958630254d6f1a4a2ebb45f53fe5a35
               <div className="bg-white dark:bg-[#202028] p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>
