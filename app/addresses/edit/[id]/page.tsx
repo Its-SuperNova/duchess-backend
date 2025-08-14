@@ -367,7 +367,7 @@ export default function EditAddressPage() {
           className: "bg-green-50 border-green-200 text-green-800",
         });
 
-        router.push("/profile/addresses");
+        router.push("/addresses");
       } else {
         setError(result.error || "Failed to update address. Please try again.");
       }
@@ -390,7 +390,7 @@ export default function EditAddressPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <p className="text-red-600 mb-4">{error}</p>
-              <Link href="/profile/addresses">
+              <Link href="/addresses">
                 <div className="px-4 py-2 bg-[#7a0000] text-white rounded-xl">
                   Back to Addresses
                 </div>
@@ -408,7 +408,7 @@ export default function EditAddressPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/profile/addresses">
+            <Link href="/addresses">
               <div className="bg-white dark:bg-[#202028] p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>

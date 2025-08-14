@@ -133,6 +133,7 @@ export default function NewAddressPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [returnTo, setReturnTo] = useState<string>("/addresses");
 
   const [validationLoading, setValidationLoading] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
@@ -146,6 +147,27 @@ export default function NewAddressPage() {
     additionalDetails: "",
     alternatePhone: "",
   });
+
+  // Detect where user came from and set return destination
+  useEffect(() => {
+    // Check if there's a returnTo query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnToParam = urlParams.get("returnTo");
+
+    if (returnToParam) {
+      setReturnTo(returnToParam);
+    } else {
+      // Check referrer to determine where user came from
+      const referrer = document.referrer;
+      if (referrer.includes("/checkout")) {
+        setReturnTo("/checkout");
+      } else if (referrer.includes("/profile")) {
+        setReturnTo("/profile");
+      } else {
+        setReturnTo("/addresses"); // Default fallback
+      }
+    }
+  }, []);
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -301,7 +323,21 @@ export default function NewAddressPage() {
           className: "bg-green-50 border-green-200 text-green-800",
         });
 
-        router.push("/profile/addresses");
+        // If returning to checkout, pass the new address data
+        if (returnTo === "/checkout") {
+          // Store the new address data in sessionStorage for checkout to use
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem(
+              "newAddressData",
+              JSON.stringify({
+                address: result.address,
+                timestamp: Date.now(),
+              })
+            );
+          }
+        }
+
+        router.push(returnTo);
       } else {
         setError(result.error || "Failed to create address. Please try again.");
       }
@@ -369,7 +405,7 @@ export default function NewAddressPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/profile/addresses">
+            <Link href={returnTo}>
               <div className="bg-white dark:bg-[#202028] p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>

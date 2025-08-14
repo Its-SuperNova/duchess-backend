@@ -21,6 +21,7 @@ import {
   MenuDots,
   Routing,
   Card,
+  ListCheckMinimalistic,
 } from "@solar-icons/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -52,13 +53,14 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useCart } from "@/context/cart-context";
-import { getUserByEmail } from "@/lib/auth-utils";
+import { getUserByEmail, updateUserProfile } from "@/lib/auth-utils";
 import {
   getDefaultAddress,
   getDisplayDistance,
   getUserAddresses,
 } from "@/lib/address-utils";
 import type { Address as DbAddress } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
@@ -69,6 +71,7 @@ export default function CheckoutClient() {
     removeFromCart,
     updateCartItemCustomization,
   } = useCart();
+  const { toast } = useToast();
   const [note, setNote] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
   // Load applied coupon code to show update/view UI
@@ -93,10 +96,8 @@ export default function CheckoutClient() {
     useState(false);
   // Address change drawer state and address text
   const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
-  const [addressText, setAddressText] = useState(
-    "2nd street, Barathipuram, Kannampalayam"
-  );
-  const [tempAddress, setTempAddress] = useState(addressText);
+  const [addressText, setAddressText] = useState("");
+  const [tempAddress, setTempAddress] = useState("");
   const { data: session } = useSession();
   const [addresses, setAddresses] = useState<DbAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState<boolean>(false);
@@ -117,8 +118,9 @@ export default function CheckoutClient() {
 
   // Contact information state
   const [contactInfo, setContactInfo] = useState({
-    name: "Ashwin C S",
-    phone: "+91-8248669086",
+    name: "",
+    phone: "",
+    alternatePhone: "",
   });
   const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
   const [tempContactInfo, setTempContactInfo] = useState(contactInfo);
@@ -178,26 +180,194 @@ export default function CheckoutClient() {
     });
   };
 
+  // Function to calculate delivery time based on address distance
+  const calculateDeliveryTime = () => {
+    if (!addressText || addresses.length === 0) return null;
+
+    // Find the current address from the addresses list
+    const currentAddress = addresses.find(
+      (addr) => addr.full_address === addressText
+    );
+    if (!currentAddress?.distance) return null;
+
+    // Preparation time: 1 hour (60 minutes)
+    const preparationTime = 60;
+
+    // Travel time: use the duration from the address if available, otherwise calculate
+    // The address page shows ~31min for 13km, so we'll use a more realistic calculation
+    let travelTime;
+    if (currentAddress.duration) {
+      // Use the actual duration from the address
+      travelTime = currentAddress.duration;
+    } else {
+      // Fallback calculation: 1 km = ~2.4 minutes (based on 13km = 31min)
+      travelTime = Math.round(currentAddress.distance * 2.4);
+    }
+
+    // Total delivery time
+    const totalTime = preparationTime + travelTime;
+
+    return totalTime;
+  };
+
+  // Function to format time in hours and minutes
+  const formatDeliveryTime = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0) {
+      return `${minutes} mins`;
+    } else if (minutes === 0) {
+      return `${hours} hr`;
+    } else {
+      return `${hours} hr ${minutes} mins`;
+    }
+  };
+
+  // Load addresses from database
   useEffect(() => {
     const load = async () => {
       if (!session?.user?.email) return;
       try {
         setLoadingAddresses(true);
+
+        // Check for new address data from sessionStorage first
+        const newAddressData = sessionStorage.getItem("newAddressData");
+        if (newAddressData) {
+          try {
+            const { address, timestamp } = JSON.parse(newAddressData);
+            const now = Date.now();
+
+            // Only use data that's less than 5 minutes old
+            if (now - timestamp < 5 * 60 * 1000) {
+              // Auto-fill the address with the newly created one
+              setAddressText(address.full_address);
+
+              // Clear the sessionStorage data
+              sessionStorage.removeItem("newAddressData");
+
+              // Update the addresses list to include the new address
+              const user = await getUserByEmail(session.user.email);
+              if (user) {
+                const list = await getUserAddresses(user.id);
+                setAddresses(list || []);
+              }
+
+              return; // Don't proceed with the full refresh since we already have the data
+            } else {
+              // Data is too old, remove it
+              sessionStorage.removeItem("newAddressData");
+            }
+          } catch (parseError) {
+            console.error("Error parsing new address data:", parseError);
+            sessionStorage.removeItem("newAddressData");
+          }
+        }
+
         const user = await getUserByEmail(session.user.email);
         if (!user) return;
         const list = await getUserAddresses(user.id);
         setAddresses(list || []);
-        const def = await getDefaultAddress(user.id);
-        if (def?.full_address) {
-          setAddressText(def.full_address);
-        } else if (list?.[0]?.full_address) {
-          setAddressText(list[0].full_address);
+
+        // Set contact info from user profile
+        setContactInfo({
+          name: user.name || "",
+          phone: user.phone_number || "",
+          alternatePhone: "",
+        });
+
+        // Only set address text if we don't already have it from new address data
+        if (!addressText) {
+          const def = await getDefaultAddress(user.id);
+          if (def?.full_address) {
+            setAddressText(def.full_address);
+          } else if (list?.[0]?.full_address) {
+            setAddressText(list[0].full_address);
+          }
         }
       } finally {
         setLoadingAddresses(false);
       }
     };
     load();
+  }, [session]);
+
+  // Auto-refresh data when returning from address creation
+  useEffect(() => {
+    const handleFocus = async () => {
+      // Check if we're returning from address creation by looking at the URL
+      if (window.location.pathname === "/checkout" && session?.user?.email) {
+        try {
+          // Check for new address data from sessionStorage
+          const newAddressData = sessionStorage.getItem("newAddressData");
+          if (newAddressData) {
+            try {
+              const { address, timestamp } = JSON.parse(newAddressData);
+              const now = Date.now();
+
+              // Only use data that's less than 5 minutes old
+              if (now - timestamp < 5 * 60 * 1000) {
+                // Auto-fill the address with the newly created one
+                setAddressText(address.full_address);
+
+                // Clear the sessionStorage data
+                sessionStorage.removeItem("newAddressData");
+
+                // Update the addresses list to include the new address
+                const user = await getUserByEmail(session.user.email);
+                if (user) {
+                  const list = await getUserAddresses(user.id);
+                  setAddresses(list || []);
+                }
+
+                return; // Don't proceed with the full refresh since we already have the data
+              } else {
+                // Data is too old, remove it
+                sessionStorage.removeItem("newAddressData");
+              }
+            } catch (parseError) {
+              console.error("Error parsing new address data:", parseError);
+              sessionStorage.removeItem("newAddressData");
+            }
+          }
+
+          // Regular refresh if no new address data
+          const user = await getUserByEmail(session.user.email);
+          if (user) {
+            const list = await getUserAddresses(user.id);
+            setAddresses(list || []);
+
+            // Update contact info from user profile
+            setContactInfo({
+              name: user.name || "",
+              phone: user.phone_number || "",
+              alternatePhone: "",
+            });
+
+            // Update address if we have new addresses
+            if (list && list.length > 0) {
+              const def = await getDefaultAddress(user.id);
+              if (def?.full_address) {
+                setAddressText(def.full_address);
+              } else if (list[0]?.full_address) {
+                setAddressText(list[0].full_address);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error refreshing data:", error);
+        }
+      }
+    };
+
+    // Listen for when the page becomes visible (user returns from another page)
+    document.addEventListener("visibilitychange", handleFocus);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleFocus);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [session]);
 
   // Calculate checkout totals
@@ -322,9 +492,15 @@ export default function CheckoutClient() {
                       </div>
                       <div className="flex items-center gap-2">
                         {note && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <button
+                            className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50 text-sm font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsNoteDrawerOpen(true);
+                            }}
+                          >
                             Edit
-                          </span>
+                          </button>
                         )}
                         <IoIosArrowForward className="h-5 w-5 text-gray-600" />
                       </div>
@@ -406,25 +582,43 @@ export default function CheckoutClient() {
                       <h2 className="text-[18px] font-semibold text-gray-800">
                         Select an address
                       </h2>
-                      <DrawerClose asChild>
-                        <button
-                          aria-label="Close"
-                          className="h-9 w-9 rounded-full bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm"
-                        >
-                          <X className="h-5 w-5 text-gray-700" />
-                        </button>
-                      </DrawerClose>
+                      <div className="flex items-center gap-2">
+                        <Link href="/addresses">
+                          <button
+                            aria-label="Manage addresses"
+                            className="h-9 w-9 rounded-full bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm"
+                          >
+                            <MenuDots
+                              weight="Broken"
+                              className="h-5 w-5 text-gray-700"
+                            />
+                          </button>
+                        </Link>
+                        <DrawerClose asChild>
+                          <button
+                            aria-label="Close"
+                            className="h-9 w-9 rounded-full bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm"
+                          >
+                            <X className="h-5 w-5 text-gray-700" />
+                          </button>
+                        </DrawerClose>
+                      </div>
                     </div>
                     <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                      <button className="w-full flex items-center justify-between bg-white rounded-[14px] px-4 py-3 shadow-sm">
-                        <span className="flex items-center gap-3 text-[#570000] font-medium">
-                          <span className="h-6 w-6 flex items-center justify-center rounded-full text-[#570000] text-lg leading-none">
-                            +
+                      <Link
+                        href="/addresses/new?returnTo=/checkout"
+                        className="w-full block"
+                      >
+                        <button className="w-full flex items-center justify-between bg-white rounded-[14px] px-4 py-3 shadow-sm hover:bg-gray-50 transition-colors">
+                          <span className="flex items-center gap-3 text-[#570000] font-medium">
+                            <span className="h-6 w-6 flex items-center justify-center rounded-full text-[#570000] text-lg leading-none">
+                              +
+                            </span>
+                            Add address
                           </span>
-                          Add address
-                        </span>
-                        <span className="text-[#570000]">›</span>
-                      </button>
+                          <span className="text-[#570000]">›</span>
+                        </button>
+                      </Link>
                     </div>
                     <div className="px-4 mt-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                       <div className="flex items-center gap-3 text-gray-400 font-semibold tracking-[0.15em] text-xs">
@@ -434,41 +628,82 @@ export default function CheckoutClient() {
                       </div>
                     </div>
                     <div className="px-4 mt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                      {addresses.map((addr) => (
-                        <div
-                          key={addr.id}
-                          className="bg-white rounded-[18px] shadow-sm p-4"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="h-6 w-6 rounded-xl items-center justify-center  flex">
-                                <HomeAngle
+                      {addresses.length > 0 ? (
+                        addresses.map((addr, index) => (
+                          <div
+                            key={addr.id}
+                            className={`bg-white rounded-[18px] shadow-sm p-4 ${
+                              index > 0 ? "mt-3" : ""
+                            } ${
+                              addressText === addr.full_address
+                                ? "ring-2 ring-[#2664eb] ring-opacity-50 border-[#2664eb]"
+                                : "hover:bg-gray-50 cursor-pointer"
+                            }`}
+                            onClick={() => {
+                              setAddressText(addr.full_address);
+                              setIsAddressDrawerOpen(false);
+                            }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="h-6 w-6 rounded-xl items-center justify-center  flex">
+                                  <HomeAngle
+                                    weight="Broken"
+                                    className="h-5 w-5 text-[#570000]"
+                                  />
+                                </span>
+                                <span className="font-medium text-gray-800">
+                                  {addr.address_name || "Address"}
+                                </span>
+                                {addressText === addr.full_address && (
+                                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#2664eb] text-white text-xs">
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                              <button className="text-[#570000]">
+                                <MenuDots
                                   weight="Broken"
                                   className="h-5 w-5 text-[#570000]"
                                 />
-                              </span>
-                              <span className="font-medium text-gray-800">
-                                {addr.address_name || "Address"}
-                              </span>
+                              </button>
                             </div>
-                            <button className="text-[#570000]">
-                              <MenuDots
-                                weight="Broken"
-                                className="h-5 w-5 text-[#570000]"
-                              />
-                            </button>
+                            <p className="mt-2 text-sm text-gray-500 leading-snug">
+                              {addr.full_address}
+                            </p>
+                            <div className="mt-3 flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
+                                <Routing weight="Broken" className="h-4 w-4" />
+                                {getDisplayDistance(addr.distance) ?? "-"} km
+                              </span>
+                              {addr.duration && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E6F3FF] text-[#2664eb] text-xs">
+                                  <ClockCircle className="h-4 w-4" />~
+                                  {addr.duration}min
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="mt-2 text-sm text-gray-500 leading-snug">
-                            {addr.full_address}
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-gray-400 mb-3">
+                            <HomeAngle
+                              weight="Broken"
+                              className="h-16 w-16 mx-auto text-gray-300"
+                            />
+                          </div>
+                          <p className="text-gray-500 text-sm mb-4">
+                            No addresses found. Add an address to proceed with
+                            checkout.
                           </p>
-                          <div className="mt-3">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
-                              <Routing weight="Broken" className="h-4 w-4" />
-                              {getDisplayDistance(addr.distance) ?? "-"} km
-                            </span>
-                          </div>
+                          <Link href="/addresses/new?returnTo=/checkout">
+                            <Button className="bg-[#570000] hover:bg-[#450000] text-white">
+                              Add New Address
+                            </Button>
+                          </Link>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </DrawerContent>
                 </Drawer>
@@ -502,16 +737,31 @@ export default function CheckoutClient() {
                   <DrawerTrigger asChild>
                     <button className="w-full flex items-center justify-between text-left">
                       <div className="flex items-center">
-                        <WidgetAdd className="h-5 w-5 mr-3 text-black" />
+                        {Object.values(customizationOptions).some(
+                          (opt) => opt
+                        ) ? (
+                          <ListCheckMinimalistic className="h-5 w-5 mr-3 text-black" />
+                        ) : (
+                          <WidgetAdd className="h-5 w-5 mr-3 text-black" />
+                        )}
                         <span className="font-medium text-gray-700 dark:text-gray-300">
-                          {Object.values(customizationOptions).some(
-                            (opt) => opt
-                          )
-                            ? "Customization options selected"
-                            : "Add customization options"}
+                          Customization options
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
+                        {Object.values(customizationOptions).some(
+                          (opt) => opt
+                        ) && (
+                          <button
+                            className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50 text-sm font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsCustomizationDrawerOpen(true);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
                         <IoIosArrowForward className="h-5 w-5 text-gray-600" />
                       </div>
                     </button>
@@ -650,6 +900,18 @@ export default function CheckoutClient() {
                             </div>
                           )}
                         </div>
+                      </div>
+
+                      {/* Disclaimer */}
+                      <div className="mt-6 px-4 text-[#9AA3C7]">
+                        <h4 className="uppercase tracking-wide font-semibold text-[14px]">
+                          Additional Customization
+                        </h4>
+                        <p className="mt-2 text-sm">
+                          For more customization options on your order, please
+                          contact the kitchen after order confirmation or try
+                          our call order service.
+                        </p>
                       </div>
                     </div>
 
@@ -884,7 +1146,9 @@ export default function CheckoutClient() {
                 <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                   <div className="flex items-center justify-between w-full">
                     <DrawerTitle className="text-[20px]">
-                      Edit Contact Information
+                      {contactInfo.name && contactInfo.phone
+                        ? "Edit Contact Information"
+                        : "Add Contact Information"}
                     </DrawerTitle>
                     <DrawerClose asChild>
                       <button
@@ -938,6 +1202,30 @@ export default function CheckoutClient() {
                         className="rounded-[12px] placeholder:text-[#C0C0C0]"
                       />
                     </div>
+                    <div>
+                      <label
+                        htmlFor="contact-alternate-phone"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Alternate Phone Number
+                      </label>
+                      <Input
+                        id="contact-alternate-phone"
+                        placeholder="Enter alternate phone number (optional)"
+                        value={tempContactInfo.alternatePhone}
+                        onChange={(e) =>
+                          setTempContactInfo((prev) => ({
+                            ...prev,
+                            alternatePhone: e.target.value,
+                          }))
+                        }
+                        className="rounded-[12px] placeholder:text-[#C0C0C0]"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        If the main contact number is not available, the
+                        delivery partner will contact the alternate number
+                      </p>
+                    </div>
                   </div>
                 </div>
                 {/* Desktop action row */}
@@ -954,9 +1242,21 @@ export default function CheckoutClient() {
                     <Button
                       size="sm"
                       className="h-9 px-5 rounded-[12px]"
-                      onClick={() => setContactInfo(tempContactInfo)}
+                      onClick={() => {
+                        setContactInfo(tempContactInfo);
+                        // If this is a new contact, also update the user profile
+                        if (!contactInfo.name || !contactInfo.phone) {
+                          // Update user profile with new contact info
+                          if (session?.user?.email) {
+                            updateUserProfile(session.user.email, {
+                              name: tempContactInfo.name,
+                              phone_number: tempContactInfo.phone,
+                            });
+                          }
+                        }
+                      }}
                     >
-                      Save
+                      {contactInfo.name && contactInfo.phone ? "Save" : "Add"}
                     </Button>
                   </DrawerClose>
                 </div>
@@ -974,9 +1274,21 @@ export default function CheckoutClient() {
                       <Button
                         size="xl"
                         className="flex-1 py-5 rounded-[20px] text-[16px]"
-                        onClick={() => setContactInfo(tempContactInfo)}
+                        onClick={() => {
+                          setContactInfo(tempContactInfo);
+                          // If this is a new contact, also update the user profile
+                          if (!contactInfo.name || !contactInfo.phone) {
+                            // Update user profile with new contact info
+                            if (session?.user?.email) {
+                              updateUserProfile(session.user.email, {
+                                name: tempContactInfo.name,
+                                phone_number: tempContactInfo.phone,
+                              });
+                            }
+                          }
+                        }}
                       >
-                        Save
+                        {contactInfo.name && contactInfo.phone ? "Save" : "Add"}
                       </Button>
                     </DrawerClose>
                   </div>
@@ -990,58 +1302,98 @@ export default function CheckoutClient() {
                 <ClockCircle className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
                 <div>
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                    Delivery in 32 mins
+                    {(() => {
+                      const deliveryTime = calculateDeliveryTime();
+                      if (deliveryTime) {
+                        return `Delivery in ${formatDeliveryTime(
+                          deliveryTime
+                        )} (aprx)`;
+                      }
+                      return "Add address to see delivery time";
+                    })()}
                   </h3>
-                  <button className="text-gray-500 dark:text-gray-400 underline text-sm">
-                    Want this later? Schedule it
-                  </button>
+                  <p className="text-gray-500 dark:text-gray-400 text-[12px]">
+                    Delivery time is approximate and will be confirmed after
+                    your order.
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-start mb-4">
-                <HomeSmileAngle className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
+                <HomeSmileAngle className="h-5 w-5 mr-3 flex-shrink-0 text-black" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Delivery at Home
                   </h3>
-                  <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center justify-between gap-3 min-w-0">
                     <p className="text-gray-500 dark:text-gray-400 text-sm truncate min-w-0">
-                      {addressText}
+                      {addressText || "No delivery address added"}
                     </p>
-                    <button
-                      className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
-                      onClick={() => {
-                        setTempAddress(addressText);
-                        setIsAddressDrawerOpen(true);
-                      }}
-                      aria-label="Change delivery address"
-                    >
-                      <Pen weight="Broken" size={16} color="#2664eb" />
-                    </button>
+                    {addressText ? (
+                      <button
+                        className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
+                        onClick={() => {
+                          setTempAddress(addressText);
+                          setIsAddressDrawerOpen(true);
+                        }}
+                        aria-label="Change delivery address"
+                      >
+                        <Pen weight="Broken" size={16} color="#2664eb" />
+                      </button>
+                    ) : (
+                      <Link href="/addresses/new?returnTo=/checkout">
+                        <button className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50">
+                          Add
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-start">
-                <Phone className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
+                <Phone className="h-5 w-5 mr-3 flex-shrink-0 text-black" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     Contact
                   </h3>
-                  <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center justify-between gap-3 min-w-0">
                     <p className="text-gray-500 dark:text-gray-400 text-sm truncate min-w-0">
-                      {contactInfo.name}, {contactInfo.phone}
+                      {contactInfo.name && contactInfo.phone
+                        ? `${contactInfo.name}, ${contactInfo.phone}${
+                            contactInfo.alternatePhone
+                              ? ` (Alt: ${contactInfo.alternatePhone})`
+                              : ""
+                          }`
+                        : "No contact information added"}
                     </p>
-                    <button
-                      className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
-                      onClick={() => {
-                        setTempContactInfo(contactInfo);
-                        setIsContactDrawerOpen(true);
-                      }}
-                      aria-label="Edit contact information"
-                    >
-                      <Pen weight="Broken" size={16} color="#2664eb" />
-                    </button>
+                    {contactInfo.name && contactInfo.phone ? (
+                      <button
+                        className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
+                        onClick={() => {
+                          setTempContactInfo(contactInfo);
+                          setIsContactDrawerOpen(true);
+                        }}
+                        aria-label="Edit contact information"
+                      >
+                        <Pen weight="Broken" size={16} color="#2664eb" />
+                      </button>
+                    ) : (
+                      <button
+                        className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
+                        onClick={() => {
+                          setTempContactInfo({
+                            name: "",
+                            phone: "",
+                            alternatePhone: "",
+                          });
+                          setIsContactDrawerOpen(true);
+                        }}
+                        aria-label="Add contact information"
+                      >
+                        Add
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1205,23 +1557,42 @@ export default function CheckoutClient() {
                       <span>Delivery Fee</span>
                       <span>₹{deliveryFee.toFixed(2)}</span>
                     </div>
+                    <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+                      <span>CGST (9%)</span>
+                      <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+                      <span>SGST (9%)</span>
+                      <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+                    </div>
                     <div className="pt-2 mt-2">
                       <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
-                      <div className="flex justify-between font-semibold text-gray-800 dark:text-gray-200 mt-2">
+                      <div className="flex justify-between font-semibold text-black dark:text-white mt-2">
                         <span>To Pay</span>
                         <span>₹{total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Link
-                      href={`/checkout/payment?amount=${total.toFixed(2)}`}
-                      className="w-full"
-                    >
-                      <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto">
-                        Proceed to Payment
-                      </Button>
-                    </Link>
+                    {addressText && contactInfo.name && contactInfo.phone ? (
+                      <Link
+                        href={`/checkout/payment?amount=${total.toFixed(2)}`}
+                        className="w-full"
+                      >
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto">
+                          Proceed to Payment
+                        </Button>
+                      </Link>
+                    ) : (
+                      <div className="space-y-3">
+                        <Button
+                          disabled
+                          className="w-full bg-gray-300 text-gray-500 py-3 rounded-[18px] text-[16px] font-medium h-auto cursor-not-allowed"
+                        >
+                          Add Address & Contact to Proceed
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1255,17 +1626,36 @@ export default function CheckoutClient() {
                 <span>Item Total</span>
                 <span>₹{subtotal}</span>
               </div>
-              <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Discount</span>
-                <span className="text-[#15A05A]">-₹{discount}</span>
-              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <span>Discount</span>
+                  <span className="text-[#15A05A]">-₹{discount}</span>
+                </div>
+              )}
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>Delivery Fee</span>
                 <span>₹{deliveryFee}</span>
               </div>
-              <div className="flex justify-between text-[#570000] font-semibold pt-2 border-t border-gray-200 dark:border-gray-600">
-                <span>To Pay</span>
-                <span>₹{subtotal - discount + deliveryFee}</span>
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>CGST (9%)</span>
+                <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>SGST (9%)</span>
+                <span>₹{((subtotal - discount) * 0.09).toFixed(2)}</span>
+              </div>
+              <div className="pt-2 mt-2">
+                <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
+                <div className="flex justify-between text-black dark:text-white font-semibold mt-2">
+                  <span>To Pay</span>
+                  <span>
+                    ₹
+                    {subtotal -
+                      discount +
+                      deliveryFee +
+                      (subtotal - discount) * 0.18}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -1315,14 +1705,25 @@ export default function CheckoutClient() {
         {/* Fixed bottom Place Order bar (mobile only) */}
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
           <div className="mx-auto px-4 py-3 w-full max-w-[1200px]">
-            <Link
-              href={`/checkout/payment?amount=${total.toFixed(2)}`}
-              className="w-full"
-            >
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto">
-                Proceed to Payment
-              </Button>
-            </Link>
+            {addressText && contactInfo.name && contactInfo.phone ? (
+              <Link
+                href={`/checkout/payment?amount=${total.toFixed(2)}`}
+                className="w-full"
+              >
+                <Button className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto">
+                  Proceed to Payment
+                </Button>
+              </Link>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  disabled
+                  className="w-full bg-gray-300 text-gray-500 py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto cursor-not-allowed"
+                >
+                  Add Address & Contact to Proceed
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
