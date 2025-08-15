@@ -1,59 +1,32 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  eslint: {
-    ignoreDuringBuilds: false, // ✅ Enable ESLint checking during builds
-  },
-  typescript: {
-    ignoreBuildErrors: false, // ✅ Enable TypeScript error checking
-  },
-  compress: true, // ✅ Enable gzip compression
-  poweredByHeader: false, // ✅ Remove X-Powered-By header for security
-  generateEtags: false, // ✅ Disable default ETags (we handle manually in API routes)
-  
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { ignoreBuildErrors: false },
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: false,
+
   images: {
-    domains: ['localhost', 'images.unsplash.com'],
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
+      { protocol: 'https', hostname: '**' }, // Keep flexible if needed
     ],
-    // ✅ Add image optimization settings
     formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days for fresher updates
   },
-  
-  // ✅ Add security headers
+
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
       {
-        // ✅ Add specific CSP for API routes
         source: '/api/(.*)',
         headers: [
           {
@@ -63,18 +36,18 @@ const nextConfig = {
         ],
       },
       {
-        // ✅ Add CSP for main app with necessary allowances
         source: '/((?!api).*)',
         headers: [
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' *.googleapis.com *.gstatic.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' *.googleapis.com *.gstatic.com blob:",
+              "script-src-elem 'self' 'unsafe-eval' 'unsafe-inline' *.googleapis.com *.gstatic.com blob:",
               "style-src 'self' 'unsafe-inline' *.googleapis.com fonts.googleapis.com",
-              "img-src 'self' data: blob: https: *.supabase.co *.unsplash.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.unsplash.com",
               "font-src 'self' data: fonts.gstatic.com",
-              "connect-src 'self' *.supabase.co *.googleapis.com",
+              "connect-src 'self' https://*.supabase.co https://*.googleapis.com",
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",
@@ -86,52 +59,39 @@ const nextConfig = {
       },
     ];
   },
-  
+
   experimental: {
-    serverActions: {
-      bodySizeLimit: '3mb',
-    },
-    // ✅ Enable optimizations
+    serverActions: { bodySizeLimit: '3mb' },
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
-  
-  // ✅ Webpack optimizations for production
+
   webpack: (config, { dev, isServer }) => {
-    // Remove console.log in production
     if (!dev) {
       config.optimization = {
         ...config.optimization,
         minimizer: config.optimization.minimizer.map((minimizer) => {
-          if (minimizer.constructor.name === 'TerserPlugin') {
-            minimizer.options.terserOptions = {
-              ...minimizer.options.terserOptions,
-              compress: {
-                ...minimizer.options.terserOptions.compress,
-                drop_console: true, // ✅ Remove console.log in production
-                drop_debugger: true,
-              },
+          if (minimizer?.options?.terserOptions) {
+            minimizer.options.terserOptions.compress = {
+              ...minimizer.options.terserOptions.compress,
+              drop_console: true,
+              drop_debugger: true,
             };
           }
           return minimizer;
         }),
       };
-      
-      // ✅ Optimize bundle splitting
+
       if (!isServer) {
         config.optimization.splitChunks = {
           chunks: 'all',
           cacheGroups: {
-            default: false,
-            vendors: false,
-            // ✅ Framework chunk (React, Next.js core)
             framework: {
-              chunks: 'all',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
               name: 'framework',
-              test: /(?<!node_modules.*)[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
+              chunks: 'all',
               priority: 40,
               enforce: true,
             },
-            // ✅ UI library chunk
             ui: {
               name: 'ui',
               test: /[\\/]node_modules[\\/](@radix-ui|lucide-react)[\\/]/,
@@ -139,27 +99,25 @@ const nextConfig = {
               priority: 30,
               enforce: true,
             },
-            // ✅ Other libraries
             lib: {
               test: /[\\/]node_modules[\\/]/,
               name: 'lib',
-              priority: 20,
               chunks: 'all',
+              priority: 20,
               minChunks: 1,
             },
-            // ✅ Common components
             common: {
               name: 'common',
               minChunks: 2,
-              priority: 10,
               chunks: 'all',
+              priority: 10,
               enforce: true,
             },
           },
         };
       }
     }
-    
+
     return config;
   },
 };
