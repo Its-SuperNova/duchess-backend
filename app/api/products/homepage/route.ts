@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 // Cache the homepage products for 1 hour (3600 seconds)
 export const revalidate = 3600;
 
-export async function GET(request: NextRequest) {
+// This route is static and doesn't accept dynamic parameters to avoid build-time errors
+// It always returns the 12 featured products for the homepage
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "12");
-    const offset = parseInt(searchParams.get("offset") || "0");
-
     // Fetch complete product data for homepage (only products with show_on_home=true)
+    // Fixed limit of 12 products for homepage - no dynamic parameters needed
     const { data: products, error } = await supabase
       .from("products")
       .select(
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true)
       .eq("show_on_home", true) // Use the new boolean column
       .order("created_at", { ascending: false })
-      .limit(12); // Ensure we only get 12 products
+      .limit(12); // Fixed limit for homepage
 
     if (error) {
       console.error("Error fetching homepage products:", error);

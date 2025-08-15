@@ -25,7 +25,7 @@ interface ApiResponse {
 
 // Unified data fetching function
 const fetchProducts = async (): Promise<ProcessedProduct[]> => {
-  const response = await fetch("/api/products/homepage?limit=12&offset=0");
+  const response = await fetch("/api/products/homepage");
   if (!response.ok) {
     throw new Error("Failed to fetch products");
   }
@@ -45,26 +45,22 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
     error,
     isLoading,
     mutate: mutateProducts,
-  } = useSWR<ProcessedProduct[]>(
-    "/api/products/homepage?limit=12&offset=0",
-    fetchProducts,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 3600000, // 1 hour
-      fallbackData: initialProducts,
-      onSuccess: (data) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.log("Products loaded successfully:", data.length);
-        }
-      },
-      onError: (error) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("SWR error:", error);
-        }
-      },
-    }
-  );
+  } = useSWR<ProcessedProduct[]>("/api/products/homepage", fetchProducts, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 3600000, // 1 hour
+    fallbackData: initialProducts,
+    onSuccess: (data) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("Products loaded successfully:", data.length);
+      }
+    },
+    onError: (error) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("SWR error:", error);
+      }
+    },
+  });
 
   // Get layout information for responsive padding
   let getLayoutClasses = () => ({
