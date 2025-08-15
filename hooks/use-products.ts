@@ -12,10 +12,18 @@ const fetcher = async (url: string) => {
 };
 
 // Custom hook for fetching products with caching
-export function useProducts() {
+export function useProducts({
+  limit = 12,
+  offset = 0,
+  initialData,
+}: { limit?: number; offset?: number; initialData?: any[] } = {}) {
+  const key = `/api/products?limit=${Math.max(
+    1,
+    Math.min(100, limit)
+  )}&offset=${Math.max(0, offset)}`;
+
   const { data, error, isLoading, mutate } = useSWR<ProcessedProduct[]>(
-    // Request a smaller initial page to reduce payload and memory on mobile
-    "/api/products?limit=12&offset=0",
+    key,
     fetcher,
     {
       // Avoid aggressive background refresh on mobile; rely on edge caching
@@ -28,6 +36,7 @@ export function useProducts() {
       revalidateIfStale: true,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
+      fallbackData: initialData as any,
     }
   );
 

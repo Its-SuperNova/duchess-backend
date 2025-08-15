@@ -7,8 +7,7 @@ import { useSession } from "next-auth/react";
 import { useCart } from "@/context/cart-context";
 import { useFavorites } from "@/context/favorites-context";
 import { User } from "lucide-react";
-import { Heart, Magnifer, UserCheck, Bag5 } from "@solar-icons/react";
-import { IoCloseOutline } from "react-icons/io5";
+import { Heart, UserCheck, Bag5 } from "@solar-icons/react";
 import { useState, useEffect } from "react";
 import { isUserAdmin } from "@/lib/auth-utils";
 
@@ -18,8 +17,6 @@ export default function UserHeader() {
   const { data: session } = useSession();
   const { cart } = useCart();
   const { favorites } = useFavorites();
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Check if we're on the checkout page
@@ -36,24 +33,7 @@ export default function UserHeader() {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-      setIsSearchExpanded(false);
-    }
-  };
-
-  const handleSearchClick = () => {
-    setIsSearchExpanded(true);
-  };
-
-  const handleSearchBlur = () => {
-    if (!searchQuery.trim()) {
-      setIsSearchExpanded(false);
-    }
-  };
+  // Search removed from header
 
   useEffect(() => {
     let isMounted = true;
@@ -141,66 +121,7 @@ export default function UserHeader() {
                   </Link>
                 </>
               )}
-              {/* Desktop Search - Hidden on Mobile and Checkout */}
-              {!isCheckoutPage && (
-                <div
-                  className={`relative transition-all duration-300 ease-in-out hidden md:block ${
-                    isSearchExpanded ? "w-64" : "w-8"
-                  }`}
-                >
-                  <form onSubmit={handleSearchSubmit} className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Enter Search"
-                      className={`h-8 bg-transparent border-b border-gray-300 focus:outline-none focus:border-black transition-all duration-300 ${
-                        isSearchExpanded ? "w-full pr-8" : "w-0 opacity-0"
-                      }`}
-                      onBlur={handleSearchBlur}
-                      style={{
-                        width: isSearchExpanded ? "calc(100% - 64px)" : "0px",
-                        marginLeft: "36px",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSearchClick}
-                      className={`absolute left-0 top-1/2 transform -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-black ${
-                        isSearchExpanded ? "pointer-events-none" : ""
-                      }`}
-                      aria-label="Search"
-                    >
-                      <Magnifer className="h-5 w-5 text-black" />
-                    </button>
-                    {isSearchExpanded && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsSearchExpanded(false);
-                          setSearchQuery("");
-                        }}
-                        className="absolute right-0 top-1/2 transform -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
-                        aria-label="Close search"
-                      >
-                        <IoCloseOutline className="h-5 w-5" />
-                      </button>
-                    )}
-                  </form>
-                </div>
-              )}
-
-              {/* Mobile Search Icon - Hidden on Desktop and Checkout */}
-              {!isCheckoutPage && (
-                <button
-                  type="button"
-                  onClick={handleSearchClick}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-black md:hidden"
-                  aria-label="Search"
-                >
-                  <Magnifer className="h-5 w-5" />
-                </button>
-              )}
+              {/* Search removed from header */}
 
               {/* Favorites - Hidden on Mobile and Checkout */}
               {!isCheckoutPage && (
@@ -254,41 +175,7 @@ export default function UserHeader() {
             </div>
           </div>
 
-          {/* Mobile Search Expansion - Slides down from header, hidden on checkout */}
-          {!isCheckoutPage && (
-            <div
-              className={`transition-all duration-300 ease-in-out overflow-hidden md:hidden ${
-                isSearchExpanded ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <div className="pb-4">
-                <form onSubmit={handleSearchSubmit} className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Enter Search"
-                    className="w-full h-12 pl-12 pr-12 bg-transparent border-b border-gray-300 focus:outline-none focus:border-black text-base"
-                    onBlur={handleSearchBlur}
-                  />
-                  <Magnifer className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  {isSearchExpanded && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSearchExpanded(false);
-                        setSearchQuery("");
-                      }}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600"
-                      aria-label="Close search"
-                    >
-                      <IoCloseOutline className="h-5 w-5" />
-                    </button>
-                  )}
-                </form>
-              </div>
-            </div>
-          )}
+          {/* Mobile search removed */}
         </div>
       </header>
     </>

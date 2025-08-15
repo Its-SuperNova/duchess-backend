@@ -17,17 +17,17 @@ import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
 
 interface HomeClientProps {
-  // Remove products prop since we'll fetch them dynamically
+  initialProducts?: any[];
 }
 
-export default function HomeClient(props: HomeClientProps) {
+export default function HomeClient({ initialProducts }: HomeClientProps) {
   // Use cached products data with SWR
   const {
     products: rawProducts,
     isLoading: isLoadingProducts,
     error: productsError,
     refresh,
-  } = useProducts();
+  } = useProducts({ limit: 12, offset: 0, initialData: initialProducts });
 
   // Get layout information for responsive padding
   let getLayoutClasses = () => ({
