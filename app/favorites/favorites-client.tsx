@@ -18,7 +18,7 @@ const Lottie = dynamic(() => import("lottie-react"), {
 import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
+// Removed direct import of large Lottie JSON to reduce bundle size
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +43,24 @@ import { Button } from "@/components/ui/button";
 export default function FavoritesClient() {
   const { favorites, removeFromFavorites, isLoading, deletingItems, error } =
     useFavorites();
+  const [zeroPurchaseAnimation, setZeroPurchaseAnimation] = useState(null);
+
+  // Load Lottie animation data dynamically to reduce bundle size
+  useEffect(() => {
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch("/Lottie/Zero Purchase.json");
+        const animationData = await response.json();
+        setZeroPurchaseAnimation(animationData);
+      } catch (error) {
+        console.error("Failed to load zero purchase animation:", error);
+      }
+    };
+
+    if (favorites.length === 0 && !isLoading) {
+      loadAnimation();
+    }
+  }, [favorites.length, isLoading]);
   const { addToCart } = useCart();
   const isMobile = useIsMobile();
 
@@ -262,11 +280,17 @@ export default function FavoritesClient() {
             <div className="flex flex-col items-center justify-center py-6 px-6">
               <div className="mb-4 flex justify-center">
                 <div className="w-[400px] h-[300px] md:h-[400px] md:w-[500px]">
-                  <Lottie
-                    animationData={zeroPurchaseAnimation}
-                    loop={true}
-                    autoplay={true}
-                  />
+                  {zeroPurchaseAnimation ? (
+                    <Lottie
+                      animationData={zeroPurchaseAnimation}
+                      loop={true}
+                      autoplay={true}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
+                    </div>
+                  )}
                 </div>
               </div>
               <h2 className="text-xl font-semibold text-gray-700 mb-2">

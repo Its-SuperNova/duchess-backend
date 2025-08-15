@@ -3,7 +3,7 @@
 import { getActiveProducts } from "@/lib/actions/products";
 import ProductCard from "@/components/productcard";
 import { processProductForHomepage } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -60,6 +60,11 @@ export default function ProductsPage({
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+  const PAGE_SIZE = 8; // Load 8 at a time
+  const MAX_ITEMS = 48; // Load up to 48 items in total
 
   // Handle async searchParams
   useEffect(() => {
@@ -86,9 +91,9 @@ export default function ProductsPage({
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        // Fetch paginated products for listing; we can later add Load More
+        // Initial page
         const fetchedProducts = await getActiveProducts({
-          limit: 24,
+          limit: PAGE_SIZE,
           offset: 0,
         });
         const processedProducts = fetchedProducts.map(
@@ -106,6 +111,12 @@ export default function ProductsPage({
 
         setCategories(uniqueCategories);
         setProducts(processedProducts);
+
+        // Determine if more pages remain (respect MAX_ITEMS)
+        setHasMore(
+          processedProducts.length > 0 &&
+            processedProducts.length < Math.min(MAX_ITEMS, 1e9)
+        );
 
         // Apply initial category filter if provided
         if (categoryId) {
@@ -132,6 +143,64 @@ export default function ProductsPage({
 
     fetchProducts();
   }, [categoryId]);
+
+  // Infinite scroll: observe sentinel and load more
+  useEffect(() => {
+    if (!hasMore || isLoading) return;
+    const node = loadMoreTriggerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting) {
+          void loadMoreProducts();
+        }
+      },
+      { rootMargin: "600px 0px 600px 0px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, products.length]);
+
+  const loadMoreProducts = async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const alreadyLoaded = products.length;
+      if (alreadyLoaded >= MAX_ITEMS) {
+        setHasMore(false);
+        return;
+      }
+      const remaining = MAX_ITEMS - alreadyLoaded;
+      const limit = Math.min(PAGE_SIZE, remaining);
+      const next = await getActiveProducts({
+        limit,
+        offset: alreadyLoaded,
+      });
+      const processed = next.map(processProductForHomepage);
+
+      // Merge without duplicates (by id)
+      const existingIds = new Set(products.map((p) => p.id));
+      const merged = [
+        ...products,
+        ...processed.filter((p) => !existingIds.has(p.id)),
+      ];
+      setProducts(merged);
+
+      setHasMore(
+        processed.length > 0 &&
+          merged.length < MAX_ITEMS &&
+          processed.length >= limit
+      );
+    } catch (error) {
+      console.error("Error loading more products:", error);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Apply filters
   useEffect(() => {
@@ -726,7 +795,25 @@ export default function ProductsPage({
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} {...product} />
           ))}
+          {isLoadingMore &&
+            Array.from({ length: 8 }).map((_, i) => (
+              <ProductSkeleton key={`sk-${i}`} />
+            ))}
         </div>
+
+        {/* Infinite scroll sentinel */}
+        {hasMore && (
+          <div ref={loadMoreTriggerRef} className="h-10" aria-hidden="true" />
+        )}
+
+        {/* Fallback button for manual loading */}
+        {hasMore && !isLoadingMore && (
+          <div className="flex justify-center my-8">
+            <Button onClick={() => void loadMoreProducts()} variant="outline">
+              Load more
+            </Button>
+          </div>
+        )}
 
         {/* No Results Message */}
         {filteredProducts.length === 0 &&

@@ -19,7 +19,7 @@ const Lottie = dynamic(() => import("lottie-react"), {
 });
 import { useCart } from "@/context/cart-context";
 import { useRouter } from "next/navigation";
-import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
+// Removed direct import of large Lottie JSON to reduce bundle size
 // Dynamically import Icon to reduce initial bundle size
 const Icon = dynamic(
   () => import("@iconify/react").then((m) => ({ default: m.Icon })),
@@ -34,8 +34,24 @@ const Icon = dynamic(
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart } = useCart();
   const router = useRouter();
+  const [zeroPurchaseAnimation, setZeroPurchaseAnimation] = useState(null);
 
+  // Load Lottie animation data dynamically to reduce bundle size
+  useEffect(() => {
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch("/Lottie/Zero Purchase.json");
+        const animationData = await response.json();
+        setZeroPurchaseAnimation(animationData);
+      } catch (error) {
+        console.error("Failed to load zero purchase animation:", error);
+      }
+    };
 
+    if (cart.length === 0) {
+      loadAnimation();
+    }
+  }, [cart.length]);
 
   // Render cart items component
   const renderCartItems = () => {
@@ -43,11 +59,17 @@ export default function CartPage() {
       return (
         <div className="flex flex-col items-center justify-center text-center px-4 gap-6">
           <div className="w-[400px] h-[300px] md:h-[400px] md:w-[500px] mb-4 lg:mb-6">
-            <Lottie 
-              animationData={zeroPurchaseAnimation} 
-              loop={true} 
-              autoplay={true}
-            />
+            {zeroPurchaseAnimation ? (
+              <Lottie
+                animationData={zeroPurchaseAnimation}
+                loop={true}
+                autoplay={true}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+                <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-center justify-center">
             <h3 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2">

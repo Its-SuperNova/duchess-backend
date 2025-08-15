@@ -8,13 +8,38 @@ import { useCart } from "@/context/cart-context";
 import { useState, useEffect } from "react";
 import { Coupon } from "@/lib/supabase";
 import { toast } from "sonner";
-import Lottie from "lottie-react";
-import couponAnimation from "@/public/Lottie/Coupon.json";
+import dynamic from "next/dynamic";
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-16 h-16 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
+// Removed direct import of large Lottie JSON to reduce bundle size
 
 export default function CouponsClient() {
   const { cart, getSubtotal } = useCart();
   const [couponCode, setCouponCode] = useState("");
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponAnimation, setCouponAnimation] = useState(null);
+
+  // Load Lottie animation data dynamically to reduce bundle size
+  useEffect(() => {
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch("/Lottie/Coupon.json");
+        const animationData = await response.json();
+        setCouponAnimation(animationData);
+      } catch (error) {
+        console.error("Failed to load coupon animation:", error);
+      }
+    };
+
+    loadAnimation();
+  }, []);
   const [loading, setLoading] = useState(true);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
 
@@ -227,11 +252,17 @@ export default function CouponsClient() {
               <div className="col-span-full text-center pb-8">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-[280px] md:w-[400px] h-[250px] md:h-[350px]">
-                    <Lottie
-                      animationData={couponAnimation}
-                      loop={true}
-                      autoplay={true}
-                    />
+                    {couponAnimation ? (
+                      <Lottie
+                        animationData={couponAnimation}
+                        loop={true}
+                        autoplay={true}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+                        <div className="w-20 h-20 bg-gray-300 rounded-full"></div>
+                      </div>
+                    )}
                   </div>
                   <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">

@@ -3,8 +3,16 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { FaStar, FaHeart, FaRegHeart, FaShare } from "react-icons/fa";
-import Lottie from "lottie-react";
-import successAnimation from "@/public/Lottie/Success.json";
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-8 h-8 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
+// Removed direct import of large Lottie JSON to reduce bundle size
 
 import { useParams, useRouter } from "next/navigation";
 import type { Product } from "@/context/favorites-context";
@@ -178,6 +186,22 @@ export default function ProductPage() {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [successAnimation, setSuccessAnimation] = useState(null);
+
+  // Load Lottie animation data dynamically to reduce bundle size
+  useEffect(() => {
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch("/Lottie/Success.json");
+        const animationData = await response.json();
+        setSuccessAnimation(animationData);
+      } catch (error) {
+        console.error("Failed to load success animation:", error);
+      }
+    };
+
+    loadAnimation();
+  }, []);
 
   const { addToCart, cart } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
@@ -783,12 +807,16 @@ export default function ProductPage() {
                   ) : isAddedToCart ? (
                     <>
                       <div className="w-5 h-5 mr-2">
-                        <Lottie
-                          animationData={successAnimation}
-                          loop={false}
-                          autoplay={true}
-                          style={{ width: "100%", height: "100%" }}
-                        />
+                        {successAnimation ? (
+                          <Lottie
+                            animationData={successAnimation}
+                            loop={false}
+                            autoplay={true}
+                            style={{ width: "100%", height: "100%" }}
+                          />
+                        ) : (
+                          <Check className="w-5 h-5 text-white" />
+                        )}
                       </div>
                       Added to Cart!
                     </>

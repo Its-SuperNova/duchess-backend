@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
 import Image from "next/image";
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
@@ -216,24 +217,34 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
               ) : products.length === 0 ? (
                 <ProductsEmpty />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
-                  {products.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      id={product.id}
-                      name={product.name}
-                      rating={product.rating}
-                      imageUrl={product.imageUrl}
-                      price={product.price}
-                      originalPrice={product.originalPrice}
-                      isVeg={product.isVeg}
-                      description={product.description}
-                      category={product.category}
-                      hasOffer={product.hasOffer}
-                      offerPercentage={product.offerPercentage}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+                    {products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        id={product.id}
+                        name={product.name}
+                        rating={product.rating}
+                        imageUrl={product.imageUrl}
+                        price={product.price}
+                        originalPrice={product.originalPrice}
+                        isVeg={product.isVeg}
+                        description={product.description}
+                        category={product.category}
+                        hasOffer={product.hasOffer}
+                        offerPercentage={product.offerPercentage}
+                      />
+                    ))}
+                  </div>
+                  {/* View All Products Button */}
+                  <div className="w-full flex justify-center mt-6">
+                    <Link href="/products">
+                      <Button variant="outline" className="px-6">
+                        View all products
+                      </Button>
+                    </Link>
+                  </div>
+                </>
               )}
             </>
           )}
