@@ -1,23 +1,20 @@
 "use client";
 
 import { useMemo, useEffect, useState } from "react";
-import Hero from "@/components/block/hero";
+import { ProcessedProduct } from "@/lib/utils";
 import ProductCard from "@/components/productcard";
+import { processProductForHomepage } from "@/lib/utils";
+import Hero from "@/components/block/hero";
 import Image from "next/image";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
-import {
-  processProductForHomepage,
-  isProductInStock,
-  type ProcessedProduct,
-} from "@/lib/utils";
 import { toast } from "sonner";
 import { useLayout } from "@/context/layout-context";
 
 interface HomeClientProps {
-  initialProducts?: any[];
+  initialProducts: ProcessedProduct[];
 }
 
 export default function HomeClient({ initialProducts }: HomeClientProps) {
@@ -27,38 +24,34 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
 
-  // Fetch complete product data client-side after initial render
   useEffect(() => {
     const fetchCompleteProducts = async () => {
       try {
         setIsLoadingProducts(true);
         setProductsError(null);
-
-        const response = await fetch("/api/products/homepage?limit=8&offset=0");
+        const response = await fetch(
+          "/api/products/homepage?limit=12&offset=0"
+        ); // Always fetch 12 products
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
-
         const data = await response.json();
         if (data.success && data.products) {
-          const processedProducts = data.products
-            .filter((product: any) => isProductInStock(product))
-            .map((product: any) => processProductForHomepage(product));
-
+          console.log("Raw API response:", data.products);
+          // Process the complete product data to include images, prices, etc.
+          const processedProducts = data.products.map((product: any) =>
+            processProductForHomepage(product)
+          );
+          console.log("Processed products:", processedProducts);
           setProducts(processedProducts);
         }
       } catch (error) {
         console.error("Error fetching complete products:", error);
-        setProductsError(
-          error instanceof Error ? error.message : "Failed to fetch products"
-        );
-        // Keep using initial products if client-side fetch fails
+        setProductsError("Failed to load complete product data");
       } finally {
         setIsLoadingProducts(false);
       }
     };
-
-    // Only fetch if we have initial products to enhance
     if (initialProducts && initialProducts.length > 0) {
       fetchCompleteProducts();
     }
@@ -89,16 +82,16 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
       setIsLoadingProducts(true);
       setProductsError(null);
 
-      const response = await fetch("/api/products/homepage?limit=8&offset=0");
+      const response = await fetch("/api/products/homepage?limit=12&offset=0");
       if (!response.ok) {
         throw new Error("Failed to fetch products");
       }
 
       const data = await response.json();
       if (data.success && data.products) {
-        const processedProducts = data.products
-          .filter((product: any) => isProductInStock(product))
-          .map((product: any) => processProductForHomepage(product));
+        const processedProducts = data.products.map((product: any) =>
+          processProductForHomepage(product)
+        );
 
         setProducts(processedProducts);
         toast.success("Products loaded successfully");
@@ -245,7 +238,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
                 <div className="h-8 w-48 bg-gray-200 animate-pulse rounded" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
-                {Array.from({ length: 8 }).map((_, index) => (
+                {Array.from({ length: 12 }).map((_, index) => (
                   <ProductSkeleton key={index} />
                 ))}
               </div>
@@ -254,7 +247,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
             <>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                  Popular Products
+                  Featured Products
                 </h2>
               </div>
               {productsError ? (

@@ -337,16 +337,15 @@ export async function getActiveProducts({
           created_at,
           categories (
             id,
-            name,
-            description
+            name
           )
         `
           )
-          .eq("is_active", true as any)
+          .eq("is_active", true)
           .order("created_at", { ascending: false })
           .range(
             Math.max(0, offset),
-            Math.max(0, offset + Math.max(1, Math.min(100, limit)) - 1)
+            Math.max(0, offset + Math.max(1, Math.min(50, limit)) - 1)
           );
 
         if (error) {
@@ -357,8 +356,8 @@ export async function getActiveProducts({
         return products || [];
       },
       2,
-      2000
-    ); // Retry with backoff
+      5000 // Increased timeout to 5 seconds
+    );
   } catch (error) {
     console.error("Error in getActiveProducts:", error);
     // For homepage, we want to be more lenient and return empty array instead of throwing
@@ -369,9 +368,9 @@ export async function getActiveProducts({
   }
 }
 
-// Get lightweight products for homepage (minimal data to avoid ISR size issues)
+// Get specific featured products for homepage (exact 12 products)
 export async function getHomepageProducts({
-  limit = 8,
+  limit = 12,
   offset = 0,
 }: { limit?: number; offset?: number } = {}) {
   try {
@@ -383,34 +382,40 @@ export async function getHomepageProducts({
             `
             id,
             name,
+            banner_image,
             short_description,
+            long_description,
             is_veg,
             has_offer,
             offer_percentage,
+            weight_options,
+            piece_options,
             selling_type,
             created_at,
             categories (
               id,
-              name
+              name,
+              description
             )
           `
           )
-          .eq("is_active", true as any)
+          .eq("is_active", true)
+          .eq("show_on_home", true) // Use the new boolean column
           .order("created_at", { ascending: false })
-          .range(
-            Math.max(0, offset),
-            Math.max(0, offset + Math.max(1, Math.min(50, limit)) - 1)
-          );
+          .limit(12); // Ensure we only get 12 products
 
         if (error) {
           console.error("Error fetching homepage products:", error);
           throw new Error(`Database error: ${error.message}`);
         }
 
+        console.log("Products with show_on_home=true:", products?.length || 0);
+        console.log("Product names found:", products?.map((p) => p.name) || []);
+
         return products || [];
       },
       2,
-      2000
+      5000 // Increased timeout to 5 seconds
     );
   } catch (error) {
     console.error("Error in getHomepageProducts:", error);

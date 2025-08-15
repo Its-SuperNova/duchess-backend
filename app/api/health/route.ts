@@ -1,38 +1,42 @@
 import { NextResponse } from "next/server";
-import { checkDatabaseHealth } from "@/lib/supabase/admin";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const healthCheck = await checkDatabaseHealth();
+    // Simple health check query
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id")
+      .limit(1);
 
-    return NextResponse.json(
-      {
-        status: healthCheck.isHealthy ? "healthy" : "unhealthy",
-        database: healthCheck,
-        timestamp: new Date().toISOString(),
-        environment: {
-          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
-            ? "configured"
-            : "missing",
-          serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY
-            ? "configured"
-            : "missing",
+    if (error) {
+      console.error("Database health check failed:", error);
+      return NextResponse.json(
+        {
+          status: "unhealthy",
+          database: "error",
+          error: error.message,
+          timestamp: new Date().toISOString(),
         },
-      },
-      {
-        status: healthCheck.isHealthy ? 200 : 503,
-      }
-    );
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({
+      status: "healthy",
+      database: "connected",
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
+    console.error("Health check failed:", error);
     return NextResponse.json(
       {
-        status: "error",
-        message: error instanceof Error ? error.message : "Unknown error",
+        status: "unhealthy",
+        database: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
-      {
-        status: 500,
-      }
+      { status: 503 }
     );
   }
 }

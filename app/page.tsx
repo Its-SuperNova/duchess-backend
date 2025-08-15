@@ -1,17 +1,18 @@
-import HomeClient from "./home-client";
 import { getHomepageProducts } from "@/lib/actions/products";
-import { processHomepageProduct } from "@/lib/utils";
+import { processProductForHomepage } from "@/lib/utils";
+import HomeClient from "./home-client";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Duchess Pastries - Premium Bakery & Pastry Shop",
+  title: "Duchess Pastries - Premium Cakes & Entremets",
   description:
-    "Discover delicious pastries, cakes, and baked goods from Duchess Pastries. Fresh, handmade treats delivered to your doorstep.",
-  keywords: "pastries, cakes, bakery, desserts, delivery, Coimbatore",
+    "Discover our finest selection of cakes, entremets, and premium pastries from Duchess Pastries. Handcrafted with love and delivered fresh to your doorstep.",
+  keywords:
+    "cakes, entremets, pastries, bakery, desserts, delivery, Coimbatore",
   openGraph: {
-    title: "Duchess Pastries - Premium Bakery & Pastry Shop",
+    title: "Duchess Pastries - Premium Cakes & Entremets",
     description:
-      "Discover delicious pastries, cakes, and baked goods from Duchess Pastries. Fresh, handmade treats delivered to your doorstep.",
+      "Discover our finest selection of cakes, entremets, and premium pastries from Duchess Pastries. Handcrafted with love and delivered fresh to your doorstep.",
     type: "website",
     locale: "en_IN",
   },
@@ -19,8 +20,8 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   // Server-side prefetch only minimal product data to avoid ISR size issues
-  const initial = await getHomepageProducts({ limit: 8, offset: 0 });
-  const initialProducts = (initial || []).map(processHomepageProduct);
+  const initial = await getHomepageProducts({ limit: 12, offset: 0 }); // Exactly 12 featured products
+  const initialProducts = (initial || []).map(processProductForHomepage);
 
   return (
     <div>

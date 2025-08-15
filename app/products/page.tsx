@@ -1,6 +1,7 @@
 "use client";
 
 import { getActiveProducts } from "@/lib/actions/products";
+import { getCategories } from "@/lib/actions/categories";
 import ProductCard from "@/components/productcard";
 import { processProductForHomepage } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
@@ -91,6 +92,14 @@ export default function ProductsPage({
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
+
+        // Fetch all categories separately to ensure all are available in filters
+        const allCategories = await getCategories();
+        const activeCategories = allCategories.filter(
+          (cat: any) => cat.is_active
+        );
+        setCategories(activeCategories);
+
         // Initial page
         const fetchedProducts = await getActiveProducts({
           limit: PAGE_SIZE,
@@ -100,16 +109,6 @@ export default function ProductsPage({
           processProductForHomepage
         );
 
-        // Extract unique categories with their IDs
-        const categoriesMap = new Map();
-        processedProducts.forEach((product) => {
-          if (product.categories) {
-            categoriesMap.set(product.categories.id, product.categories);
-          }
-        });
-        const uniqueCategories = Array.from(categoriesMap.values());
-
-        setCategories(uniqueCategories);
         setProducts(processedProducts);
 
         // Determine if more pages remain (respect MAX_ITEMS)
@@ -164,6 +163,45 @@ export default function ProductsPage({
     return () => observer.disconnect();
   }, [hasMore, isLoading, products.length]);
 
+  // Apply filters when selectedCategory or selectedVegFilter changes
+  useEffect(() => {
+    let filtered = products;
+
+    // Apply category filter
+    if (selectedCategory) {
+      filtered = filtered.filter(
+        (product) => product.categories?.name === selectedCategory
+      );
+    }
+
+    // Apply dietary filter
+    if (selectedVegFilter === "Vegetarian") {
+      filtered = filtered.filter((product) => product.isVeg === true);
+    } else if (selectedVegFilter === "Non-Vegetarian") {
+      filtered = filtered.filter((product) => product.isVeg === false);
+    }
+
+    // Apply sorting
+    if (selectedSort) {
+      filtered = [...filtered].sort((a, b) => {
+        switch (selectedSort) {
+          case "price-low":
+            return a.price - b.price;
+          case "price-high":
+            return b.price - a.price;
+          case "name-asc":
+            return (a.name || "").localeCompare(b.name || "");
+          case "name-desc":
+            return (b.name || "").localeCompare(a.name || "");
+          default:
+            return 0;
+        }
+      });
+    }
+
+    setFilteredProducts(filtered);
+  }, [products, selectedCategory, selectedVegFilter, selectedSort]);
+
   const loadMoreProducts = async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
@@ -201,47 +239,6 @@ export default function ProductsPage({
       setIsLoadingMore(false);
     }
   };
-
-  // Apply filters
-  useEffect(() => {
-    let filtered = products;
-
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter(
-        (product) => product.category === selectedCategory
-      );
-    }
-
-    // Filter by veg/non-veg
-    if (selectedVegFilter) {
-      filtered = filtered.filter((product) => {
-        if (selectedVegFilter === "veg") return product.isVeg === true;
-        if (selectedVegFilter === "non-veg") return product.isVeg === false;
-        return true;
-      });
-    }
-
-    // Apply sorting
-    if (selectedSort) {
-      filtered = [...filtered].sort((a, b) => {
-        switch (selectedSort) {
-          case "price-low":
-            return a.price - b.price;
-          case "price-high":
-            return b.price - a.price;
-          case "name-asc":
-            return (a.name || "").localeCompare(b.name || "");
-          case "name-desc":
-            return (b.name || "").localeCompare(a.name || "");
-          default:
-            return 0;
-        }
-      });
-    }
-
-    setFilteredProducts(filtered);
-  }, [products, selectedCategory, selectedVegFilter, selectedSort]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -691,8 +688,11 @@ export default function ProductsPage({
                           <div className="grid grid-cols-1 gap-2">
                             {[
                               { value: "", label: "All" },
-                              { value: "veg", label: "Vegetarian" },
-                              { value: "non-veg", label: "Non-Vegetarian" },
+                              { value: "Vegetarian", label: "Vegetarian" },
+                              {
+                                value: "Non-Vegetarian",
+                                label: "Non-Vegetarian",
+                              },
                             ].map((option) => (
                               <Button
                                 key={option.value}
@@ -1047,8 +1047,8 @@ export default function ProductsPage({
                   <div className="px-4 pb-4 space-y-2">
                     {[
                       { value: "", label: "All" },
-                      { value: "veg", label: "Vegetarian" },
-                      { value: "non-veg", label: "Non-Vegetarian" },
+                      { value: "Vegetarian", label: "Vegetarian" },
+                      { value: "Non-Vegetarian", label: "Non-Vegetarian" },
                     ].map((option) => (
                       <button
                         key={option.value}

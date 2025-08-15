@@ -4,10 +4,10 @@ import { supabase } from "@/lib/supabase";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "8");
+    const limit = parseInt(searchParams.get("limit") || "12");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // Fetch complete product data for homepage
+    // Fetch complete product data for homepage (only products with show_on_home=true)
     const { data: products, error } = await supabase
       .from("products")
       .select(
@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
         banner_image,
         additional_images,
         short_description,
+        long_description,
         is_veg,
         has_offer,
         offer_percentage,
@@ -32,8 +33,9 @@ export async function GET(request: NextRequest) {
       `
       )
       .eq("is_active", true)
+      .eq("show_on_home", true) // Use the new boolean column
       .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .limit(12); // Ensure we only get 12 products
 
     if (error) {
       console.error("Error fetching homepage products:", error);
@@ -42,6 +44,12 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log("API: Products with show_on_home=true:", products?.length || 0);
+    console.log(
+      "API: Product names found:",
+      products?.map((p) => p.name) || []
+    );
 
     return NextResponse.json({
       success: true,

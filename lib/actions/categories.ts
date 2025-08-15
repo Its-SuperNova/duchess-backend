@@ -6,19 +6,24 @@ import { revalidatePath } from "next/cache";
 // Get all categories
 export async function getCategories() {
   try {
-    return await withRetry(async () => {
-      const { data: categories, error } = await supabaseAdmin
-        .from("categories")
-        .select("id, name, image, description, is_active")
-        .order("name", { ascending: true });
+    return await withRetry(
+      async () => {
+        const { data: categories, error } = await supabaseAdmin
+          .from("categories")
+          .select("id, name, image, description, is_active")
+          .order("name", { ascending: true })
+          .limit(50); // Limit to prevent large queries
 
-      if (error) {
-        console.error("Error fetching categories:", error);
-        throw new Error(`Database error: ${error.message}`);
-      }
+        if (error) {
+          console.error("Error fetching categories:", error);
+          throw new Error(`Database error: ${error.message}`);
+        }
 
-      return categories || [];
-    });
+        return categories || [];
+      },
+      2,
+      5000
+    ); // Increased timeout to 5 seconds
   } catch (error) {
     console.error("Error in getCategories:", error);
     // Return empty array for graceful fallback

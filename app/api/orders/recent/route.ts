@@ -40,8 +40,6 @@ export async function GET() {
         sgst,
         is_coupon,
         estimated_time_delivery,
-        distance,
-        duration,
         delivery_zone,
         payment_method,
         notes,
