@@ -36,10 +36,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
     <div
       className={`w-full overflow-x-hidden bg-white dark:bg-gray-900 ${homePadding}`}
     >
-      {/* Hero Section */}
-      <div className="w-full">
-        <Hero />
-      </div>
+
 
       {/* Products Section */}
       <div className="w-full">
