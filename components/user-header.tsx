@@ -82,7 +82,20 @@ export default function UserHeader() {
         <div className="mx-auto w-full max-w-[1200px] px-4">
           <div className="py-2 text-center">
             <p className="text-xs md:text-sm text-gray-600">
-              We also accept orders over the phone – Just call us!
+              We also accept orders over the phone – Call us at{" "}
+              <a
+                href="tel:9080022593"
+                className="underline hover:text-gray-800 transition-colors"
+              >
+                9080022593
+              </a>{" "}
+              or{" "}
+              <a
+                href="tel:8248654804"
+                className="underline hover:text-gray-800 transition-colors"
+              >
+                8248654804
+              </a>
             </p>
           </div>
         </div>
