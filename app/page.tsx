@@ -25,5 +25,5 @@ export default async function Home() {
   const initial = await getHomepageProducts({ limit: 12, offset: 0 }); // Exactly 12 featured products
   const initialProducts = (initial || []).map(processProductForHomepage);
 
-  return <HomeClient initialProducts={initialProducts} />;
+  return <HomeClient />;
 }
