@@ -84,7 +84,7 @@ export function processProductForHomepage(dbProduct: any): ProcessedProduct {
     id: dbProduct.id,
     name: dbProduct.name,
     rating: generateRating(), // TODO: Replace with actual ratings when available
-    imageUrl: dbProduct.banner_image || "/placeholder.svg",
+    imageUrl: null, // TESTING: Remove image for testing
     price: price,
     originalPrice: originalPrice,
     isVeg: dbProduct.is_veg,
