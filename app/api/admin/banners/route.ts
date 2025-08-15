@@ -94,10 +94,13 @@ export async function POST(request: NextRequest) {
           result = { action: "updated", data };
         } else {
           // Create new banner
-          bannerData.created_at = new Date().toISOString();
+          const insertData = {
+            ...bannerData,
+            created_at: new Date().toISOString(),
+          };
           const { data, error } = await supabase
             .from("banners")
-            .insert(bannerData)
+            .insert(insertData)
             .select()
             .single();
 
@@ -108,16 +111,18 @@ export async function POST(request: NextRequest) {
         results.push(result);
       } catch (error) {
         console.error(`Error processing banner:`, error);
-        errors.push(`Banner ${banner.position || "unknown"}: ${error.message}`);
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        errors.push(`Banner ${banner.position || "unknown"}: ${errorMessage}`);
       }
     }
 
     if (errors.length > 0) {
       return NextResponse.json(
-        { 
+        {
           message: "Some banners failed to save",
           results,
-          errors 
+          errors,
         },
         { status: 207 } // Multi-status
       );
@@ -127,11 +132,12 @@ export async function POST(request: NextRequest) {
       message: "Banners saved successfully",
       results,
     });
-
   } catch (error) {
     console.error("Error saving banners:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -163,8 +169,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ banners: data });
   } catch (error) {
     console.error("Error fetching banners:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }

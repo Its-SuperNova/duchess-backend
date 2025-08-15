@@ -16,10 +16,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useRef, useEffect } from "react";
 
+interface Slide {
+  id: number;
+  title: string;
+  desktopImage: File | null;
+  desktopImageUrl: string;
+  mobileImage: File | null;
+  mobileImageUrl: string;
+  isClickable: boolean;
+  redirectUrl: string;
+}
+
 export default function HeroSliderPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("desktop");
-  const [slides, setSlides] = useState([
+  const [slides, setSlides] = useState<Slide[]>([
     {
       id: 1,
       title: "Slide 1",
@@ -93,7 +104,7 @@ export default function HeroSliderPage() {
     input.click();
   };
 
-  const getCurrentImageData = (slide: any) => {
+  const getCurrentImageData = (slide: Slide) => {
     if (activeTab === "desktop") {
       return {
         image: slide.desktopImage,
@@ -356,7 +367,7 @@ export default function HeroSliderPage() {
 
       if (response.ok && result.banners) {
         // Convert database banners to slides format
-        const loadedSlides = result.banners.map((banner: any) => ({
+        const loadedSlides: Slide[] = result.banners.map((banner: any) => ({
           id: banner.position,
           title: `Slide ${banner.position}`,
           desktopImage: null,

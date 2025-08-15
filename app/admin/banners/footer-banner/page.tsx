@@ -15,10 +15,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 
+interface Banner {
+  image: File | null;
+  imageUrl: string;
+  isClickable: boolean;
+  redirectUrl: string;
+}
+
+interface BannersState {
+  desktop: {
+    banner1: Banner;
+  };
+  mobile: {
+    banner1: Banner;
+  };
+}
+
 export default function FooterBannerPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("desktop");
-  const [banners, setBanners] = useState({
+  const [banners, setBanners] = useState<BannersState>({
     desktop: {
       banner1: {
         image: null,
@@ -132,7 +148,7 @@ export default function FooterBannerPage() {
   const renderBanner = (
     deviceType: "desktop" | "mobile",
     bannerKey: string,
-    bannerData: any,
+    bannerData: Banner,
     bannerTitle: string
   ) => {
     // For mobile banners, use a different layout with image on left and options on right
