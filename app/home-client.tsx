@@ -70,6 +70,11 @@ export default function HomeClient({
     }
   );
 
+  // iOS-specific memory management
+  const isIOS =
+    typeof window !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   // Memoize products to prevent unnecessary re-renders and crashes
   const memoizedProducts = useMemo(() => {
     if (!products || products.length === 0) return [];
@@ -88,19 +93,23 @@ export default function HomeClient({
           product.isVeg !== undefined
       );
 
-      // Limit to exactly 12 products to prevent memory issues
-      return validProducts.slice(0, 12);
+      // iOS: Limit to 8 products to prevent memory issues
+      // Android: Show all 12 products
+      const maxProducts = isIOS ? 8 : 12;
+      return validProducts.slice(0, maxProducts);
     } catch (error) {
       console.error("Error processing products:", error);
       // Return empty array if processing fails to prevent crash
       return [];
     }
-  }, [products]);
+  }, [products, isIOS]);
 
   // Add performance monitoring for debugging
   useEffect(() => {
     if (memoizedProducts.length > 0) {
-      console.log(`Rendering ${memoizedProducts.length} products on homepage`);
+      console.log(
+        `Rendering ${memoizedProducts.length} products on homepage (iOS: ${isIOS})`
+      );
       // Monitor memory usage in development
       if (
         process.env.NODE_ENV === "development" &&
@@ -109,9 +118,13 @@ export default function HomeClient({
         if ("memory" in performance) {
           console.log("Memory usage:", (performance as any).memory);
         }
+        // iOS-specific memory warning
+        if (isIOS) {
+          console.warn("iOS detected - using memory-optimized rendering");
+        }
       }
     }
-  }, [memoizedProducts.length]);
+  }, [memoizedProducts.length, isIOS]);
 
   const retryFetch = async () => {
     try {
@@ -150,14 +163,14 @@ export default function HomeClient({
           ) : (
             <>
               {isLoading ? (
-                // Show skeletons while loading
+                // Show skeletons while loading (iOS-optimized)
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {Array.from({ length: 12 }).map((_, i) => (
+                  {Array.from({ length: isIOS ? 8 : 12 }).map((_, i) => (
                     <ProductSkeleton key={i} />
                   ))}
                 </div>
               ) : (
-                // Show all 12 products at once with error boundary protection
+                // Show products with iOS-specific optimization
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {memoizedProducts.map((p, i) => {
                     try {
@@ -165,7 +178,7 @@ export default function HomeClient({
                         <ProductCard
                           key={p.id}
                           {...p}
-                          priority={i < 4} // preload first 4 images
+                          priority={i < (isIOS ? 2 : 4)} // iOS: preload only 2, Android: preload 4
                         />
                       );
                     } catch (error) {
