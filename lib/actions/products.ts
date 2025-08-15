@@ -380,14 +380,15 @@ export async function getHomepageProducts({
           .from("products")
           .select(
             `
-                            id,
-                name,
-                is_veg,
-                weight_options,
-                piece_options,
-                categories (
-                  name
-                )
+            id,
+            name,
+            banner_image,
+            is_veg,
+            weight_options,
+            piece_options,
+            categories (
+              name
+            )
           `
           )
           .eq("is_active", true)

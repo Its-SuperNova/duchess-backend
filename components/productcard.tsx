@@ -128,23 +128,14 @@ const ProductCard = memo(function ProductCard({
       <div className="relative">
         <Link href={`/products/${id}`}>
           <div className="relative h-48 w-full rounded-[28px] overflow-hidden group">
-            {imageUrl ? (
-              <Image
-                src={imageUrl}
-                alt={name}
-                fill
-                className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                priority={priority}
-              />
-            ) : (
-              // TESTING: Gray background instead of image
-              <div className="w-full h-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                <span className="text-gray-500 dark:text-gray-400 text-sm">
-                  No Image
-                </span>
-              </div>
-            )}
+            <Image
+              src={imageUrl || "/placeholder.svg"}
+              alt={name}
+              fill
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              priority={priority}
+            />
           </div>
         </Link>
         {/* Favorite Button */}

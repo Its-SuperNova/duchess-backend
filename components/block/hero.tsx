@@ -14,6 +14,7 @@ import DesktopEmblaSlider from "@/components/block/desktop-embla-banner-slider";
 interface Category {
   id: string;
   name: string;
+  image: string | null;
 }
 
 const Hero = memo(() => {
@@ -160,9 +161,41 @@ const Hero = memo(() => {
   );
 
   // Memoize the category image mapping to prevent recreation on every render
-  // TESTING: No image mapping needed
+  const categoryImageMap = useMemo(
+    () => ({
+      cakes: "/images/categories/cake.png",
+      cupcakes: "/images/categories/cupcake.png",
+      cookies: "/images/categories/cookies.png",
+      breads: "/images/categories/bread.png",
+      pastries: "/images/categories/croissant.png",
+      donuts: "/images/categories/donut.png",
+      brownies: "/images/categories/brownie.png",
+      tarts: "/images/categories/tart.png",
+      macarons: "/images/categories/macaron.png",
+      croissants: "/images/categories/croissant.png",
+      pies: "/images/categories/pie.png",
+      muffins: "/images/categories/muffin.png",
+      sweets: "/images/categories/sweets-bowl.png",
+      chocolates: "/images/categories/chocolate-bar.png",
+    }),
+    []
+  );
 
-  // TESTING: No image fetching for categories
+  // Function to get fallback image for categories
+  const getCategoryImage = useCallback(
+    (category: Category) => {
+      if (category.image) {
+        return category.image;
+      }
+
+      const categoryKey = category.name.toLowerCase();
+      return (
+        categoryImageMap[categoryKey as keyof typeof categoryImageMap] ||
+        "/images/categories/sweets-bowl.png"
+      );
+    },
+    [categoryImageMap]
+  );
 
   return (
     <div className="w-full">
@@ -199,11 +232,14 @@ const Hero = memo(() => {
                   key={category.id}
                 >
                   <div className="flex flex-col items-center cursor-pointer flex-shrink-0 w-24 group">
-                    <div className="w-20 h-20 relative bg-gray-300 dark:bg-gray-600 rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
-                      {/* TESTING: Gray background instead of image */}
-                      <span className="text-gray-500 dark:text-gray-400 text-xs text-center">
-                        No Image
-                      </span>
+                    <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
+                      <Image
+                        src={getCategoryImage(category) || "/placeholder.svg"}
+                        alt={category.name}
+                        width={80}
+                        height={80}
+                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+                      />
                     </div>
                     <p className="text-sm font-medium mt-3 text-center">
                       {category.name}
@@ -246,11 +282,14 @@ const Hero = memo(() => {
                   key={category.id}
                 >
                   <div className="flex flex-col items-center cursor-pointer flex-shrink-0 min-w-[72px] group">
-                    <div className="w-16 h-16 relative bg-gray-300 dark:bg-gray-600 rounded-[20px] shadow-sm overflow-hidden flex items-center justify-center">
-                      {/* TESTING: Gray background instead of image */}
-                      <span className="text-gray-500 dark:text-gray-400 text-xs text-center">
-                        No Image
-                      </span>
+                    <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-[20px] shadow-sm overflow-hidden flex items-center justify-center">
+                      <Image
+                        src={getCategoryImage(category) || "/placeholder.svg"}
+                        alt={category.name}
+                        width={64}
+                        height={64}
+                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+                      />
                     </div>
                     <p className="text-sm mt-2 text-center line-clamp-2 max-w-[72px]">
                       {category.name}

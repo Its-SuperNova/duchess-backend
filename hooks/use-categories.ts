@@ -4,6 +4,7 @@ import useSWR from "swr";
 interface Category {
   id: string;
   name: string;
+  image: string | null;
 }
 
 // Fetcher function for SWR

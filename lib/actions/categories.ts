@@ -10,7 +10,7 @@ export async function getCategories() {
       async () => {
         const { data: categories, error } = await supabaseAdmin
           .from("categories")
-          .select("id, name") // TESTING: Remove image fetching
+          .select("id, name, image") // Only fetch essential columns
           .eq("is_active", true) // Filter active categories on server side
           .order("name", { ascending: true })
           .limit(50); // Limit to prevent large queries
