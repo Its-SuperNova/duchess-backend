@@ -97,6 +97,26 @@ export function processProductForHomepage(dbProduct: any): ProcessedProduct {
   };
 }
 
+// Convert database product to lightweight ProcessedProduct for homepage (no heavy data)
+export function processHomepageProduct(dbProduct: any): ProcessedProduct {
+  return {
+    id: dbProduct.id,
+    name: dbProduct.name,
+    rating: generateRating(), // TODO: Replace with actual ratings when available
+    imageUrl: "/placeholder.svg", // Use placeholder to avoid large image URLs in HTML
+    price: 0, // Will be fetched client-side
+    originalPrice: undefined, // Will be fetched client-side
+    isVeg: dbProduct.is_veg,
+    description:
+      dbProduct.short_description ||
+      "Delicious pastry made with premium ingredients",
+    category: dbProduct.categories?.name || "Pastry",
+    hasOffer: dbProduct.has_offer,
+    offerPercentage: dbProduct.offer_percentage,
+    categories: dbProduct.categories,
+  };
+}
+
 // Check if product is in stock
 export function isProductInStock(product: any): boolean {
   // Check weight options

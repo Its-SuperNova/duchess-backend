@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
 import Image from "next/image";
@@ -8,7 +8,6 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
-import { useProducts } from "@/hooks/use-products";
 import {
   processProductForHomepage,
   isProductInStock,
@@ -22,13 +21,48 @@ interface HomeClientProps {
 }
 
 export default function HomeClient({ initialProducts }: HomeClientProps) {
-  // Use cached products data with SWR
-  const {
-    products: rawProducts,
-    isLoading: isLoadingProducts,
-    error: productsError,
-    refresh,
-  } = useProducts({ limit: 12, offset: 0, initialData: initialProducts });
+  const [products, setProducts] = useState<ProcessedProduct[]>(
+    initialProducts || []
+  );
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
+
+  // Fetch complete product data client-side after initial render
+  useEffect(() => {
+    const fetchCompleteProducts = async () => {
+      try {
+        setIsLoadingProducts(true);
+        setProductsError(null);
+
+        const response = await fetch("/api/products/homepage?limit=8&offset=0");
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data = await response.json();
+        if (data.success && data.products) {
+          const processedProducts = data.products
+            .filter((product: any) => isProductInStock(product))
+            .map((product: any) => processProductForHomepage(product));
+
+          setProducts(processedProducts);
+        }
+      } catch (error) {
+        console.error("Error fetching complete products:", error);
+        setProductsError(
+          error instanceof Error ? error.message : "Failed to fetch products"
+        );
+        // Keep using initial products if client-side fetch fails
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    // Only fetch if we have initial products to enhance
+    if (initialProducts && initialProducts.length > 0) {
+      fetchCompleteProducts();
+    }
+  }, [initialProducts]);
 
   // Get layout information for responsive padding
   let getLayoutClasses = () => ({
@@ -50,22 +84,33 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
     return isVeryCompact ? "px-2" : isCompact ? "px-4" : "";
   }, [isVeryCompact, isCompact]);
 
-  // Process and filter products from cached data
-  const products = useMemo(() => {
-    if (!rawProducts) return [];
-
-    return rawProducts
-      .filter((product) => isProductInStock(product))
-      .map((product) => processProductForHomepage(product));
-  }, [rawProducts]);
-
   const retryFetchProducts = async () => {
     try {
-      await refresh();
-      toast.success("Products loaded successfully");
+      setIsLoadingProducts(true);
+      setProductsError(null);
+
+      const response = await fetch("/api/products/homepage?limit=8&offset=0");
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
+      const data = await response.json();
+      if (data.success && data.products) {
+        const processedProducts = data.products
+          .filter((product: any) => isProductInStock(product))
+          .map((product: any) => processProductForHomepage(product));
+
+        setProducts(processedProducts);
+        toast.success("Products loaded successfully");
+      }
     } catch (error) {
       console.error("Error refreshing products:", error);
+      setProductsError(
+        error instanceof Error ? error.message : "Failed to fetch products"
+      );
       toast.error("Failed to load products");
+    } finally {
+      setIsLoadingProducts(false);
     }
   };
 

@@ -368,3 +368,55 @@ export async function getActiveProducts({
     return [];
   }
 }
+
+// Get lightweight products for homepage (minimal data to avoid ISR size issues)
+export async function getHomepageProducts({
+  limit = 8,
+  offset = 0,
+}: { limit?: number; offset?: number } = {}) {
+  try {
+    return await withRetry(
+      async () => {
+        const { data: products, error } = await supabaseAdmin
+          .from("products")
+          .select(
+            `
+            id,
+            name,
+            short_description,
+            is_veg,
+            has_offer,
+            offer_percentage,
+            selling_type,
+            created_at,
+            categories (
+              id,
+              name
+            )
+          `
+          )
+          .eq("is_active", true as any)
+          .order("created_at", { ascending: false })
+          .range(
+            Math.max(0, offset),
+            Math.max(0, offset + Math.max(1, Math.min(50, limit)) - 1)
+          );
+
+        if (error) {
+          console.error("Error fetching homepage products:", error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        return products || [];
+      },
+      2,
+      2000
+    );
+  } catch (error) {
+    console.error("Error in getHomepageProducts:", error);
+    console.warn(
+      "Returning empty products array due to database connection issues"
+    );
+    return [];
+  }
+}

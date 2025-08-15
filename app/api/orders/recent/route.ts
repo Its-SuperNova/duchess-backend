@@ -34,7 +34,6 @@ export async function GET() {
         status,
         payment_status,
         total_amount,
-        paid_amount,
         discount_amount,
         delivery_charge,
         cgst,
@@ -53,7 +52,7 @@ export async function GET() {
           product_image,
           category,
           quantity,
-          price
+          unit_price
         ),
         addresses!orders_delivery_address_id_fkey (
           id,
