@@ -92,7 +92,6 @@ const DesktopEmblaSlider: React.FC<DesktopEmblaSliderProps> = ({
                   fill
                   className="object-cover rounded-[28px]"
                   priority={banner.id === 1}
-                  unoptimized={true}
                   sizes="(max-width: 1280px) 100vw, 1280px"
                 />
                 <div className="absolute inset-0 bg-black/10 rounded-[28px]"></div>

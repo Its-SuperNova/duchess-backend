@@ -99,12 +99,10 @@ const BannerSlider: React.FC<BannerSliderProps> = ({ className = "" }) => {
                 <Image
                   src={banner.src}
                   alt={banner.alt}
-                  width={800}
-                  height={200}
-                  className="w-full h-auto object-cover rounded-[28px]"
+                  fill
+                  className="object-cover rounded-[28px]"
                   priority={banner.id === 1}
-                  unoptimized={true}
-                  key={`banner-${banner.id}-${Date.now()}`}
+                  sizes="(max-width: 768px) 100vw, 768px"
                 />
                 <div className="absolute inset-0 bg-black/10 rounded-[28px]"></div>
               </div>

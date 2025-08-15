@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState } from "react";
 import { ProcessedProduct } from "@/lib/utils";
 import ProductCard from "@/components/productcard";
 import { processProductForHomepage } from "@/lib/utils";
+import useSWR from "swr";
 import Hero from "@/components/block/hero";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,6 +18,15 @@ interface HomeClientProps {
   initialProducts: ProcessedProduct[];
 }
 
+// Fetcher function for SWR
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Failed to fetch products");
+  }
+  return response.json();
+};
+
 export default function HomeClient({ initialProducts }: HomeClientProps) {
   const [products, setProducts] = useState<ProcessedProduct[]>(
     initialProducts || []
@@ -24,38 +34,72 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCompleteProducts = async () => {
-      try {
-        setIsLoadingProducts(true);
-        setProductsError(null);
-        const response = await fetch(
-          "/api/products/homepage?limit=12&offset=0"
-        ); // Always fetch 12 products
-        if (!response.ok) {
-          throw new Error("Failed to fetch products");
-        }
-        const data = await response.json();
-        if (data.success && data.products) {
-          console.log("Raw API response:", data.products);
-          // Process the complete product data to include images, prices, etc.
-          const processedProducts = data.products.map((product: any) =>
-            processProductForHomepage(product)
-          );
-          console.log("Processed products:", processedProducts);
-          setProducts(processedProducts);
-        }
-      } catch (error) {
-        console.error("Error fetching complete products:", error);
-        setProductsError("Failed to load complete product data");
-      } finally {
-        setIsLoadingProducts(false);
+  // Use SWR for client-side caching
+  const {
+    data: apiData,
+    error: swrError,
+    isLoading: swrLoading,
+  } = useSWR("/api/products/homepage?limit=12&offset=0", fetcher, {
+    revalidateOnFocus: false, // Don't revalidate when window gains focus
+    revalidateOnReconnect: true, // Revalidate when reconnecting
+    dedupingInterval: 3600000, // Dedupe requests within 1 hour
+    fallbackData: { success: true, products: initialProducts },
+    onSuccess: (data) => {
+      if (data.success && data.products) {
+        console.log("Raw API response:", data.products);
+        // Process the complete product data to include images, prices, etc.
+        const processedProducts = data.products.map((product: any) =>
+          processProductForHomepage(product)
+        );
+        console.log("Processed products:", processedProducts);
+        setProducts(processedProducts);
       }
-    };
-    if (initialProducts && initialProducts.length > 0) {
-      fetchCompleteProducts();
+    },
+    onError: (error) => {
+      console.error("SWR error:", error);
+      setProductsError("Failed to load complete product data");
+    },
+  });
+
+  // Fallback to manual fetch if SWR fails
+  useEffect(() => {
+    if (swrError && !apiData) {
+      const fetchCompleteProducts = async () => {
+        try {
+          setIsLoadingProducts(true);
+          setProductsError(null);
+          const response = await fetch(
+            "/api/products/homepage?limit=12&offset=0"
+          );
+          if (!response.ok) {
+            throw new Error("Failed to fetch products");
+          }
+          const data = await response.json();
+          if (data.success && data.products) {
+            console.log("Raw API response:", data.products);
+            // Process the complete product data to include images, prices, etc.
+            const processedProducts = data.products.map((product: any) =>
+              processProductForHomepage(product)
+            );
+            console.log("Processed products:", processedProducts);
+            setProducts(processedProducts);
+          }
+        } catch (error) {
+          console.error("Error fetching complete products:", error);
+          setProductsError("Failed to load complete product data");
+        } finally {
+          setIsLoadingProducts(false);
+        }
+      };
+      if (initialProducts && initialProducts.length > 0) {
+        fetchCompleteProducts();
+      }
     }
-  }, [initialProducts]);
+  }, [swrError, apiData, initialProducts]);
+
+  // Use SWR loading state or fallback to manual loading state
+  const isLoading = swrLoading || isLoadingProducts;
+  const error = swrError || productsError;
 
   // Get layout information for responsive padding
   let getLayoutClasses = () => ({
@@ -231,7 +275,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
       <div className="w-full">
         <section className="px-4 py-8 pt-0 md:pt-8 md:px-6 lg:px-8 w-full">
           {/* Products Grid with Loading States */}
-          {isLoadingProducts ? (
+          {isLoading ? (
             <>
               {/* Loading state for section title */}
               <div className="flex justify-between items-center mb-6">
@@ -250,14 +294,14 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
                   Featured Products
                 </h2>
               </div>
-              {productsError ? (
+              {error ? (
                 <ProductsError />
               ) : products.length === 0 ? (
                 <ProductsEmpty />
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
-                    {products.map((product) => (
+                    {products.map((product, index) => (
                       <ProductCard
                         key={product.id}
                         id={product.id}
@@ -271,6 +315,7 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
                         category={product.category}
                         hasOffer={product.hasOffer}
                         offerPercentage={product.offerPercentage}
+                        priority={index < 4} // Priority load first 4 products
                       />
                     ))}
                   </div>

@@ -3,6 +3,9 @@ import { processProductForHomepage } from "@/lib/utils";
 import HomeClient from "./home-client";
 import { Metadata } from "next";
 
+// Cache this page for 1 hour (3600 seconds)
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "Duchess Pastries - Premium Cakes & Entremets",
   description:
@@ -19,13 +22,8 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  // Server-side prefetch only minimal product data to avoid ISR size issues
   const initial = await getHomepageProducts({ limit: 12, offset: 0 }); // Exactly 12 featured products
   const initialProducts = (initial || []).map(processProductForHomepage);
 
-  return (
-    <div>
-      <HomeClient initialProducts={initialProducts} />
-    </div>
-  );
+  return <HomeClient initialProducts={initialProducts} />;
 }

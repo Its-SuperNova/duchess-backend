@@ -22,6 +22,7 @@ interface ProductCardProps {
   category?: string;
   hasOffer?: boolean;
   offerPercentage?: number;
+  priority?: boolean; // Add priority loading prop
 }
 
 const ProductCard = memo(function ProductCard({
@@ -36,6 +37,7 @@ const ProductCard = memo(function ProductCard({
   category,
   hasOffer,
   offerPercentage,
+  priority,
 }: ProductCardProps) {
   const { toast } = useToast();
   const { addToCart } = useCart();
@@ -131,7 +133,8 @@ const ProductCard = memo(function ProductCard({
               alt={name}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              priority={priority}
             />
           </div>
         </Link>

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// Cache the homepage products for 1 hour (3600 seconds)
+export const revalidate = 3600;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -51,10 +54,18 @@ export async function GET(request: NextRequest) {
       products?.map((p) => p.name) || []
     );
 
-    return NextResponse.json({
+    // Add cache headers for better performance
+    const response = NextResponse.json({
       success: true,
       products: products || [],
     });
+
+    // Set cache headers
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    response.headers.set('CDN-Cache-Control', 'public, max-age=3600');
+    response.headers.set('Vercel-CDN-Cache-Control', 'public, max-age=3600');
+
+    return response;
   } catch (error) {
     console.error("Error in homepage products API:", error);
     return NextResponse.json(
