@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 interface OrderItem {
   id: number;
   product_name: string;
-  price: number;
+  unit_price: number;
   quantity: number;
   product_image: string | null;
   variant: string;
@@ -22,15 +22,16 @@ interface Order {
   id: string;
   order_number: string;
   total_amount: number;
-  subtotal_amount?: number;
+  item_total?: number;
   discount_amount?: number;
-  delivery_charge?: number; // Updated from delivery_fee
-  delivery_fee?: number; // Keep for backward compatibility
+  delivery_charge?: number;
+  cgst?: number;
+  sgst?: number;
   status: string;
   payment_status: string;
-  address_text: string | null;
+  delivery_address_text: string | null;
   note: string | null;
-  notes?: string | null; // New field
+  notes?: string | null;
   coupon_code: string | null;
   created_at: string;
   items: OrderItem[];
@@ -126,7 +127,7 @@ export default function ConfirmationClient() {
         <h1 className="text-xl font-semibold">Order Confirmation</h1>
       </div>
 
-      <div className="container mx-auto px-4 py-4 space-y-4">
+      <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-4">
         {/* Order Confirmation Header Section */}
         <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
           <div className="text-center">
@@ -140,99 +141,6 @@ export default function ConfirmationClient() {
               Thank you for your order. Your order has been received and is
               being prepared.
             </p>
-          </div>
-        </div>
-
-        {/* Order Status Tracker Section */}
-        <div className="bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="text-center mb-4">
-            <div className="text-lg font-bold text-black mb-1">
-              10:20 - 10:30 PM
-            </div>
-            <div className="text-sm text-black">
-              On time •{" "}
-              <span className="text-gray-500">We've got your order!</span>
-            </div>
-          </div>
-
-          {/* Progress Steps */}
-          <div className="flex items-center justify-between">
-            {/* Step 1: Confirmed */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-2">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <span className="text-xs text-gray-600">Confirmed</span>
-            </div>
-
-            {/* Line 1 */}
-            <div className="flex-1 h-1 bg-green-500 mx-2"></div>
-
-            {/* Step 2: Preparation */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 bg-green-100 border-2 border-green-500 rounded-full flex items-center justify-center mb-2">
-                <svg
-                  className="w-6 h-6 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18z"
-                  />
-                </svg>
-              </div>
-              <span className="text-xs text-gray-600">Preparing</span>
-            </div>
-
-            {/* Line 2 */}
-            <div className="flex-1 h-1 bg-green-200 mx-2"></div>
-
-            {/* Step 3: Delivery */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 bg-green-100 border-2 border-green-500 rounded-full flex items-center justify-center mb-2">
-                <svg
-                  className="w-6 h-6 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <span className="text-xs text-gray-600">On Way</span>
-            </div>
-
-            {/* Line 3 */}
-            <div className="flex-1 h-1 bg-green-200 mx-2"></div>
-
-            {/* Step 4: Delivered */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 bg-green-100 border-2 border-green-500 rounded-full flex items-center justify-center mb-2">
-                <svg
-                  className="w-6 h-6 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                  />
-                </svg>
-              </div>
-              <span className="text-xs text-gray-600">Delivered</span>
-            </div>
           </div>
         </div>
 
@@ -277,11 +185,11 @@ export default function ConfirmationClient() {
                   <div className="flex justify-between">
                     <h3 className="font-medium">{item.product_name}</h3>
                     <p className="font-medium">
-                      {formatCurrency(item.price * item.quantity)}
+                      {formatCurrency(item.unit_price * item.quantity)}
                     </p>
                   </div>
                   <p className="text-sm text-gray-500">
-                    {formatCurrency(item.price)} x {item.quantity}
+                    {formatCurrency(item.unit_price)} x {item.quantity}
                   </p>
                   {item.variant && (
                     <p className="text-sm text-gray-500">
@@ -298,24 +206,44 @@ export default function ConfirmationClient() {
         <div className="bg-white rounded-[20px] p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-3">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-gray-600">Subtotal</span>
-              <span>{formatCurrency(order.subtotal_amount)}</span>
-            </div>
-            {order.discount_amount && order.discount_amount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Discount</span>
-                <span>-{formatCurrency(order.discount_amount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-gray-600">Delivery Fee</span>
-              <span>
-                {formatCurrency(order.delivery_charge || order.delivery_fee)}
+              <span className="font-medium">
+                {formatCurrency(order.item_total)}
               </span>
             </div>
+            {order.discount_amount && order.discount_amount > 0 ? (
+              <div className="flex justify-between items-center text-green-600">
+                <span>Discount</span>
+                <span className="font-medium">
+                  -{formatCurrency(order.discount_amount)}
+                </span>
+              </div>
+            ) : null}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Delivery Fee</span>
+              <span className="font-medium">
+                {formatCurrency(order.delivery_charge)}
+              </span>
+            </div>
+            {order.cgst && order.cgst > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">CGST (9%)</span>
+                <span className="font-medium">
+                  {formatCurrency(order.cgst)}
+                </span>
+              </div>
+            )}
+            {order.sgst && order.sgst > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">SGST (9%)</span>
+                <span className="font-medium">
+                  {formatCurrency(order.sgst)}
+                </span>
+              </div>
+            )}
             <Separator className="my-3" />
-            <div className="flex justify-between font-bold text-lg">
+            <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
               <span>{formatCurrency(order.total_amount)}</span>
             </div>
@@ -323,15 +251,15 @@ export default function ConfirmationClient() {
         </div>
 
         {/* Delivery & Notes Section */}
-        {(order.address_text ||
+        {(order.delivery_address_text ||
           order.note ||
           order.notes ||
           order.coupon_code) && (
           <div className="bg-white rounded-[20px] p-6 shadow-sm space-y-4">
-            {order.address_text && (
+            {order.delivery_address_text && (
               <div>
                 <h3 className="font-medium mb-2">Delivery Address</h3>
-                <p className="text-gray-600">{order.address_text}</p>
+                <p className="text-gray-600">{order.delivery_address_text}</p>
               </div>
             )}
 
@@ -355,17 +283,30 @@ export default function ConfirmationClient() {
           </div>
         )}
 
-        {/* Action Buttons Section */}
-        <div className="bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild variant="outline" className="flex-1">
-              <Link href="/products">Continue Shopping</Link>
-            </Button>
-            <Button asChild className="bg-[#523435] hover:bg-[#4a2a2a] flex-1">
-              <Link href="/profile/orders">View All Orders</Link>
+        {/* Action Buttons Section - Desktop */}
+        <div className="hidden md:block bg-white rounded-[20px] p-6 shadow-sm">
+          <div className="flex justify-center">
+            <Button
+              asChild
+              className="bg-[#523435] hover:bg-[#4a2a2a] px-8 py-3"
+            >
+              <Link href="/profile/orders/track">Track Order</Link>
             </Button>
           </div>
         </div>
+
+        {/* Mobile spacing for fixed button */}
+        <div className="md:hidden h-20"></div>
+      </div>
+
+      {/* Fixed Mobile Track Order Button */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50">
+        <Button
+          asChild
+          className="w-full bg-[#523435] hover:bg-[#4a2a2a] py-4 text-lg font-semibold"
+        >
+          <Link href="/profile/orders/track">Track Order</Link>
+        </Button>
       </div>
     </div>
   );

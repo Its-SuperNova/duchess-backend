@@ -299,14 +299,6 @@ export default function CheckoutClient() {
       }
     };
   }, []);
-  const [isAddAddressDrawerOpen, setIsAddAddressDrawerOpen] = useState(false);
-  const [newAddress, setNewAddress] = useState({
-    addressName: "",
-    fullAddress: "",
-    city: "",
-    state: "",
-    pincode: "",
-  });
 
   // Lottie animation state for payment section
   const [paymentAnimationData, setPaymentAnimationData] = useState(null);
@@ -1101,218 +1093,6 @@ export default function CheckoutClient() {
                   </DrawerContent>
                 </Drawer>
               </div>
-
-              {/* Add New Address Drawer */}
-              <Drawer
-                modal={true}
-                open={isAddAddressDrawerOpen}
-                onOpenChange={setIsAddAddressDrawerOpen}
-              >
-                <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
-                  <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <div className="flex items-center justify-between w-full">
-                      <DrawerTitle className="text-[20px]">
-                        Add New Address
-                      </DrawerTitle>
-                      <DrawerClose asChild>
-                        <button
-                          aria-label="Close"
-                          className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
-                        >
-                          <X className="h-5 w-5 text-gray-700" />
-                        </button>
-                      </DrawerClose>
-                    </div>
-                  </DrawerHeader>
-                  <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <div className="space-y-4">
-                      <div>
-                        <label
-                          htmlFor="address-name"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Address Name
-                        </label>
-                        <Input
-                          id="address-name"
-                          placeholder="e.g., Home, Office, etc."
-                          value={newAddress.addressName}
-                          onChange={(e) =>
-                            setNewAddress((prev) => ({
-                              ...prev,
-                              addressName: e.target.value,
-                            }))
-                          }
-                          className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="full-address"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Full Address
-                        </label>
-                        <Textarea
-                          id="full-address"
-                          placeholder="Enter your complete address"
-                          value={newAddress.fullAddress}
-                          onChange={(e) =>
-                            setNewAddress((prev) => ({
-                              ...prev,
-                              fullAddress: e.target.value,
-                            }))
-                          }
-                          className="min-h-[100px] rounded-[12px] placeholder:text-[#C0C0C0]"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label
-                            htmlFor="city"
-                            className="block text-sm font-medium text-gray-700 mb-2"
-                          >
-                            City
-                          </label>
-                          <Input
-                            id="city"
-                            placeholder="City"
-                            value={newAddress.city}
-                            onChange={(e) =>
-                              setNewAddress((prev) => ({
-                                ...prev,
-                                city: e.target.value,
-                              }))
-                            }
-                            className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="state"
-                            className="block text-sm font-medium text-gray-700 mb-2"
-                          >
-                            State
-                          </label>
-                          <Input
-                            id="state"
-                            placeholder="State"
-                            value={newAddress.city}
-                            onChange={(e) =>
-                              setNewAddress((prev) => ({
-                                ...prev,
-                                state: e.target.value,
-                              }))
-                            }
-                            className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="pincode"
-                            className="block text-sm font-medium text-gray-700 mb-2"
-                          >
-                            Pincode
-                          </label>
-                          <Input
-                            id="pincode"
-                            placeholder="Pincode"
-                            value={newAddress.pincode}
-                            onChange={(e) =>
-                              setNewAddress((prev) => ({
-                                ...prev,
-                                pincode: e.target.value,
-                              }))
-                            }
-                            className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Desktop action row */}
-                  <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setNewAddress({
-                          addressName: "",
-                          fullAddress: "",
-                          city: "",
-                          state: "",
-                          pincode: "",
-                        })
-                      }
-                      className="h-9 px-5 rounded-[12px]"
-                    >
-                      Clear
-                    </Button>
-                    <DrawerClose asChild>
-                      <Button
-                        size="sm"
-                        className="h-9 px-5 rounded-[12px]"
-                        onClick={() => {
-                          if (newAddress.fullAddress.trim()) {
-                            setAddressText(newAddress.fullAddress);
-                            setIsAddAddressDrawerOpen(false);
-                            setNewAddress({
-                              addressName: "",
-                              fullAddress: "",
-                              city: "",
-                              state: "",
-                              pincode: "",
-                            });
-                          }
-                        }}
-                      >
-                        Save Address
-                      </Button>
-                    </DrawerClose>
-                  </div>
-                  <DrawerFooter className="pt-2 pb-6 lg:hidden">
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        size="xl"
-                        onClick={() =>
-                          setNewAddress({
-                            addressName: "",
-                            fullAddress: "",
-                            city: "",
-                            state: "",
-                            pincode: "",
-                          })
-                        }
-                        className="flex-1 rounded-[20px] text-[16px]"
-                      >
-                        Clear
-                      </Button>
-                      <DrawerClose asChild>
-                        <Button
-                          size="xl"
-                          className="flex-1 py-5 rounded-[20px] text-[16px]"
-                          onClick={() => {
-                            if (newAddress.fullAddress.trim()) {
-                              setAddressText(newAddress.fullAddress);
-                              setIsAddAddressDrawerOpen(false);
-                              setNewAddress({
-                                addressName: "",
-                                fullAddress: "",
-                                city: "",
-                                state: "",
-                                pincode: "",
-                              });
-                            }
-                          }}
-                        >
-                          Save Address
-                        </Button>
-                      </DrawerClose>
-                    </div>
-                  </DrawerFooter>
-                </DrawerContent>
-              </Drawer>
             </div>
             {/* Coupons Section */}
             <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
@@ -1821,15 +1601,6 @@ export default function CheckoutClient() {
                       ? "Save"
                       : "Add"}
                   </Button>
-                  <DrawerClose asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 px-5 rounded-[12px]"
-                    >
-                      Cancel
-                    </Button>
-                  </DrawerClose>
                 </div>
                 <DrawerFooter className="pt-2 pb-6 lg:hidden">
                   <div className="flex gap-3">
@@ -1898,15 +1669,6 @@ export default function CheckoutClient() {
                         ? "Save"
                         : "Add"}
                     </Button>
-                    <DrawerClose asChild>
-                      <Button
-                        variant="outline"
-                        size="xl"
-                        className="flex-1 py-5 rounded-[20px] text-[16px]"
-                      >
-                        Cancel
-                      </Button>
-                    </DrawerClose>
                   </div>
                 </DrawerFooter>
               </DrawerContent>
@@ -1965,15 +1727,14 @@ export default function CheckoutClient() {
                         <p className="text-gray-500 dark:text-gray-400 text-sm">
                           Add address to proceed with checkout
                         </p>
-                        <button
-                          className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors px-3 py-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                          onClick={() => {
-                            setIsAddAddressDrawerOpen(true);
-                          }}
-                          aria-label="Add delivery address"
-                        >
-                          Add
-                        </button>
+                        <Link href="/addresses/new?returnTo=/checkout">
+                          <button
+                            className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors px-3 py-1 rounded-full hover:bg-blue-50 text-sm font-medium"
+                            aria-label="Add delivery address"
+                          >
+                            Add
+                          </button>
+                        </Link>
                       </>
                     )}
                   </div>

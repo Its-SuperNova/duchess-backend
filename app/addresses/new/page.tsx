@@ -323,7 +323,19 @@ export default function NewAddressPage() {
           className: "bg-green-50 border-green-200 text-green-800",
         });
 
-        router.push("/addresses");
+        // Store the new address data in sessionStorage for checkout page
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(
+            "newAddressData",
+            JSON.stringify({
+              address: result.address,
+              timestamp: Date.now(),
+            })
+          );
+        }
+
+        // Redirect to the returnTo URL or default to addresses page
+        router.push(returnTo);
       } else {
         setError(result.error || "Failed to create address. Please try again.");
       }
@@ -391,7 +403,7 @@ export default function NewAddressPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/addresses">
+            <Link href={returnTo}>
               <div className="bg-white dark:bg-[#202028] p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>

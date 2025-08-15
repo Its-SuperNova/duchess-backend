@@ -141,15 +141,15 @@ export async function POST(request: NextRequest) {
     // Enhanced order data structure (AFTER migration)
     const enhancedOrderData = {
       user_id: user.id,
-      subtotal_amount: subtotalAmount ?? 0,
+      item_total: subtotalAmount ?? 0,
       discount_amount: discountAmount ?? 0,
-      delivery_fee: deliveryFee ?? 0,
+      delivery_charge: deliveryFee ?? 0,
       total_amount: totalAmount ?? 0,
       // Tax information
-      cgst_amount: calculatedCgst,
-      sgst_amount: calculatedSgst,
+      cgst: calculatedCgst,
+      sgst: calculatedSgst,
       // Enhanced delivery information
-      address_text: addressText || null,
+      delivery_address_text: addressText || null,
       delivery_address: deliveryAddress || {
         address: addressText || "Default address",
         type: "home",
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
       product_name: item.product_name,
       product_image: item.product_image,
       quantity: item.quantity,
-      price: item.price,
+      unit_price: item.price,
       variant: item.variant,
       // Enhanced customization fields
       add_text_on_cake: item.add_text_on_cake || false,
