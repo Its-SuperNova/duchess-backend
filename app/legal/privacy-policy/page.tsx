@@ -39,9 +39,9 @@ export default function PrivacyPolicyPage() {
                 <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
                   At Duchess Pastries, we are committed to protecting your
                   privacy and ensuring the security of your personal
-                  information. This Privacy Policy explains how we collect,
-                  use, and safeguard your data when you visit our website or
-                  use our services.
+                  information. This Privacy Policy explains how we collect, use,
+                  and safeguard your data when you visit our website or use our
+                  services.
                 </p>
               </div>
 
@@ -53,8 +53,8 @@ export default function PrivacyPolicyPage() {
                   </h2>
                   <div className="space-y-2 sm:space-y-3 text-gray-700 text-sm sm:text-base">
                     <p>
-                      <strong>Legal Entity:</strong> Gopalakrishnan
-                      Chithrakala, doing business as Duchess Pastry
+                      <strong>Legal Entity:</strong> Gopalakrishnan Chithrakala,
+                      doing business as Duchess Pastry
                     </p>
                     <p>
                       <strong>Address:</strong> 7/68 62-B Vijayalakshmi Nagar,
@@ -91,8 +91,8 @@ export default function PrivacyPolicyPage() {
                       </h3>
                       <ul className="list-disc list-inside space-y-1 sm:space-y-2 text-gray-700 ml-4 text-sm sm:text-base">
                         <li>
-                          Delivery address, alternate phone, payment
-                          information (tokenized), order history
+                          Delivery address, alternate phone, payment information
+                          (tokenized), order history
                         </li>
                       </ul>
                     </div>
@@ -210,8 +210,8 @@ export default function PrivacyPolicyPage() {
                         required by law or to protect rights
                       </p>
                       <p>
-                        <strong>Business Transfers:</strong> In connection
-                        with merger, sale, or reorganization
+                        <strong>Business Transfers:</strong> In connection with
+                        merger, sale, or reorganization
                       </p>
                     </div>
                     <p className="text-gray-700 text-xs sm:text-sm bg-gray-50 p-3 sm:p-4 rounded-lg border-l-4 border-blue-500">
@@ -236,8 +236,8 @@ export default function PrivacyPolicyPage() {
                       deletion or consent withdrawal
                     </li>
                     <li>
-                      <strong>Analytics & Logs:</strong> Raw logs up to 1
-                      year; aggregated/anonymized after 13 months
+                      <strong>Analytics & Logs:</strong> Raw logs up to 1 year;
+                      aggregated/anonymized after 13 months
                     </li>
                   </ul>
                 </div>
@@ -295,8 +295,8 @@ export default function PrivacyPolicyPage() {
                     </li>
                   </ul>
                   <p className="text-gray-700 text-sm sm:text-base">
-                    You can manage or block cookies via your browser or PWA
-                    settings. Blocking may affect functionality.
+                    You can manage or block cookies via your browser settings.
+                    Blocking may affect functionality.
                   </p>
                 </div>
 
@@ -322,9 +322,9 @@ export default function PrivacyPolicyPage() {
                     9. International Data Transfers
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
-                    If we transfer data outside India (e.g. to U.S. servers),
-                    we use Standard Contractual Clauses approved under Indian
-                    law to ensure adequate protection.
+                    If we transfer data outside India (e.g. to U.S. servers), we
+                    use Standard Contractual Clauses approved under Indian law
+                    to ensure adequate protection.
                   </p>
                 </div>
 
@@ -334,9 +334,9 @@ export default function PrivacyPolicyPage() {
                     10. Changes to This Policy
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
-                    We may update this Privacy Policy over time. We'll post
-                    the revised date at the top and, if changes are material,
-                    notify you via email or in-app notice.
+                    We may update this Privacy Policy over time. We'll post the
+                    revised date at the top and, if changes are material, notify
+                    you via email or in-app notice.
                   </p>
                 </div>
 

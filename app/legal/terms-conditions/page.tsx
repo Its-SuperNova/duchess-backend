@@ -38,10 +38,10 @@ export default function TermsConditionsPage() {
               <div className="mb-8 sm:mb-10">
                 <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
                   Welcome to DuchessPastry.com ("Service"), operated by
-                  Gopalakrishnan Chithrakala (doing business as Duchess
-                  Pastry). By accessing or using our Service, you agree to be
-                  bound by these Terms & Conditions ("Terms"). If you do not
-                  agree, please do not use the Service.
+                  Gopalakrishnan Chithrakala (doing business as Duchess Pastry).
+                  By accessing or using our Service, you agree to be bound by
+                  these Terms & Conditions ("Terms"). If you do not agree,
+                  please do not use the Service.
                 </p>
               </div>
 
@@ -61,9 +61,8 @@ export default function TermsConditionsPage() {
                       Pastry.
                     </p>
                     <p>
-                      <strong>"Order"</strong> means the request you submit
-                      via our website/PWA for purchase and delivery of
-                      pastries.
+                      <strong>"Order"</strong> means the request you submit via
+                      our website for purchase and delivery of pastries.
                     </p>
                   </div>
                 </div>
@@ -80,8 +79,7 @@ export default function TermsConditionsPage() {
                   <ul className="list-disc list-inside space-y-1 sm:space-y-2 text-gray-700 ml-4 text-sm sm:text-base">
                     <li>Are at least 18 years old.</li>
                     <li>
-                      Have the legal capacity to enter into a binding
-                      contract.
+                      Have the legal capacity to enter into a binding contract.
                     </li>
                     <li>Agree to these Terms and our Privacy Policy.</li>
                   </ul>
@@ -98,13 +96,13 @@ export default function TermsConditionsPage() {
                       via Google OAuth.
                     </li>
                     <li>
-                      You are responsible for maintaining the confidentiality
-                      of your login credentials and for all activities under
-                      your account.
+                      You are responsible for maintaining the confidentiality of
+                      your login credentials and for all activities under your
+                      account.
                     </li>
                     <li>
-                      Notify us immediately of any unauthorized use or
-                      security breach.
+                      Notify us immediately of any unauthorized use or security
+                      breach.
                     </li>
                   </ul>
                 </div>
@@ -139,9 +137,9 @@ export default function TermsConditionsPage() {
                         Pricing & Fees:
                       </h3>
                       <p className="text-gray-700 text-sm sm:text-base">
-                        On order, prices will be updated with applicable
-                        taxes. Delivery fees may apply and will be displayed
-                        in the checkout flow.
+                        On order, prices will be updated with applicable taxes.
+                        Delivery fees may apply and will be displayed in the
+                        checkout flow.
                       </p>
                     </div>
                     <div>
@@ -150,8 +148,8 @@ export default function TermsConditionsPage() {
                       </h3>
                       <p className="text-gray-700 text-sm sm:text-base">
                         Coupon codes are subject to their own terms (expiry,
-                        one-time use, first-order only, etc.). We may modify
-                        or discontinue promotions at any time.
+                        one-time use, first-order only, etc.). We may modify or
+                        discontinue promotions at any time.
                       </p>
                     </div>
                   </div>
@@ -188,9 +186,8 @@ export default function TermsConditionsPage() {
                         Failed Deliveries:
                       </h3>
                       <p className="text-gray-700 text-sm sm:text-base">
-                        If we cannot reach the delivery address, we will
-                        contact you. Additional delivery fees may apply for
-                        re-delivery.
+                        If we cannot reach the delivery address, we will contact
+                        you. Additional delivery fees may apply for re-delivery.
                       </p>
                     </div>
                   </div>
@@ -202,10 +199,10 @@ export default function TermsConditionsPage() {
                     6. Cancellations & Refunds
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
-                    <strong>No Cancellations or Refunds:</strong> Once you
-                    place an Order and complete payment via Razorpay, the
-                    Order is final. We do not accept cancellations or issue
-                    refunds under any circumstances.
+                    <strong>No Cancellations or Refunds:</strong> Once you place
+                    an Order and complete payment via Razorpay, the Order is
+                    final. We do not accept cancellations or issue refunds under
+                    any circumstances.
                   </p>
                 </div>
 
@@ -216,10 +213,10 @@ export default function TermsConditionsPage() {
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
                     All content on the Service—logos, text, graphics, images,
-                    and software—is our property or that of our licensors and
-                    is protected by copyright, trademark, and other laws. You
-                    may not reproduce, modify, distribute, or create
-                    derivative works without our prior written consent.
+                    and software—is our property or that of our licensors and is
+                    protected by copyright, trademark, and other laws. You may
+                    not reproduce, modify, distribute, or create derivative
+                    works without our prior written consent.
                   </p>
                 </div>
 
@@ -256,8 +253,8 @@ export default function TermsConditionsPage() {
                         "As Is" Service:
                       </h3>
                       <p>
-                        We provide the Service on an "as is" and "as
-                        available" basis without warranties of any kind.
+                        We provide the Service on an "as is" and "as available"
+                        basis without warranties of any kind.
                       </p>
                     </div>
                     <div>
@@ -276,9 +273,9 @@ export default function TermsConditionsPage() {
                       <p>
                         To the fullest extent permitted under applicable law,
                         Duchess Pastry and its affiliates shall not be liable
-                        for any indirect, incidental, special, or
-                        consequential damages arising out of or in connection
-                        with your use of the Service.
+                        for any indirect, incidental, special, or consequential
+                        damages arising out of or in connection with your use of
+                        the Service.
                       </p>
                     </div>
                   </div>
@@ -293,9 +290,8 @@ export default function TermsConditionsPage() {
                     You agree to indemnify, defend, and hold harmless Duchess
                     Pastry and its officers, directors, employees, and agents
                     from any claims, liabilities, losses, damages, costs, or
-                    expenses (including reasonable attorneys' fees) arising
-                    from your breach of these Terms or your use of the
-                    Service.
+                    expenses (including reasonable attorneys' fees) arising from
+                    your breach of these Terms or your use of the Service.
                   </p>
                 </div>
 
@@ -307,9 +303,9 @@ export default function TermsConditionsPage() {
                   <p className="text-gray-700 text-sm sm:text-base">
                     We may suspend or terminate your access to the Service at
                     any time, with or without cause or notice. All provisions
-                    that by their nature should survive termination will
-                    remain in effect (e.g., intellectual property,
-                    disclaimers, indemnification, limitation of liability).
+                    that by their nature should survive termination will remain
+                    in effect (e.g., intellectual property, disclaimers,
+                    indemnification, limitation of liability).
                   </p>
                 </div>
 
@@ -319,10 +315,10 @@ export default function TermsConditionsPage() {
                     12. Governing Law & Dispute Resolution
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
-                    These Terms are governed by the laws of India. Any
-                    disputes arising under or in connection with these Terms
-                    shall be submitted to the exclusive jurisdiction of the
-                    courts in Coimbatore, Tamil Nadu.
+                    These Terms are governed by the laws of India. Any disputes
+                    arising under or in connection with these Terms shall be
+                    submitted to the exclusive jurisdiction of the courts in
+                    Coimbatore, Tamil Nadu.
                   </p>
                 </div>
 
@@ -332,11 +328,10 @@ export default function TermsConditionsPage() {
                     13. Changes to Terms
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
-                    We may update these Terms from time to time. We'll post
-                    the new "Last updated" date here and, if changes are
-                    material, notify you via email or in-app notification.
-                    Continued use of the Service after changes constitutes
-                    your acceptance.
+                    We may update these Terms from time to time. We'll post the
+                    new "Last updated" date here and, if changes are material,
+                    notify you via email or in-app notification. Continued use
+                    of the Service after changes constitutes your acceptance.
                   </p>
                 </div>
 

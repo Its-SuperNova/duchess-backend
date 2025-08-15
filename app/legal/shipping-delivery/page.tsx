@@ -65,8 +65,7 @@ export default function ShippingDeliveryPage() {
                   </p>
                   <ul className="list-disc list-inside space-y-1 sm:space-y-2 text-gray-700 ml-4 text-sm sm:text-base">
                     <li>
-                      <strong>Online</strong> – via our website or PWA checkout
-                      flow.
+                      <strong>Online</strong> – via our website checkout flow.
                     </li>
                     <li>
                       <strong>On-Call</strong> – by telephone at
