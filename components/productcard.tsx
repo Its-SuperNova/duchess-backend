@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, memo, useCallback, useMemo } from "react";
+import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GrSquare } from "react-icons/gr";
@@ -48,10 +48,10 @@ const ProductCard = memo(function ProductCard({
     typeof id === "string" ? parseInt(id.replace(/\D/g, "")) || 0 : id;
 
   // Set isClient to true when component mounts (client-side only)
-  useState(() => {
+  useEffect(() => {
     setIsClient(true);
     setIsLiked(isFavorite(numericId));
-  });
+  }, [numericId, isFavorite]);
 
   // Memoize the favorite product object to prevent recreation on every render
   const favoriteProduct = useMemo(
