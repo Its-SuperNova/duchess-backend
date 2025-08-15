@@ -16,8 +16,6 @@ export async function GET(request: NextRequest) {
           // Cache for 10 minutes, allow stale content for 2 hours while revalidating
           // Categories change less frequently than products
           "Cache-Control": "public, s-maxage=600, stale-while-revalidate=7200",
-          // Add ETag for conditional requests
-          ETag: `"categories-${Date.now()}"`,
           // Allow CORS for better caching across origins
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET",

@@ -33,8 +33,8 @@ export const supabaseAdmin = createClient<Database>(
       fetch: (url: string | Request | URL, options: RequestInit = {}) => {
         return fetch(url, {
           ...options,
-          // Add timeout for queries
-          signal: AbortSignal.timeout(15000), // 15 second timeout
+          // Keep request time within Vercel function limits to avoid 504s
+          signal: AbortSignal.timeout(8000), // 8s per attempt
         });
       },
     },

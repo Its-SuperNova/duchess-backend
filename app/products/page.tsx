@@ -86,7 +86,11 @@ export default function ProductsPage({
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        const fetchedProducts = await getActiveProducts();
+        // Fetch paginated products for listing; we can later add Load More
+        const fetchedProducts = await getActiveProducts({
+          limit: 24,
+          offset: 0,
+        });
         const processedProducts = fetchedProducts.map(
           processProductForHomepage
         );

@@ -312,8 +312,11 @@ export async function searchProducts(query: string) {
   }
 }
 
-// Get active products for homepage display
-export async function getActiveProducts() {
+// Get active products with pagination for homepage and listing pages
+export async function getActiveProducts({
+  limit = 24,
+  offset = 0,
+}: { limit?: number; offset?: number } = {}) {
   try {
     return await withRetry(
       async () => {
@@ -341,7 +344,10 @@ export async function getActiveProducts() {
           )
           .eq("is_active", true as any)
           .order("created_at", { ascending: false })
-          .limit(24); // Increase to 24 for better grid layout
+          .range(
+            Math.max(0, offset),
+            Math.max(0, offset + Math.max(1, Math.min(100, limit)) - 1)
+          );
 
         if (error) {
           console.error("Error fetching active products:", error);
@@ -352,7 +358,7 @@ export async function getActiveProducts() {
       },
       2,
       2000
-    ); // More aggressive retry for homepage
+    ); // Retry with backoff
   } catch (error) {
     console.error("Error in getActiveProducts:", error);
     // For homepage, we want to be more lenient and return empty array instead of throwing
