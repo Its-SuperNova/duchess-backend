@@ -8,11 +8,22 @@ export default auth((req) => {
   if (pathname.startsWith("/admin")) {
     // If user is not authenticated, redirect to login
     if (!req.auth) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      // Prevent redirect loop by checking if already on login page
+      if (pathname !== "/login") {
+        return NextResponse.redirect(new URL("/login", req.url));
+      }
     }
+  }
 
-    // Role-based access is handled by RoleGuard component
-    // Additional role validation could be added here if needed
+  // Check if user is trying to access profile routes
+  if (pathname.startsWith("/profile")) {
+    // If user is not authenticated, redirect to login
+    if (!req.auth) {
+      // Prevent redirect loop by checking if already on login page
+      if (pathname !== "/login") {
+        return NextResponse.redirect(new URL("/login", req.url));
+      }
+    }
   }
 });
 

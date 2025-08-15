@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "./layout-wrapper";
 import AuthSessionProvider from "@/components/providers/session-provider";
+import ErrorBoundary from "@/components/error-boundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,9 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} overflow-x-hidden`}>
-        <AuthSessionProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
-        </AuthSessionProvider>
+        <ErrorBoundary>
+          <AuthSessionProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </AuthSessionProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

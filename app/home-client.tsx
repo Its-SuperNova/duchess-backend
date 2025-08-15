@@ -50,6 +50,8 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
     revalidateOnReconnect: true,
     dedupingInterval: 3600000, // 1 hour
     fallbackData: initialProducts,
+    errorRetryCount: 2, // Limit retries to prevent infinite loops
+    errorRetryInterval: 5000, // 5 second delay between retries
     onSuccess: (data) => {
       if (process.env.NODE_ENV !== "production") {
         console.log("Products loaded successfully:", data.length);
@@ -59,22 +61,27 @@ export default function HomeClient({ initialProducts }: HomeClientProps) {
       if (process.env.NODE_ENV !== "production") {
         console.error("SWR error:", error);
       }
+      // Prevent infinite error loops
+      if (error.message.includes("Failed to fetch")) {
+        console.warn("Network error, will retry with backoff");
+      }
     },
   });
 
-  // Get layout information for responsive padding
-  let getLayoutClasses = () => ({
-    isCompact: false,
-    isVeryCompact: false,
-    mainContentClasses: "",
-  });
-
-  try {
-    const layoutContext = useLayout();
-    getLayoutClasses = layoutContext.getLayoutClasses;
-  } catch (error) {
-    // Layout context not available, use default values
-  }
+  // Get layout information for responsive padding with safe fallback
+  const getLayoutClasses = (() => {
+    try {
+      const layoutContext = useLayout();
+      return layoutContext.getLayoutClasses;
+    } catch (error) {
+      // Safe fallback if layout context fails
+      return () => ({
+        isCompact: false,
+        isVeryCompact: false,
+        mainContentClasses: "",
+      });
+    }
+  })();
 
   const { isCompact, isVeryCompact } = getLayoutClasses();
 
