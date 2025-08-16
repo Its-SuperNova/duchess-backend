@@ -15,7 +15,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹350",
     veg: true,
-    image: "/images/products/product-2-banner.jpg",
+    image: "/images/homePage-Product/Italian-Tiramisu.jpg",
   },
   {
     id: "651a0b1e-49ad-4c40-b96e-385ad427aa04",
@@ -23,7 +23,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹290",
     veg: false,
-    image: "/images/products/product-15-banner.jpg",
+    image: "/images/homePage-Product/Chocolate-Cherry-Cake.jpg",
   },
   {
     id: "ed345fae-0a78-43e6-a59b-52eea843c24a",
@@ -31,7 +31,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹380",
     veg: false,
-    image: "/images/products/product-16-banner.jpg",
+    image: "/images/homePage-Product/Chocolate-Pistachio-Melting-Cake.jpg",
   },
   {
     id: "845fe0a9-153d-4eb4-864e-b765793f66be",
@@ -39,7 +39,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹50",
     veg: false,
-    image: "/images/products/product-35-banner.jpg",
+    image: "/images/homePage-Product/Chocolate-Soft-Center.jpg",
   },
   {
     id: "6730b6c8-cd62-4133-bc1c-8a778c69a921",
@@ -47,7 +47,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Chocolates",
     price: "₹500",
     veg: true,
-    image: "/images/products/product-36-banner.jpg",
+    image: "/images/homePage-Product/Chocolate-Pistachios-Bar.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd008",
@@ -55,7 +55,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Snacks",
     price: "₹40",
     veg: true,
-    image: "/images/products/granola-bar-banner.jpg",
+    image: "/images/homePage-Product/Granola-Bar.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd010",
@@ -63,7 +63,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Traditional Sweets",
     price: "₹15",
     veg: true,
-    image: "/images/products/mandola-banner.jpg",
+    image: "/images/homePage-Product/Mandola.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd012",
@@ -71,7 +71,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹480",
     veg: true,
-    image: "/images/products/blueberry-cheesecake-banner.jpg",
+    image: "/images/homePage-Product/Blueberry-Chilled-Cheese-Cake.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd013",
@@ -79,7 +79,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹380",
     veg: true,
-    image: "/images/products/tiramisu-banner.jpg",
+    image: "/images/homePage-Product/Tiramisu.jpg",
   },
   {
     id: "e6081571-704a-4cd6-9da0-a88437cf02de",
@@ -87,7 +87,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cookies",
     price: "₹25",
     veg: true,
-    image: "/images/products/oatmeal-raisin-banner.jpg",
+    image: "/images/homePage-Product/Oatmeal-Raisin-Cookies.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd006",
@@ -95,7 +95,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹450",
     veg: true,
-    image: "/images/products/strawberry-cheesecake-banner.jpg",
+    image: "/images/homePage-Product/Strawberry-Chilled-Cheese-Cake.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd007",
@@ -103,7 +103,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹600",
     veg: true,
-    image: "/images/products/opera-banner.jpg",
+    image: "/images/homePage-Product/Opera.jpg",
   },
 ];
 
