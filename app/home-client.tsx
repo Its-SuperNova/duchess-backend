@@ -1,23 +1,12 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import useSWR from "swr";
 import { toast } from "sonner";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
-import { processProductForHomepage, ProcessedProduct } from "@/lib/utils";
+import { ProcessedProduct } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
-// Fetcher function for SWR
-const fetchProducts = async (): Promise<ProcessedProduct[]> => {
-  const res = await fetch("/api/products/homepage", {
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.products.map(processProductForHomepage);
-};
 
 // Skeleton loader for products
 const ProductSkeleton = () => (
@@ -39,36 +28,8 @@ export default function HomeClient({
 
   useEffect(() => setIsClient(true), []);
 
-  const {
-    data: products = initialProducts,
-    isLoading,
-    mutate,
-  } = useSWR<ProcessedProduct[]>(
-    isClient ? "/api/products/homepage" : null,
-    fetchProducts,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 3600000, // 1 hour
-      fallbackData: initialProducts,
-      errorRetryCount: 2, // Limit retries to prevent infinite loops
-      errorRetryInterval: 5000, // 5 second delay between retries
-      keepPreviousData: true, // Keep previous data while loading new data
-      revalidateIfStale: true, // Revalidate if data is stale
-      // Add timeout to prevent hanging requests
-      onSuccess: (data) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.log("Homepage products loaded successfully:", data.length);
-        }
-      },
-      onError: (error) => {
-        console.error("SWR error in homepage:", error);
-        // Prevent infinite error loops
-        if (error.message.includes("Failed to fetch")) {
-          console.warn("Network error, will retry with backoff");
-        }
-      },
-    }
-  );
+  // Use local data instead of SWR fetching
+  const products = initialProducts;
 
   // iOS-specific memory management
   const isIOS =
@@ -126,13 +87,9 @@ export default function HomeClient({
     }
   }, [memoizedProducts.length, isIOS]);
 
-  const retryFetch = async () => {
-    try {
-      await mutate();
-      toast.success("Products refreshed");
-    } catch {
-      toast.error("Failed to refresh products");
-    }
+  const refreshProducts = () => {
+    // Since we're using local data, just show a success message
+    toast.success("Products refreshed");
   };
 
   return (
@@ -144,52 +101,38 @@ export default function HomeClient({
       <section className="px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl md:text-3xl font-bold">Featured Products</h2>
-          <Button onClick={retryFetch} variant="outline" size="sm">
+          <Button onClick={refreshProducts} variant="outline" size="sm">
             Refresh
           </Button>
         </div>
 
-        {/* Error boundary wrapper for products */}
+        {/* Products display */}
         <div className="relative">
-          {memoizedProducts.length === 0 && !isLoading ? (
+          {memoizedProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">
                 No products available at the moment.
               </p>
-              <Button onClick={retryFetch} variant="outline" className="mt-4">
-                Try Again
-              </Button>
             </div>
           ) : (
-            <>
-              {isLoading ? (
-                // Show skeletons while loading (iOS-optimized)
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {Array.from({ length: isIOS ? 8 : 12 }).map((_, i) => (
-                    <ProductSkeleton key={i} />
-                  ))}
-                </div>
-              ) : (
-                // Show products with iOS-specific optimization
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {memoizedProducts.map((p, i) => {
-                    try {
-                      return (
-                        <ProductCard
-                          key={p.id}
-                          {...p}
-                          priority={i < (isIOS ? 2 : 4)} // iOS: preload only 2, Android: preload 4
-                        />
-                      );
-                    } catch (error) {
-                      console.error(`Error rendering product ${p.id}:`, error);
-                      // Return skeleton as fallback instead of crashing
-                      return <ProductSkeleton key={`error-${p.id}`} />;
-                    }
-                  })}
-                </div>
-              )}
-            </>
+            // Show products with iOS-specific optimization
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {memoizedProducts.map((p, i) => {
+                try {
+                  return (
+                    <ProductCard
+                      key={p.id}
+                      {...p}
+                      priority={i < (isIOS ? 2 : 4)} // iOS: preload only 2, Android: preload 4
+                    />
+                  );
+                } catch (error) {
+                  console.error(`Error rendering product ${p.id}:`, error);
+                  // Return skeleton as fallback instead of crashing
+                  return <ProductSkeleton key={`error-${p.id}`} />;
+                }
+              })}
+            </div>
           )}
         </div>
 

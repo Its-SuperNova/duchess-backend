@@ -1,4 +1,4 @@
-import { getHomepageProducts } from "@/lib/actions/products";
+import { homepageProductCards } from "@/data/homepage-product-cards";
 import { processProductForHomepage } from "@/lib/utils";
 import HomeClient from "./home-client";
 import { Metadata } from "next";
@@ -22,8 +22,24 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const initial = await getHomepageProducts({ limit: 12, offset: 0 }); // Exactly 12 featured products
-  const initialProducts = (initial || []).map(processProductForHomepage);
+  // Convert homepage product cards to ProcessedProduct format
+  const initialProducts = homepageProductCards.map((product) => ({
+    id: product.id,
+    name: product.name,
+    rating: 4.5, // Default rating
+    imageUrl: product.image,
+    price: parseInt(product.price.replace("₹", "")),
+    originalPrice: undefined,
+    isVeg: product.veg,
+    description: `Delicious ${product.name.toLowerCase()} made with premium ingredients`,
+    category: product.category,
+    hasOffer: false,
+    offerPercentage: undefined,
+    categories: {
+      id: product.id,
+      name: product.category,
+    },
+  }));
 
   return <HomeClient initialProducts={initialProducts} />;
 }
