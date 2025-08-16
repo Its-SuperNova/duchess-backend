@@ -13,27 +13,23 @@ interface Product {
   selling_type: string;
   categories: {
     name: string;
-  }[];
+  };
 }
 
 interface UseSimpleInfiniteProductsOptions {
   categorySlug: string;
   pageSize?: number;
-  initialProducts?: Product[];
 }
 
 export function useSimpleInfiniteProducts({
   categorySlug,
   pageSize = 4,
-  initialProducts = [],
 }: UseSimpleInfiniteProductsOptions) {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(
-    initialProducts.length === 0
-  );
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchProducts = useCallback(
     async (page: number, append: boolean = false) => {
@@ -95,17 +91,12 @@ export function useSimpleInfiniteProducts({
     fetchProducts(0, false);
   }, [fetchProducts]);
 
-  // Initial load - only if we don't have initial products
+  // Initial load
   useEffect(() => {
-    if (categorySlug && initialProducts.length === 0) {
+    if (categorySlug) {
       fetchProducts(0, false);
-    } else if (initialProducts.length > 0) {
-      // If we have initial products, set hasMore based on whether we expect more
-      // This is a simple heuristic - if initial products are less than pageSize, probably no more
-      setHasMore(initialProducts.length >= pageSize);
-      setIsInitialLoading(false);
     }
-  }, [categorySlug, fetchProducts, initialProducts.length, pageSize]);
+  }, [categorySlug, fetchProducts]);
 
   const {
     observerRef,
