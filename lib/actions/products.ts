@@ -427,7 +427,7 @@ export async function getHomepageProducts({
   }
 }
 
-// Get products by category slug (for category pages)
+// Get products by category slug (for category pages) - OPTIMIZED VERSION
 export async function getProductsByCategorySlug(categorySlug: string) {
   try {
     return await withRetry(async () => {
@@ -441,9 +441,8 @@ export async function getProductsByCategorySlug(categorySlug: string) {
         console.log("Failed to decode URL, using original:", searchTerm);
       }
 
-      console.log("=== CATEGORY SEARCH DEBUG ===");
-      console.log("Original slug:", categorySlug);
-      console.log("Search term after processing:", searchTerm);
+      console.log("=== OPTIMIZED CATEGORY SEARCH ===");
+      console.log("Search term:", searchTerm);
 
       // First, find the category by name (exact match or contains)
       const { data: categories, error: categoriesError } = await supabaseAdmin
@@ -456,34 +455,22 @@ export async function getProductsByCategorySlug(categorySlug: string) {
         return [];
       }
 
-      console.log("Available categories:", categories);
-
-      // Find the matching category - simple approach
+      // Find the matching category - optimized approach
       const matchingCategory = categories?.find((cat: any) => {
         const categoryName = cat.name.toLowerCase();
         const searchLower = searchTerm.toLowerCase();
 
-        console.log(`\n--- Checking Category: "${cat.name}" ---`);
-        console.log(`Category (lowercase): "${categoryName}"`);
-        console.log(`Search term (lowercase): "${searchLower}"`);
-
         // Try exact match first
         if (categoryName === searchLower) {
-          console.log("✓ Exact match found!");
           return true;
         }
 
         // Handle the case where slug has "and" but category has "&"
-        // Convert both to use "and" for comparison
         const normalizedSearch = searchLower.replace(/&/g, "and");
         const normalizedCategory = categoryName.replace(/&/g, "and");
 
-        console.log(`Normalized search: "${normalizedSearch}"`);
-        console.log(`Normalized category: "${normalizedCategory}"`);
-
         // Try normalized exact match
         if (normalizedSearch === normalizedCategory) {
-          console.log("✓ Normalized exact match found!");
           return true;
         }
 
@@ -492,28 +479,18 @@ export async function getProductsByCategorySlug(categorySlug: string) {
           categoryName.includes(searchLower) ||
           searchLower.includes(categoryName)
         ) {
-          console.log("✓ Contains match found!");
           return true;
         }
 
-        console.log("✗ No match found for this category");
         return false;
       });
 
       if (!matchingCategory) {
-        console.log("\n❌ NO MATCHING CATEGORY FOUND");
-        console.log("Search term was:", searchTerm);
-        console.log(
-          "Available categories:",
-          categories?.map((c) => c.name)
-        );
+        console.log("No matching category found for:", searchTerm);
         return [];
       }
 
-      console.log("\n✅ MATCHING CATEGORY FOUND:", matchingCategory);
-
       // Get products for this category using the category_id
-      // Only fetch fields needed for ProductCard display and price calculation
       const { data: products, error: productsError } = await supabaseAdmin
         .from("products")
         .select(
@@ -542,12 +519,148 @@ export async function getProductsByCategorySlug(categorySlug: string) {
       }
 
       console.log("Products found:", products?.length || 0);
-      console.log("=== END CATEGORY SEARCH DEBUG ===\n");
+      console.log("=== END OPTIMIZED CATEGORY SEARCH ===\n");
       return products || [];
     });
   } catch (error) {
     console.error("Error in getProductsByCategorySlug:", error);
     return [];
+  }
+}
+
+// Get paginated products by category slug - OPTIMIZED for infinite scroll
+export async function getProductsByCategorySlugPaginated(
+  categorySlug: string,
+  page: number = 0,
+  limit: number = 4
+) {
+  try {
+    return await withRetry(async () => {
+      const offset = page * limit;
+
+      // Convert slug back to readable format and handle URL encoding
+      let searchTerm = categorySlug.replace(/-/g, " ");
+
+      // Handle URL-encoded characters
+      try {
+        searchTerm = decodeURIComponent(searchTerm);
+      } catch (e) {
+        console.log("Failed to decode URL, using original:", searchTerm);
+      }
+
+      // First, find the category by name
+      const { data: categories, error: categoriesError } = await supabaseAdmin
+        .from("categories")
+        .select("id, name")
+        .eq("is_active", true);
+
+      if (categoriesError) {
+        console.error("Error fetching categories:", categoriesError);
+        return {
+          products: [],
+          hasMore: false,
+          totalCount: 0,
+          currentPage: page,
+          totalPages: 0,
+        };
+      }
+
+      // Find the matching category
+      const matchingCategory = categories?.find((cat: any) => {
+        const categoryName = cat.name.toLowerCase();
+        const searchLower = searchTerm.toLowerCase();
+
+        // Try exact match first
+        if (categoryName === searchLower) {
+          return true;
+        }
+
+        // Handle the case where slug has "and" but category has "&"
+        const normalizedSearch = searchLower.replace(/&/g, "and");
+        const normalizedCategory = categoryName.replace(/&/g, "and");
+
+        // Try normalized exact match
+        if (normalizedSearch === normalizedCategory) {
+          return true;
+        }
+
+        // Try contains match
+        if (
+          categoryName.includes(searchLower) ||
+          searchLower.includes(categoryName)
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (!matchingCategory) {
+        console.log("No matching category found for:", searchTerm);
+        return {
+          products: [],
+          hasMore: false,
+          totalCount: 0,
+          currentPage: page,
+          totalPages: 0,
+        };
+      }
+
+      // Get products for this category with pagination
+      const { data: products, error: productsError } = await supabaseAdmin
+        .from("products")
+        .select(
+          `
+          id,
+          name,
+          is_veg,
+          has_offer,
+          offer_percentage,
+          weight_options,
+          piece_options,
+          selling_type,
+          banner_image,
+          categories (
+            name
+          )
+        `
+        )
+        .eq("category_id", matchingCategory.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (productsError) {
+        console.error("Error fetching paginated products:", productsError);
+        throw new Error(`Database error: ${productsError.message}`);
+      }
+
+      // Check if there are more products
+      const { count } = await supabaseAdmin
+        .from("products")
+        .select("*", { count: "exact", head: true })
+        .eq("category_id", matchingCategory.id)
+        .eq("is_active", true);
+
+      const hasMore = count ? offset + limit < count : false;
+
+      return {
+        products: products || [],
+        hasMore,
+        totalCount: count || 0,
+        currentPage: page,
+        totalPages: count ? Math.ceil(count / limit) : 0,
+      };
+    });
+  } catch (error) {
+    console.error("Error in getProductsByCategorySlugPaginated:", error);
+    return {
+      products: [],
+      hasMore: false,
+      totalCount: 0,
+      currentPage: page,
+      totalPages: 0,
+    };
   }
 }
 
