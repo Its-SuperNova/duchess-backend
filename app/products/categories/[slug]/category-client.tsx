@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useOptimizedInfiniteProducts } from "@/hooks/use-optimized-infinite-products";
