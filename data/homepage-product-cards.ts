@@ -55,7 +55,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Snacks",
     price: "₹40",
     veg: true,
-    image: "/images/homePage-Product/Granola-Bar.jpg",
+    image: "/images/homePage-Product/Granola-bar.jpg",
   },
   {
     id: "f7b684b5-d65c-4844-b6da-39225a5cd010",
