@@ -26,9 +26,7 @@ export function useAllProductsInfinite({
   initialData = [],
 }: UseAllProductsInfiniteOptions) {
   const [products, setProducts] = useState<Product[]>(initialData);
-  const [currentPage, setCurrentPage] = useState(
-    initialData.length > 0 ? 1 : 0
-  );
+  const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true); // Always assume there might be more initially
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(
@@ -42,7 +40,7 @@ export function useAllProductsInfinite({
         setError(null);
 
         const response = await fetch(
-          `/api/products?page=${page}&limit=${pageSize}`
+          `/api/products?offset=${page * pageSize}&limit=${pageSize}`
         );
 
         if (!response.ok) {
@@ -65,17 +63,23 @@ export function useAllProductsInfinite({
 
         // If we got a full page, there might be more products
         // If we got less than a full page, we've reached the end
-        setHasMore(newProducts.length >= pageSize);
+        const shouldHaveMore = newProducts.length >= pageSize;
+        setHasMore(shouldHaveMore);
 
         // Debug logging
         console.log(
           "Setting hasMore:",
-          newProducts.length >= pageSize,
+          shouldHaveMore,
           "Products received:",
           newProducts.length,
           "Page size:",
           pageSize
         );
+
+        // Safety check: if we got 0 products, definitely no more
+        if (newProducts.length === 0) {
+          setHasMore(false);
+        }
 
         if (page === 0) {
           setIsInitialLoading(false);
@@ -101,7 +105,7 @@ export function useAllProductsInfinite({
       setCurrentPage(nextPage);
       fetchProducts(nextPage, true);
     }
-  }, [hasMore, currentPage, fetchProducts, products.length]);
+  }, [hasMore, currentPage, fetchProducts]);
 
   const refresh = useCallback(() => {
     setProducts([]);

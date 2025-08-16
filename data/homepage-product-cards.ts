@@ -23,7 +23,7 @@ export const homepageProductCards: HomepageProductCard[] = [
     category: "Cakes",
     price: "₹290",
     veg: false,
-    image: "/images/homePage-Product/Chocolate-cherryCake.jpg",
+    image: "/images/homePage-Product/Chocolate-CherryCake.jpg",
   },
   {
     id: "a3878b07-e31c-4d95-81cf-3cb17a7ffb05",
