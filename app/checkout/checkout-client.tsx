@@ -98,14 +98,38 @@ export default function CheckoutClient() {
           : null;
       if (raw) {
         const c = JSON.parse(raw);
-        if (c?.code) setSelectedCoupon(c.code);
+        // Only set selectedCoupon if the coupon is valid
+        if (c?.code && isCouponValid(c)) {
+          setSelectedCoupon(c.code);
+        } else {
+          // Remove invalid coupon from localStorage
+          localStorage.removeItem("appliedCoupon");
+          setSelectedCoupon(null);
+        }
       } else {
         setSelectedCoupon(null);
       }
     } catch {
       setSelectedCoupon(null);
     }
-  }, []);
+  }, [getSubtotal]);
+
+  // Function to check if a coupon is valid for the current order
+  const isCouponValid = (coupon: any) => {
+    if (!coupon) return false;
+
+    const now = new Date();
+    const validFrom = new Date(coupon.valid_from);
+    const validUntil = new Date(coupon.valid_until);
+    const currentSubtotal = getSubtotal();
+
+    return (
+      coupon.is_active &&
+      now >= validFrom &&
+      now <= validUntil &&
+      currentSubtotal >= coupon.min_order_amount
+    );
+  };
 
   // Load note and customization options from localStorage on component mount
   useEffect(() => {
@@ -732,12 +756,11 @@ export default function CheckoutClient() {
       const { orderId, orderNumber } = await response.json();
       console.log("Order created successfully:", orderId);
 
-      // Clear cart and storage
-      clearCart();
-      clearCheckoutContext();
-
-      // Navigate to confirmation
-      router.replace("/checkout/confirmation?orderId=" + orderId);
+      // Navigate to animation page immediately with order ID
+      // Cart will be cleared in the animation page to prevent empty cart flash
+      router.replace(
+        "/checkout/order-confirmation-animation?orderId=" + orderId
+      );
     } catch (err) {
       console.error("Error creating order:", err);
       setPaymentError(
@@ -1990,7 +2013,7 @@ export default function CheckoutClient() {
                       }
                       onClick={() => setIsPaymentDialogOpen(true)}
                     >
-                      Proceed to Payment
+                      Confirm Order
                     </Button>
                   </div>
                 </div>
@@ -2127,7 +2150,7 @@ export default function CheckoutClient() {
               }
               onClick={() => setIsPaymentDialogOpen(true)}
             >
-              Proceed to Payment
+              Confirm Order
             </Button>
           </div>
         </div>
@@ -2137,7 +2160,7 @@ export default function CheckoutClient() {
           open={isPaymentDialogOpen}
           onOpenChange={setIsPaymentDialogOpen}
         >
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[calc(100%-40px)] rounded-[22px] ">
             <DialogHeader>
               <DialogTitle>Confirm Payment</DialogTitle>
               <DialogDescription>
@@ -2211,18 +2234,11 @@ export default function CheckoutClient() {
 
             <DialogFooter className="gap-2">
               <Button
-                variant="outline"
-                onClick={() => setIsPaymentDialogOpen(false)}
-                disabled={isProcessingPayment}
-              >
-                Cancel
-              </Button>
-              <Button
                 onClick={handlePaymentConfirm}
                 disabled={isProcessingPayment}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
               >
-                {isProcessingPayment ? "Processing..." : "Confirm & Pay"}
+                {isProcessingPayment ? "Processing..." : "Confirm Order"}
               </Button>
             </DialogFooter>
           </DialogContent>

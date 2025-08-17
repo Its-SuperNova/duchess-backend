@@ -71,10 +71,106 @@ export default function ConfirmationClient() {
 
   if (loading) {
     return (
-      <div className="bg-white min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading order details...</p>
+      <div className="min-h-screen bg-[#F5F6FB]">
+        {/* Header Skeleton */}
+        <div className="bg-[#F5F6FB] p-4 flex items-center">
+          <div className="mr-4">
+            <div className="bg-white p-2 rounded-full shadow-sm">
+              <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+
+        <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-4">
+          {/* Order Confirmation Header Skeleton */}
+          <div className="bg-white rounded-[20px] p-6 md:p-8 shadow-sm">
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="h-16 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+              <div className="h-8 w-48 bg-gray-200 rounded mx-auto mb-2 animate-pulse"></div>
+              <div className="h-4 w-80 bg-gray-200 rounded mx-auto animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Contact Section Skeleton */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="text-center">
+              <div className="h-6 w-48 bg-gray-200 rounded mx-auto mb-3 animate-pulse"></div>
+              <div className="h-4 w-80 bg-gray-200 rounded mx-auto mb-6 animate-pulse"></div>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="h-12 w-56 bg-gray-200 rounded-[12px] animate-pulse"></div>
+                <div className="h-12 w-48 bg-gray-200 rounded-[12px] animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Information Skeleton */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="h-6 w-36 bg-gray-200 rounded mb-4 animate-pulse"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i}>
+                  <div className="h-4 w-24 bg-gray-200 rounded mb-1 animate-pulse"></div>
+                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Order Items Skeleton */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="h-6 w-28 bg-gray-200 rounded mb-4 animate-pulse"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="h-16 w-16 bg-gray-200 rounded animate-pulse flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-2">
+                      <div className="h-5 w-40 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-5 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-4 w-24 bg-gray-200 rounded mb-1 animate-pulse"></div>
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Order Summary Skeleton */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="h-6 w-32 bg-gray-200 rounded mb-4 animate-pulse"></div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex justify-between items-center">
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+              <div className="border-t pt-3">
+                <div className="flex justify-between items-center">
+                  <div className="h-5 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-5 w-20 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery Address Skeleton */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <div className="h-6 w-36 bg-gray-200 rounded mb-4 animate-pulse"></div>
+            <div className="h-4 w-full bg-gray-200 rounded mb-2 animate-pulse"></div>
+            <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Action Buttons Skeleton */}
+          <div className="flex gap-4 pt-4">
+            <div className="h-12 w-32 bg-gray-200 rounded-[12px] animate-pulse"></div>
+            <div className="h-12 w-40 bg-gray-200 rounded-[12px] animate-pulse"></div>
+          </div>
         </div>
       </div>
     );
@@ -141,6 +237,63 @@ export default function ConfirmationClient() {
               Thank you for your order. Your order has been received and is
               being prepared.
             </p>
+          </div>
+        </div>
+
+        {/* Contact Section */}
+        <div className="bg-white rounded-[20px] p-6 shadow-sm">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold mb-3">
+              Complete Your Payment
+            </h2>
+            <p className="text-gray-600 mb-6">
+              To complete your payment and place your order, please contact
+              Duchess Pastry
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {/* Call Button 1 */}
+              <a
+                href="tel:+919080022593"
+                className="flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-[12px] transition-colors font-medium"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
+                </svg>
+                Call: 9080022593
+              </a>
+
+              {/* Call Button 2 */}
+              <a
+                href="tel:+917603831952"
+                className="flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-[12px] transition-colors font-medium"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
+                </svg>
+                Call: 7603831952
+              </a>
+            </div>
           </div>
         </div>
 
