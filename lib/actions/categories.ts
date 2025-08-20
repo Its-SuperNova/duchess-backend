@@ -24,7 +24,7 @@ export async function getCategories() {
           "Cakes",
           "Chocolates",
           "Cookies",
-          "Entremets",
+          "Cheese Cakes",
           "Muffins & Cupcakes",
           "Brownies & Brookies",
         ];
