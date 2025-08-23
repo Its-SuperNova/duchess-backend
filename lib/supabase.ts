@@ -31,7 +31,7 @@ export interface User {
   phone_number?: string;
   date_of_birth?: string;
   gender?: string;
-  role: "user" | "admin" | "delivery_agent" | "shop_worker";
+  role: "user" | "admin" | "shop_worker";
   created_at: string;
   updated_at: string;
 }

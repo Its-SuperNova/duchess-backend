@@ -126,7 +126,7 @@ export async function updateUserProfile(
 // Role-based access control utilities
 export async function getUserRole(
   email: string
-): Promise<"user" | "admin" | "delivery_agent" | "shop_worker" | null> {
+): Promise<"user" | "admin" | "shop_worker" | null> {
   try {
     // Use admin client to bypass RLS for user role queries
     const { data, error } = await supabaseAdmin
@@ -154,14 +154,12 @@ export async function isUserAdmin(email: string): Promise<boolean> {
 
 export async function isUserModerator(email: string): Promise<boolean> {
   const role = await getUserRole(email);
-  return (
-    role === "delivery_agent" || role === "shop_worker" || role === "admin"
-  );
+  return role === "shop_worker" || role === "admin";
 }
 
 export async function updateUserRole(
   email: string,
-  role: "user" | "admin" | "delivery_agent" | "shop_worker"
+  role: "user" | "admin" | "shop_worker"
 ): Promise<User | null> {
   try {
     console.log("updateUserRole called with:", { email, role });
