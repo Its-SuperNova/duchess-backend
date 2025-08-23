@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import TimeKeeper from "react-timekeeper";
+import { TimePicker } from "@/components/block/clockTimePicker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -145,21 +145,6 @@ export default function OrderDetailPage() {
       return timestamp; // Return original if parsing fails
     }
   };
-
-  // Close time picker when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (showTimePicker && !target.closest(".time-picker-container")) {
-        setShowTimePicker(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showTimePicker]);
 
   // Function to update order status
   const updateOrderStatus = async (newStatus: string) => {
@@ -986,7 +971,9 @@ export default function OrderDetailPage() {
                     className="flex-1"
                     value={
                       selectedTime ||
-                      formatTimeForDisplay(order.estimated_time_delivery) ||
+                      formatTimeForDisplay(
+                        order.estimated_time_delivery || null
+                      ) ||
                       ""
                     }
                     readOnly
@@ -1002,53 +989,19 @@ export default function OrderDetailPage() {
                 </div>
 
                 {showTimePicker && (
-                  <div className="relative z-50 time-picker-container">
-                    <div className="absolute top-2 left-0 bg-white border rounded-lg shadow-xl p-4 min-w-[280px]">
-                      <div className="space-y-3">
-                        <TimeKeeper
-                          time={
-                            selectedTime ||
-                            formatTimeForDisplay(
-                              order.estimated_time_delivery
-                            ) ||
-                            "12:00pm"
-                          }
-                          onChange={(data) => setSelectedTime(data.formatted12)}
-                          closeOnMinuteSelect={false}
-                          hour24Mode={false}
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setShowTimePicker(false)}
-                            className="flex-1"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              if (selectedTime) {
-                                updateEstimatedDeliveryTime(selectedTime);
-                                setShowTimePicker(false);
-                              }
-                            }}
-                            disabled={!selectedTime || isUpdating}
-                            className="flex-1"
-                          >
-                            {isUpdating ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Updating...
-                              </>
-                            ) : (
-                              "Update Time"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                  <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                    onClick={(e) =>
+                      e.target === e.currentTarget && setShowTimePicker(false)
+                    }
+                  >
+                      <TimePicker
+                        onTimeSelect={(time) => {
+                          setSelectedTime(time);
+                          updateEstimatedDeliveryTime(time);
+                          setShowTimePicker(false);
+                        }}
+                      />
                   </div>
                 )}
               </div>
