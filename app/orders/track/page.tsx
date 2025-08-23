@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import Lottie from "lottie-react";
 import paymentPendingAnimation from "../../../public/Lottie/payment-pending.json";
+import paymentDoneAnimation from "../../../public/Lottie/Payment-Done.json";
 import preparingAnimation from "../../../public/Lottie/preparing.json";
 import outForDeliveryAnimation from "../../../public/Lottie/out-for-delivery.json";
 import confirmAnimation from "../../../public/Lottie/check.json";
@@ -20,7 +21,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 function TrackOrderPageContent() {
-  const [currentStep, setCurrentStep] = useState(1); // 1 = payment pending, 2 = preparing, etc.
+  const [currentStep, setCurrentStep] = useState(0); // 0 = payment pending (not selected), 1 = payment successful (selected), 2 = preparing, etc.
   return (
     <div className="flex-1 h-screen flex items-center justify-center w-full">
       <div
@@ -30,19 +31,31 @@ function TrackOrderPageContent() {
         {/* Header Section */}
         <div
           className={`text-white p-4 md:pt-[20px] ${
-            currentStep === 1 ? "bg-blue-500" : "bg-green-500"
+            currentStep === 1
+              ? "bg-green-500"
+              : currentStep === 0
+              ? "bg-blue-500"
+              : "bg-green-500"
           }`}
         >
           <div className="flex items-center justify-between mb-3">
             <Link
               href="/orders"
               className={`flex items-center rounded-full p-2 ${
-                currentStep === 1 ? "bg-blue-200" : "bg-green-200"
+                currentStep === 1
+                  ? "bg-green-200"
+                  : currentStep === 0
+                  ? "bg-blue-200"
+                  : "bg-green-200"
               }`}
             >
               <ChevronLeft
                 className={`h-5 w-5 ${
-                  currentStep === 1 ? "text-blue-700" : "text-green-700"
+                  currentStep === 1
+                    ? "text-green-700"
+                    : currentStep === 0
+                    ? "text-blue-700"
+                    : "text-green-700"
                 }`}
               />
             </Link>
@@ -53,16 +66,26 @@ function TrackOrderPageContent() {
                 ? "Out for Delivery"
                 : currentStep === 2
                 ? "Preparing Order"
+                : currentStep === 1
+                ? "Payment Successful"
                 : "Payment Pending"}
             </h2>
             <div
               className={`flex items-center justify-center rounded-full h-9 w-9 ${
-                currentStep === 1 ? "bg-blue-200" : "bg-green-200"
+                currentStep === 1
+                  ? "bg-green-200"
+                  : currentStep === 0
+                  ? "bg-blue-200"
+                  : "bg-green-200"
               }`}
             >
               <RefreshCw
                 className={`h-4 w-4 ${
-                  currentStep === 1 ? "text-blue-700" : "text-green-700"
+                  currentStep === 1
+                    ? "text-green-700"
+                    : currentStep === 0
+                    ? "text-blue-700"
+                    : "text-green-700"
                 }`}
               />
             </div>
@@ -77,6 +100,8 @@ function TrackOrderPageContent() {
                   ? "Your order is on the way"
                   : currentStep === 2
                   ? "Your order is being prepared"
+                  : currentStep === 1
+                  ? "Payment completed successfully"
                   : "Complete payment to proceed"}
               </div>
             </div>
@@ -94,19 +119,31 @@ function TrackOrderPageContent() {
                     currentStep === 4 ? "w-32 h-32" : "w-64 h-64"
                   }`}
                 >
-                  <Lottie
-                    animationData={
-                      currentStep === 4
-                        ? confirmAnimation
-                        : currentStep === 3
-                        ? outForDeliveryAnimation
-                        : currentStep === 2
-                        ? preparingAnimation
-                        : paymentPendingAnimation
-                    }
-                    loop={true}
-                    autoplay={true}
-                  />
+                  {currentStep === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Lottie
+                        animationData={paymentPendingAnimation}
+                        loop={true}
+                        autoplay={true}
+                      />
+                    </div>
+                  ) : (
+                    <Lottie
+                      animationData={
+                        currentStep === 4
+                          ? confirmAnimation
+                          : currentStep === 3
+                          ? outForDeliveryAnimation
+                          : currentStep === 2
+                          ? preparingAnimation
+                          : currentStep === 1
+                          ? paymentDoneAnimation
+                          : paymentPendingAnimation
+                      }
+                      loop={true}
+                      autoplay={true}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -123,12 +160,18 @@ function TrackOrderPageContent() {
                   ? "Out for Delivery"
                   : currentStep === 2
                   ? "Order in Progress"
+                  : currentStep === 1
+                  ? "Payment Successful"
                   : "Payment Pending"}
               </h2>
               <p className="text-gray-600 mb-4 text-[14px]">
                 <span
                   className={`text-[14px] font-medium ${
-                    currentStep === 1 ? "text-blue-600" : "text-green-600"
+                    currentStep === 1
+                      ? "text-green-600"
+                      : currentStep === 0
+                      ? "text-blue-600"
+                      : "text-green-600"
                   }`}
                 >
                   {currentStep === 4
@@ -137,6 +180,8 @@ function TrackOrderPageContent() {
                     ? "On the way"
                     : currentStep === 2
                     ? "Being prepared"
+                    : currentStep === 1
+                    ? "Payment successful"
                     : "Awaiting payment"}
                 </span>
                 <span className="mx-1">•</span>
@@ -146,6 +191,8 @@ function TrackOrderPageContent() {
                   ? "Your order is being delivered to you"
                   : currentStep === 2
                   ? "Your delicious order is being made"
+                  : currentStep === 1
+                  ? "Payment has been completed successfully"
                   : "Complete payment to proceed with your order"}
               </p>
             </div>
@@ -156,7 +203,11 @@ function TrackOrderPageContent() {
               <div className="absolute top-6 left-6 right-6 h-0.5 bg-gray-200">
                 <div
                   className={`h-full transition-all duration-500 ${
-                    currentStep === 1 ? "bg-blue-500" : "bg-green-500"
+                    currentStep === 1
+                      ? "bg-green-500"
+                      : currentStep === 0
+                      ? "bg-gray-300"
+                      : "bg-green-500"
                   }`}
                   style={{
                     width:
@@ -166,7 +217,9 @@ function TrackOrderPageContent() {
                         ? "80%"
                         : currentStep >= 2
                         ? "60%"
-                        : "25%",
+                        : currentStep >= 1
+                        ? "25%"
+                        : "0%",
                   }}
                 />
               </div>
@@ -175,13 +228,16 @@ function TrackOrderPageContent() {
               <div className="flex justify-between relative">
                 {/* Step 1 - Order Confirmed */}
                 <div className="flex flex-col items-center">
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center relative z-10 transition-all duration-300 shadow-lg ${
-                      currentStep === 1 ? "bg-blue-500" : "bg-green-500"
-                    } text-white`}
+                  <button
+                    onClick={() => setCurrentStep(currentStep === 1 ? 0 : 1)}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center relative z-10 transition-all duration-300 ${
+                      currentStep >= 1
+                        ? "bg-green-500 text-white shadow-lg"
+                        : "bg-gray-100 text-gray-400"
+                    }`}
                   >
                     <Card className="w-6 h-6" weight="Broken" />
-                  </div>
+                  </button>
                 </div>
 
                 {/* Step 2 - Preparing */}
@@ -282,6 +338,8 @@ function TrackOrderPageContent() {
             href="tel:+919876543210"
             className={`w-full py-3 px-6 rounded-full font-medium text-center flex items-center justify-center gap-2 transition-colors ${
               currentStep === 1
+                ? "bg-green-500 text-white hover:bg-green-600"
+                : currentStep === 0
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-green-500 text-white hover:bg-green-600"
             }`}
@@ -309,6 +367,8 @@ function TrackOrderPageContent() {
             href="tel:+919876543210"
             className={`w-full py-3 px-6 rounded-full font-medium text-center flex items-center justify-center gap-2 transition-colors ${
               currentStep === 1
+                ? "bg-green-500 text-white hover:bg-green-600"
+                : currentStep === 0
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-green-500 text-white hover:bg-green-600"
             }`}
