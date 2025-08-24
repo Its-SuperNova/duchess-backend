@@ -219,7 +219,7 @@ export default function OrdersPage() {
   };
 
   const handleTrackOrder = (orderId: string) => {
-    router.push(`/profile/orders/track?id=${orderId}`);
+    router.push(`/orders/track/${orderId}`);
   };
 
   const activeOrders = orders.filter(

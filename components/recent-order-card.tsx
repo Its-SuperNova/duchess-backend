@@ -193,7 +193,7 @@ export default function RecentOrderCard() {
             <div className="flex justify-between text-xs text-gray-500 mb-2">
               <span>Order Progress</span>
               <Link
-                href="/profile/orders/track"
+                href={`/orders/track/${recentOrder.id}`}
                 className="text-primary hover:underline"
               >
                 Track Order

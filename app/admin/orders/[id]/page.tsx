@@ -11,6 +11,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { TimePicker } from "@/components/block/clockTimePicker";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -27,11 +33,17 @@ import {
   User,
   MapPin,
   Calendar,
-  CreditCard,
-  Package,
   Phone,
+  AlertTriangle,
+  Package,
 } from "lucide-react";
-import { ChefHatHeart, Scooter, HomeSmile } from "@solar-icons/react";
+import {
+  ChefHatHeart,
+  Scooter,
+  HomeSmile,
+  CalendarMark,
+  ClockCircle,
+} from "@solar-icons/react";
 
 interface Order {
   id: string;
@@ -123,19 +135,29 @@ export default function OrderDetailPage() {
     if (!timestamp) return "";
 
     try {
-      // Handle both ISO format and local time format
-      let date: Date;
+      // Parse the timestamp manually to avoid timezone issues
+      let hours: number, minutes: number;
 
       if (timestamp.includes("T") || timestamp.includes("Z")) {
-        // ISO format (UTC)
-        date = new Date(timestamp);
+        // ISO format (e.g., "2025-08-23T15:00:00+00:00")
+        const match = timestamp.match(/T(\d{2}):(\d{2}):/);
+        if (match) {
+          hours = parseInt(match[1]);
+          minutes = parseInt(match[2]);
+        } else {
+          return timestamp; // Return original if parsing fails
+        }
       } else {
-        // Local time format (YYYY-MM-DD HH:MM:SS)
-        date = new Date(timestamp + "T00:00:00");
+        // Local time format (e.g., "2025-08-23 15:00:00")
+        const match = timestamp.match(/(\d{2}):(\d{2}):/);
+        if (match) {
+          hours = parseInt(match[1]);
+          minutes = parseInt(match[2]);
+        } else {
+          return timestamp; // Return original if parsing fails
+        }
       }
 
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
       const period = hours >= 12 ? "pm" : "am";
       const displayHours = hours % 12 || 12;
       const displayMinutes = minutes.toString().padStart(2, "0");
@@ -250,7 +272,7 @@ export default function OrderDetailPage() {
       if (result.success) {
         setOrder({
           ...order,
-          estimated_time_delivery: newTime,
+          estimated_time_delivery: timestamp,
         });
         toast({
           title: "Success",
@@ -436,6 +458,20 @@ export default function OrderDetailPage() {
             await updateOrderStatus("preparing");
             break;
           case "delivery":
+            // Additional validation for delivery step
+            if (
+              !order?.estimated_time_delivery ||
+              !order?.delivery_person_name ||
+              !order?.delivery_person_contact
+            ) {
+              toast({
+                title: "Missing Information",
+                description:
+                  "Please provide estimated delivery time, delivery person name, and contact before starting delivery.",
+                variant: "destructive",
+              });
+              return;
+            }
             await updateOrderStatus("out_for_delivery");
             break;
           case "delivered":
@@ -745,36 +781,97 @@ export default function OrderDetailPage() {
                         order.orderStatus === "out_for_delivery" ||
                         order.orderStatus === "delivered"
                           ? "bg-green-500 text-white shadow-lg"
+                          : !order.estimated_time_delivery ||
+                            !order.delivery_person_name ||
+                            !order.delivery_person_contact
+                          ? "bg-orange-100 text-orange-400 border-2 border-orange-300"
                           : "bg-gray-100 text-gray-400"
                       }`}
                     >
                       <Scooter className="w-6 h-6" weight="Broken" />
                     </div>
-                    <p className="text-xs mt-2 text-center font-medium">
-                      Out for Delivery
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-2 text-xs h-6 px-2"
-                      onClick={() => {
-                        showConfirmation({
-                          type: "delivery",
-                          title: "Start Order Delivery",
-                          description:
-                            "Are you sure you want to mark this order as out for delivery? This will notify the customer that their order is on the way.",
-                        });
-                      }}
-                      disabled={
-                        order.orderStatus === "out_for_delivery" ||
-                        order.orderStatus === "delivered"
-                      }
-                    >
-                      {order.orderStatus === "out_for_delivery" ||
-                      order.orderStatus === "delivered"
-                        ? "Completed"
-                        : "Start Delivery"}
-                    </Button>
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                      <p className="text-xs text-center font-medium">
+                        Out for Delivery
+                      </p>
+                      {(!order.estimated_time_delivery ||
+                        !order.delivery_person_name ||
+                        !order.delivery_person_contact) && (
+                        <AlertTriangle className="w-3 h-3 text-orange-500" />
+                      )}
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 text-xs h-6 px-2"
+                            onClick={() => {
+                              // Check if required fields are missing
+                              if (
+                                !order.estimated_time_delivery ||
+                                !order.delivery_person_name ||
+                                !order.delivery_person_contact
+                              ) {
+                                toast({
+                                  title: "Missing Information",
+                                  description:
+                                    "Please provide estimated delivery time, delivery person name, and contact before starting delivery.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              showConfirmation({
+                                type: "delivery",
+                                title: "Start Order Delivery",
+                                description:
+                                  "Are you sure you want to mark this order as out for delivery? This will notify the customer that their order is on the way.",
+                              });
+                            }}
+                            disabled={
+                              order.orderStatus === "out_for_delivery" ||
+                              order.orderStatus === "delivered" ||
+                              !order.estimated_time_delivery ||
+                              !order.delivery_person_name ||
+                              !order.delivery_person_contact
+                            }
+                          >
+                            {order.orderStatus === "out_for_delivery" ||
+                            order.orderStatus === "delivered"
+                              ? "Completed"
+                              : !order.estimated_time_delivery ||
+                                !order.delivery_person_name ||
+                                !order.delivery_person_contact
+                              ? "Missing Info"
+                              : "Start Delivery"}
+                          </Button>
+                        </TooltipTrigger>
+                        {(!order.estimated_time_delivery ||
+                          !order.delivery_person_name ||
+                          !order.delivery_person_contact) && (
+                          <TooltipContent>
+                            <div className="text-sm">
+                              <p className="font-medium mb-1">
+                                Missing Information:
+                              </p>
+                              <ul className="space-y-1 text-xs">
+                                {!order.estimated_time_delivery && (
+                                  <li>• Estimated delivery time</li>
+                                )}
+                                {!order.delivery_person_name && (
+                                  <li>• Delivery person name</li>
+                                )}
+                                {!order.delivery_person_contact && (
+                                  <li>• Delivery person contact</li>
+                                )}
+                              </ul>
+                            </div>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
 
                   {/* Step 5: Delivered */}
@@ -897,15 +994,23 @@ export default function OrderDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Order Date:</span>
-                  <span className="font-medium">{order.fullDate}</span>
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground mb-2">
-                    Bill Details
+                <div className="flex justify-between gap-2">
+                  <div className="flex justify-center items-center gap-2 bg-[#f5f5f5] p-2 rounded-md w-full">
+                    <div className="flex items-center gap-2">
+                      <CalendarMark className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <span className="font-medium">{order.fullDate}</span>
                   </div>
+                  <div className="flex justify-center items-center gap-2 bg-[#f5f5f5] p-2 rounded-md w-full">
+                    <div className="flex items-center gap-2">
+                      <ClockCircle className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <span className="font-medium">
+                      {formatTimeForDisplay(order.created_at)}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-3">
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Item Total:</span>
@@ -995,13 +1100,13 @@ export default function OrderDetailPage() {
                       e.target === e.currentTarget && setShowTimePicker(false)
                     }
                   >
-                      <TimePicker
-                        onTimeSelect={(time) => {
-                          setSelectedTime(time);
-                          updateEstimatedDeliveryTime(time);
-                          setShowTimePicker(false);
-                        }}
-                      />
+                    <TimePicker
+                      onTimeSelect={(time) => {
+                        setSelectedTime(time);
+                        updateEstimatedDeliveryTime(time);
+                        setShowTimePicker(false);
+                      }}
+                    />
                   </div>
                 )}
               </div>

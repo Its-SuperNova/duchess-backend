@@ -98,6 +98,16 @@
   .text-primary-foreground {
     color: hsl(var(--primary-foreground)) !important;
   }
+  
+  /* Hide scrollbars for specific elements */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
 }
 
 /* Custom Scrollbar Styles */

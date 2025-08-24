@@ -417,14 +417,14 @@ export default function ProfilePage() {
                   <ChevronRight className="h-4 w-4 text-[#858585]" />
                 </Link>
                 <Link
-                  href="/profile/orders/track"
+                  href="/orders"
                   className="flex items-center justify-between px-4 py-2 cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
                     <div className="bg-[#f4f4f7] rounded-full w-10 h-10 flex items-center justify-center">
                       <Truck className="h-5 w-5 text-[#9b99ab]" />
                     </div>
-                    <span className="text-[#000000]">Track Order</span>
+                    <span className="text-[#000000]">My Orders</span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-[#858585]" />
                 </Link>
