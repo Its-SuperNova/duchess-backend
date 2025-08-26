@@ -73,8 +73,8 @@ export default function ProfilePage() {
   const { theme, resolvedTheme } = themeContext;
   const { favorites } = useFavorites();
 
-  // Mock data for demonstration, matching the Figma numbers
-  const totalOrders = 0;
+  // State for order count
+  const [totalOrders, setTotalOrders] = useState(0);
   const totalFavorites = favorites.length;
 
   // Handle mounting state
@@ -111,6 +111,18 @@ export default function ProfilePage() {
               gender: undefined,
               avatar_url: session.user.image || undefined,
             });
+          }
+
+          // Fetch total order count
+          try {
+            const response = await fetch("/api/orders/count");
+            if (response.ok) {
+              const data = await response.json();
+              setTotalOrders(data.totalOrders || 0);
+            }
+          } catch (error) {
+            console.error("Error fetching order count:", error);
+            setTotalOrders(0);
           }
         } catch (error) {
           console.error("Error loading profile data:", error);
@@ -405,26 +417,26 @@ export default function ProfilePage() {
               </h2>
               <div className="space-y-2 py-4">
                 <Link
-                  href="/profile/orders"
+                  href="/orders"
                   className="flex items-center justify-between px-4 py-2 cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
                     <div className="bg-[#f4f4f7] rounded-full w-10 h-10 flex items-center justify-center">
                       <ShoppingBag className="h-5 w-5 text-[#9b99ab]" />
                     </div>
-                    <span className="text-[#000000]">My Orders</span>
+                    <span className="text-[#000000]">Active Orders</span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-[#858585]" />
                 </Link>
                 <Link
-                  href="/orders"
+                  href="/orders?tab=completed"
                   className="flex items-center justify-between px-4 py-2 cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
                     <div className="bg-[#f4f4f7] rounded-full w-10 h-10 flex items-center justify-center">
                       <Truck className="h-5 w-5 text-[#9b99ab]" />
                     </div>
-                    <span className="text-[#000000]">My Orders</span>
+                    <span className="text-[#000000]">Completed Orders</span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-[#858585]" />
                 </Link>

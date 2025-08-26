@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -110,9 +110,20 @@ interface OrderItem {
 export default function OrdersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
+
+  // Handle URL parameter for tab
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "completed") {
+      setActiveTab("completed");
+    } else {
+      setActiveTab("active");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (session?.user) {
@@ -593,13 +604,6 @@ export default function OrdersPage() {
                                 ₹{order.total_amount?.toFixed(2) || "0.00"}
                               </p>
                             </div>
-
-                            {/* Leave Review button for delivered orders */}
-                            {order.status.toLowerCase() === "delivered" && (
-                              <button className="bg-primary text-white px-4 py-2 rounded-full text-sm hover:bg-primary/90 transition-colors">
-                                Leave Review
-                              </button>
-                            )}
                           </div>
 
                           {/* Note if exists */}

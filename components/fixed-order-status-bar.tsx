@@ -36,11 +36,10 @@ export default function FixedOrderStatusBar() {
         const data = await response.json();
         const orders = data.orders || [];
         // Get the most recent order that's not delivered or cancelled
-        const activeOrder =
-          orders.find(
-            (order: Order) =>
-              !["delivered", "cancelled"].includes(order.status.toLowerCase())
-          ) || orders[0]; // Fallback to most recent order
+        const activeOrder = orders.find(
+          (order: Order) =>
+            !["delivered", "cancelled"].includes(order.status.toLowerCase())
+        );
         setRecentOrder(activeOrder || null);
       }
     } catch (error) {
