@@ -424,7 +424,7 @@ export default function ProfilePage() {
                     <div className="bg-[#f4f4f7] rounded-full w-10 h-10 flex items-center justify-center">
                       <ShoppingBag className="h-5 w-5 text-[#9b99ab]" />
                     </div>
-                    <span className="text-[#000000]">Active Orders</span>
+                    <span className="text-[#000000]">My Orders</span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-[#858585]" />
                 </Link>

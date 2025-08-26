@@ -96,7 +96,7 @@ body {
   }
 
   /* Add extra small breakpoint */
-  @variants responsive {
+  @layer utilities {
     .xs\:flex-row {
       flex-direction: row;
     }
