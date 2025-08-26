@@ -2,6 +2,15 @@
 
 declare global {
   namespace Database {
+    // Email confirmation types
+    interface EmailConfirmation {
+      email: string;
+      orderId: string;
+      items: Array<{
+        name: string;
+        quantity: number;
+      }>;
+    }
     interface Tables {
       users: {
         Row: {

@@ -128,7 +128,7 @@ export default function TermsConditionsPage() {
                         Payment Processing:
                       </h3>
                       <p className="text-gray-700 text-sm sm:text-base">
-                        We process payments exclusively via Razorpay. Payment
+                        We process payments exclusively via secure payment gateways. Payment
                         must be made in full at the time of Order placement.
                       </p>
                     </div>
@@ -200,7 +200,7 @@ export default function TermsConditionsPage() {
                   </h2>
                   <p className="text-gray-700 text-sm sm:text-base">
                     <strong>No Cancellations or Refunds:</strong> Once you place
-                    an Order and complete payment via Razorpay, the Order is
+                    an Order and complete payment via our secure payment gateway, the Order is
                     final. We do not accept cancellations or issue refunds under
                     any circumstances.
                   </p>

@@ -30,7 +30,7 @@ const payments = [
     name: "John Doe",
     email: "john@example.com",
     amount: "₹350.00",
-    method: "Razorpay",
+            method: "Online Payment",
     status: "Success",
     orderId: "ORD12345",
     txnId: "TXN456789",

@@ -196,7 +196,7 @@ export default function PrivacyPolicyPage() {
                           (PostgreSQL), Prisma
                         </li>
                         <li>
-                          <strong>Payments:</strong> Razorpay (PCI-compliant)
+                          <strong>Payments:</strong> Secure Payment Gateway (PCI-compliant)
                         </li>
                         <li>
                           <strong>Analytics & Error Reporting:</strong> Google

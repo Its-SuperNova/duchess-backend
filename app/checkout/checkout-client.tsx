@@ -756,6 +756,50 @@ export default function CheckoutClient() {
       const { orderId, orderNumber } = await response.json();
       console.log("Order created successfully:", orderId);
 
+      // Send order confirmation email
+      try {
+        console.log("Attempting to send order confirmation email...");
+        console.log("Email data:", {
+          email: session?.user?.email,
+          orderId: orderId,
+          items: cart.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+          })),
+        });
+
+        const emailResponse = await fetch("/api/order/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: session?.user?.email,
+            orderId: orderId,
+            items: cart.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+            })),
+          }),
+        });
+
+        if (emailResponse.ok) {
+          const emailResult = await emailResponse.json();
+          console.log(
+            "Order confirmation email sent successfully:",
+            emailResult
+          );
+        } else {
+          const errorData = await emailResponse.json().catch(() => ({}));
+          console.error("Failed to send order confirmation email:", {
+            status: emailResponse.status,
+            statusText: emailResponse.statusText,
+            error: errorData,
+          });
+        }
+      } catch (emailError) {
+        console.error("Error sending order confirmation email:", emailError);
+        // Don't fail the order if email fails
+      }
+
       // Navigate to animation page immediately with order ID
       // Cart will be cleared in the animation page to prevent empty cart flash
       router.replace(
@@ -1834,7 +1878,7 @@ export default function CheckoutClient() {
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
                       After clicking "Pay now", you will be redirected to{" "}
                       <span className="font-medium text-[#2664eb]">
-                        Razorpay Secure
+                        Secure Payment Gateway
                       </span>{" "}
                       (UPI, Cards, Wallets, NetBanking) to complete your
                       purchase securely.
@@ -2117,7 +2161,7 @@ export default function CheckoutClient() {
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
                 After clicking "Pay now", you will be redirected to{" "}
                 <span className="font-medium text-[#2664eb]">
-                  Razorpay Secure
+                  Secure Payment Gateway
                 </span>{" "}
                 (UPI, Cards, Wallets, NetBanking) to complete your purchase
                 securely.

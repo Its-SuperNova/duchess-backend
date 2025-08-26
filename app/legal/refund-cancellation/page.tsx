@@ -57,7 +57,7 @@ export default function RefundCancellationPage() {
                       </h3>
                       <p className="text-gray-700 text-sm sm:text-base">
                         Once an order is placed and payment is successfully
-                        processed via Razorpay, the sale is final.
+                        processed via our secure payment gateway, the sale is final.
                       </p>
                     </div>
                     <div>
@@ -244,7 +244,7 @@ export default function RefundCancellationPage() {
                           hello@duchesspastry.com
                         </a>{" "}
                         before initiating a chargeback. We will work with
-                        Razorpay to investigate and resolve the issue.
+                        our payment processor to investigate and resolve the issue.
                       </p>
                     </div>
                   </div>
