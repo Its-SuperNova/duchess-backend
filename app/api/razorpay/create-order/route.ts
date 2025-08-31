@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
-      amountInRupees,
+      amount: amountInRupees,
       currency = "INR",
       receipt,
       notes,
