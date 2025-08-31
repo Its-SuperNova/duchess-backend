@@ -28,12 +28,11 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Fetch order
+    // Fetch order - allow admin to view any order, user to view their own orders
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*")
       .eq("id", orderId as any)
-      .eq("user_id", (user as any)?.id)
       .single();
 
     if (orderError || !order) {

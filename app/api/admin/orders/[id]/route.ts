@@ -50,18 +50,6 @@ export async function GET(
           item_status,
           preparation_notes
         ),
-        addresses!orders_delivery_address_id_fkey (
-          id,
-          address_name,
-          full_address,
-          city,
-          state,
-          zip_code,
-          alternate_phone,
-          additional_details,
-          distance,
-          duration
-        ),
         coupons!orders_coupon_id_fkey (
           id,
           code,
@@ -116,11 +104,101 @@ export async function GET(
     // Extract contact information from delivery_address (legacy) or addresses table
     const deliveryAddress = order.delivery_address || {};
     const contactInfo = deliveryAddress.contact || {};
-    const addressData = order.addresses;
+    let addressData = order.addresses;
+
+    // If no address data from foreign key, try to fetch it from notes
+    if (!addressData && order.notes) {
+      try {
+        const notesData =
+          typeof order.notes === "string"
+            ? JSON.parse(order.notes)
+            : order.notes;
+        if (notesData.deliveryAddressId) {
+          console.log(
+            "Fetching address by ID from notes:",
+            notesData.deliveryAddressId
+          );
+          const { data: fetchedAddress, error: addressError } = await supabase
+            .from("addresses")
+            .select("*")
+            .eq("id", notesData.deliveryAddressId)
+            .single();
+
+          if (!addressError && fetchedAddress) {
+            addressData = fetchedAddress;
+            console.log("Successfully fetched address:", fetchedAddress);
+          } else {
+            console.error("Error fetching address:", addressError);
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing notes for address ID:", error);
+      }
+    }
+
+    // Parse delivery address from notes if not available in addresses table
+    let parsedDeliveryAddress = null;
+    let specialInstructions = null;
+    if (order.notes) {
+      try {
+        const notesData =
+          typeof order.notes === "string"
+            ? JSON.parse(order.notes)
+            : order.notes;
+
+        // Extract special instructions
+        if (notesData.specialInstructions) {
+          specialInstructions = notesData.specialInstructions;
+        }
+
+        // Parse address data
+        if (notesData.addressText) {
+          // Try to extract city, state, and pincode from the address text
+          const addressParts = notesData.addressText
+            .split(",")
+            .map((part) => part.trim());
+
+          // Simple parsing logic - you might want to improve this based on your address format
+          let city = "Unknown";
+          let state = "Unknown";
+          let zipCode = "Unknown";
+
+          if (addressParts.length >= 2) {
+            // Assume the last part might be city/state
+            const lastPart = addressParts[addressParts.length - 1];
+            if (lastPart.toLowerCase().includes("sulur")) {
+              city = "Sulur";
+              state = "Tamil Nadu";
+              zipCode = "641402"; // Default pincode for Sulur
+            }
+          }
+
+          parsedDeliveryAddress = {
+            id: "parsed",
+            name: "Delivery Address",
+            full_address: notesData.addressText,
+            city: city,
+            state: state,
+            zip_code: zipCode,
+            alternate_phone: null,
+            additional_details: null,
+            // Don't set default distance/duration - let the main logic handle it
+          };
+        }
+      } catch (error) {
+        console.error("Error parsing delivery address from notes:", error);
+      }
+    }
 
     console.log("Raw order data:", {
+      orderId: order.id,
+      delivery_address_id: order.delivery_address_id,
       delivery_address: order.delivery_address,
       addresses: order.addresses,
+      addressData: addressData,
+      addressDistance: addressData?.distance,
+      addressDuration: addressData?.duration,
+      addressId: addressData?.id,
       contactInfo: contactInfo,
       userInfo: order.users,
       coupon: order.coupons,
@@ -134,7 +212,10 @@ export async function GET(
         name: order.users?.name || order.contact_name || "Unknown Customer",
         email: order.users?.email || "No email",
         phone: order.contact_number || addressData?.alternate_phone || null,
-        alternatePhone: order.contact_alternate_number || null,
+        alternatePhone:
+          order.contact_alternate_number ||
+          addressData?.alternate_phone ||
+          null,
         avatar: `/api/avatar?name=${encodeURIComponent(
           order.users?.name || order.contact_name || "Unknown"
         )}`,
@@ -168,7 +249,7 @@ export async function GET(
             alternate_phone: addressData.alternate_phone,
             additional_details: addressData.additional_details,
           }
-        : null,
+        : parsedDeliveryAddress,
       delivery_address_text: order.delivery_address_text,
       contact_name: order.contact_name,
       contact_number: order.contact_number,
@@ -176,6 +257,7 @@ export async function GET(
 
       // Special requests and customizations
       notes: order.notes,
+      specialInstructions: specialInstructions,
       is_knife: order.is_knife,
       is_candle: order.is_candle,
       is_text_on_card: order.is_text_on_card,
@@ -186,9 +268,10 @@ export async function GET(
       delivery_date: order.delivery_date,
       delivery_time_slot: order.delivery_time_slot,
       estimated_time_delivery: order.estimated_time_delivery,
-      distance: addressData?.distance || null, // From address relationship
-      duration: addressData?.duration || null, // From address relationship
-      delivery_zone: order.delivery_zone,
+      distance: addressData?.distance || null, // Use actual address data only
+      duration: addressData?.duration || null, // Use actual address data only
+      delivery_zone:
+        order.delivery_zone || (addressData?.distance ? "Zone 1" : null), // Calculate zone based on actual distance
       delivery_person_name: order.delivery_person_name,
       delivery_person_contact: order.delivery_person_contact,
 

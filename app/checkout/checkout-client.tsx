@@ -73,6 +73,7 @@ import { calculateDeliveryFee } from "@/lib/distance";
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
+import CheckoutRazorpay from "@/components/CheckoutRazorpay";
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
@@ -201,6 +202,10 @@ export default function CheckoutClient() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isRazorpayPaymentOpen, setIsRazorpayPaymentOpen] = useState(false);
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [paymentOrderData, setPaymentOrderData] = useState<any>(null);
+  const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -618,7 +623,7 @@ export default function CheckoutClient() {
     return calculateDeliveryFee(distanceInKm);
   };
 
-  const deliveryFee = subtotal > 0 ? calculateDeliveryFeeFromAddress() : 0;
+  const deliveryFee = 0; // Set delivery fee to 0 for all orders
   // Calculate taxes (CGST 9% + SGST 9% = 18% total)
   const taxableAmount = subtotal - discount;
   const cgstAmount = taxableAmount * 0.09;
@@ -627,35 +632,20 @@ export default function CheckoutClient() {
 
   // Helper function to get delivery fee breakdown information
   const getDeliveryFeeBreakdown = () => {
-    if (!addressText || addresses.length === 0) return null;
-
-    const currentAddress = addresses.find(
-      (addr) => addr.full_address === addressText
-    );
-
-    if (!currentAddress?.distance) {
-      // Return default breakdown for addresses without distance info
-      return {
-        distance: null,
-        fee: 80,
-        formattedDistance: "Unknown distance",
-      };
-    }
-
-    const distanceInKm = currentAddress.distance / 10;
-    const fee = calculateDeliveryFee(distanceInKm);
-
+    // Return 0 delivery fee for all orders
     return {
-      distance: distanceInKm,
-      fee,
-      formattedDistance: `${distanceInKm.toFixed(1)} km`,
+      distance: null,
+      fee: 0,
+      formattedDistance: "Free delivery",
     };
   };
 
   const deliveryBreakdown = getDeliveryFeeBreakdown();
 
-  // Payment processing function
+  // Payment processing function - Create order and open Razorpay
   const handlePaymentConfirm = async () => {
+    if (isPaymentInProgress) return; // Prevent multiple payment attempts
+
     try {
       setIsProcessingPayment(true);
       setPaymentError(null);
@@ -669,8 +659,6 @@ export default function CheckoutClient() {
         setPaymentError("Address not found. Please select a valid address.");
         return;
       }
-
-      // Use the already calculated tax amounts from the main calculation
 
       // Get coupon data for coupon ID
       let appliedCouponData = null;
@@ -730,31 +718,102 @@ export default function CheckoutClient() {
         // Payment method
         paymentMethod: "online",
         specialInstructions: note || "",
+        // Cart items for order_items table
+        cartItems: cart.map((item) => ({
+          id: item.id,
+          product_id: item.id,
+          name: item.name,
+          image: item.image,
+          description: item.description,
+          category: item.category,
+          quantity: item.quantity,
+          price: item.price,
+          variant: item.variant,
+          customization_options: item.customization,
+          cake_text: item.cakeText,
+          cake_flavor: item.cakeFlavor,
+          cake_size: item.cakeSize,
+          cake_weight: item.cakeWeight,
+          add_knife: item.addKnife,
+          add_candles: item.addCandles,
+          add_message_card: item.addMessageCard,
+          gift_card_text: item.giftCardText,
+        })),
       };
 
       console.log("Applied coupon data:", appliedCouponData);
       console.log("Extracted coupon ID:", couponId);
       console.log("Creating order with data:", orderData);
 
-      const response = await fetch("/api/orders/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+      // Store order data for Razorpay payment (we'll create the order in Razorpay API)
+      setPaymentOrderData(orderData);
+      setPaymentOrderId("pending"); // Will be set after Razorpay order creation
+
+      // Close the payment dialog and open Razorpay payment
+      console.log("Setting up Razorpay payment flow...");
+      setIsPaymentDialogOpen(false);
+      setIsRazorpayPaymentOpen(true);
+      console.log(
+        "Payment dialog closed, Razorpay component should render now"
+      );
+    } catch (err) {
+      console.error("Error creating order:", err);
+      setPaymentError(
+        `Payment failed: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Razorpay payment success handler
+  const handlePaymentSuccess = async (paymentData: any) => {
+    try {
+      console.log("Payment successful:", paymentData);
+      console.log("Payment data structure:", {
+        localOrderId: paymentData.localOrderId,
+        orderId: paymentData.orderId,
+        success: paymentData.success,
+        message: paymentData.message,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Failed to create order:", response.status, errorData);
+      // Get the order ID from the payment data
+      let orderId = paymentData.localOrderId || paymentData.orderId;
+      console.log("Extracted orderId:", orderId);
+
+      // Fallback: if orderId is still undefined, try to get it from the order data
+      if (!orderId && paymentOrderData) {
+        console.log(
+          "OrderId is undefined, trying to get from paymentOrderData"
+        );
+        console.log("Payment order data:", paymentOrderData);
+        // Try to get the order ID from the database using the user's email and recent orders
+        try {
+          const recentOrderResponse = await fetch(
+            `/api/orders/recent?email=${session?.user?.email}`
+          );
+          if (recentOrderResponse.ok) {
+            const recentOrderData = await recentOrderResponse.json();
+            if (recentOrderData.order) {
+              orderId = recentOrderData.order.id;
+              console.log("Found recent order ID:", orderId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching recent order:", error);
+        }
+      }
+
+      // If still no orderId, show error and don't proceed
+      if (!orderId) {
+        console.error("Could not determine order ID for confirmation");
         setPaymentError(
-          `Failed to create order: ${
-            errorData.error || `HTTP ${response.status}`
-          }`
+          "Payment successful but could not confirm order. Please contact support with your payment details."
         );
         return;
       }
-
-      const { orderId, orderNumber } = await response.json();
-      console.log("Order created successfully:", orderId);
 
       // Send order confirmation email
       try {
@@ -803,21 +862,35 @@ export default function CheckoutClient() {
         // Don't fail the order if email fails
       }
 
-      // Navigate to animation page immediately with order ID
-      // Cart will be cleared in the animation page to prevent empty cart flash
+      // Clear cart after successful payment
+      try {
+        clearCart();
+        console.log("Cart cleared after successful payment");
+      } catch (cartError) {
+        console.error("Failed to clear cart:", cartError);
+        // Don't fail the success flow if cart clearing fails
+      }
+
+      // Navigate to animation page with order ID
       router.replace(
         "/checkout/order-confirmation-animation?orderId=" + orderId
       );
-    } catch (err) {
-      console.error("Error creating order:", err);
+    } catch (error) {
+      console.error("Error handling payment success:", error);
       setPaymentError(
-        `Payment failed: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
+        "Payment successful but there was an error processing your order. Please contact support."
       );
-    } finally {
-      setIsProcessingPayment(false);
     }
+  };
+
+  // Razorpay payment failure handler
+  const handlePaymentFailure = (error: any) => {
+    console.error("Payment failed:", error);
+    setPaymentError(
+      "Payment failed. Please try again or contact support if the issue persists."
+    );
+    setIsRazorpayPaymentOpen(false);
+    setIsPaymentDialogOpen(true); // Reopen payment dialog for retry
   };
 
   // Persist lightweight checkout context for payment step
@@ -2121,7 +2194,7 @@ export default function CheckoutClient() {
                     </span>
                   )}
                 </div>
-                <span>₹{deliveryFee}</span>
+                <span className="text-green-600 font-medium">Free</span>
               </div>
 
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
@@ -2197,7 +2270,7 @@ export default function CheckoutClient() {
               }
               onClick={() => setIsPaymentDialogOpen(true)}
             >
-              Confirm Order
+              Proceed to Payment
             </Button>
           </div>
         </div>
@@ -2231,7 +2304,7 @@ export default function CheckoutClient() {
                   )}
                   <div className="flex justify-between">
                     <span>Delivery Fee:</span>
-                    <span>₹{deliveryFee.toFixed(2)}</span>
+                    <span className="text-green-600 font-medium">Free</span>
                   </div>
                   <div className="flex justify-between">
                     <span>CGST (9%):</span>
@@ -2285,11 +2358,44 @@ export default function CheckoutClient() {
                 disabled={isProcessingPayment}
                 className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
               >
-                {isProcessingPayment ? "Processing..." : "Confirm Order"}
+                {isProcessingPayment ? "Processing..." : "Proceed to Payment"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Razorpay Payment Component */}
+        {isRazorpayPaymentOpen && paymentOrderData && (
+          <>
+            {console.log("Rendering CheckoutRazorpay component with:", {
+              isRazorpayPaymentOpen,
+              hasPaymentOrderData: !!paymentOrderData,
+              total,
+              orderData: paymentOrderData,
+            })}
+            <CheckoutRazorpay
+              amount={total}
+              currency="INR"
+              notes={{
+                user_email: session?.user?.email || "",
+                items: cart.map((item) => ({
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: item.price,
+                })),
+              }}
+              orderData={paymentOrderData}
+              onSuccess={handlePaymentSuccess}
+              onFailure={handlePaymentFailure}
+              onClose={() => {
+                setIsRazorpayPaymentOpen(false);
+                setPaymentOrderId(null);
+                setPaymentOrderData(null);
+              }}
+              autoTrigger={true}
+            />
+          </>
+        )}
       </div>
     </div>
   );

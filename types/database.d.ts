@@ -100,6 +100,31 @@ declare global {
         Update: Partial<Tables["coupons"]["Insert"]>;
       };
 
+      payments: {
+        Row: {
+          id: string;
+          order_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id: string | null;
+          razorpay_refund_id: string | null;
+          amount: number;
+          currency: string;
+          payment_status: "pending" | "captured" | "failed" | "refunded";
+          payment_method: string;
+          receipt: string | null;
+          signature_verified: boolean;
+          webhook_received: boolean;
+          notes: any;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Tables["payments"]["Row"],
+          "id" | "created_at" | "updated_at"
+        >;
+        Update: Partial<Tables["payments"]["Insert"]>;
+      };
+
       favorites: {
         Row: {
           id: string;
@@ -178,6 +203,8 @@ declare global {
           // Payment information
           payment_method: "online" | "cod" | "card" | "upi" | "wallet";
           payment_transaction_id: string | null;
+          // Payment reference
+          latest_payment_id: string | null;
           // Additional tracking
           preparation_time: number | null;
           cooking_started_at: string | null;

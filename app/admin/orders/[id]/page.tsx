@@ -101,6 +101,7 @@ interface Order {
   delivery_person_contact?: string;
   payment_method: string;
   notes?: string;
+  specialInstructions?: string;
   // Legacy fields for backward compatibility
   address_text?: string;
   note?: string;
@@ -1472,33 +1473,6 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Additional Information */}
-      {(order.note || order.coupon_code) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {order.note && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Order Note:
-                </p>
-                <p className="text-sm">{order.note}</p>
-              </div>
-            )}
-            {order.coupon_code && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Coupon Applied:
-                </p>
-                <Badge variant="secondary">{order.coupon_code}</Badge>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

@@ -6,7 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:razorpay": "echo 'Navigate to http://localhost:3000/test-razorpay to test Razorpay integration'",
+    "db:migrate": "node scripts/run-razorpay-migration.js",
+    "db:migrate:manual": "echo 'Copy the SQL from database/razorpay-migration.sql and run it in Supabase SQL editor'",
+    "setup:env": "node scripts/setup-env.js",
+    "check:schema": "node scripts/check-db-schema.js",
+    "cleanup:payments": "node scripts/cleanup-payments.js",
+    "cleanup:payments:all": "node scripts/cleanup-payments.js --confirm",
+    "cleanup:payments:test": "node scripts/cleanup-payments.js --test-only",
+    "cleanup:payments:date": "node scripts/cleanup-payments.js --date-range 2025-08-31",
+    "cleanup:payments:pending": "node scripts/cleanup-payments.js --status pending",
+    "update:delivery-fees": "node scripts/update-delivery-fees.js",
+    "update:delivery-fees:confirm": "node scripts/update-delivery-fees.js --confirm"
   },
   "dependencies": {
     "@hookform/resolvers": "latest",
@@ -56,6 +68,7 @@
     "next-auth": "^5.0.0-beta.28",
     "next-themes": "latest",
     "nodemailer": "^6.10.1",
+    "razorpay": "^2.9.6",
     "react": "^19.1.1",
     "react-day-picker": "^9.9.0",
     "react-dom": "^19.1.1",
