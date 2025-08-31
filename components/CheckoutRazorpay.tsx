@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +27,75 @@ interface CheckoutRazorpayProps {
 declare global {
   interface Window {
     Razorpay: any;
+    __razorpayScriptLoaded?: boolean;
   }
+}
+
+// Global script loading state
+let scriptLoadingPromise: Promise<boolean> | null = null;
+
+// Preload Razorpay script immediately when module loads
+function preloadRazorpayScript(): Promise<boolean> {
+  if (window.Razorpay) {
+    return Promise.resolve(true);
+  }
+
+  if (window.__razorpayScriptLoaded) {
+    return Promise.resolve(true);
+  }
+
+  if (scriptLoadingPromise) {
+    return scriptLoadingPromise;
+  }
+
+  scriptLoadingPromise = new Promise<boolean>((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => {
+      console.log("Razorpay SDK preloaded successfully");
+      window.__razorpayScriptLoaded = true;
+      resolve(true);
+    };
+
+    script.onerror = (error) => {
+      console.error("Failed to preload Razorpay SDK:", error);
+      scriptLoadingPromise = null;
+      resolve(false);
+    };
+
+    // Set a shorter timeout for preloading
+    const timeout = setTimeout(() => {
+      console.error("Razorpay SDK preload timeout");
+      scriptLoadingPromise = null;
+      resolve(false);
+    }, 5000); // 5 second timeout for preloading
+
+    script.onload = () => {
+      clearTimeout(timeout);
+      console.log("Razorpay SDK preloaded successfully");
+      window.__razorpayScriptLoaded = true;
+      resolve(true);
+    };
+
+    script.onerror = (error) => {
+      clearTimeout(timeout);
+      console.error("Failed to preload Razorpay SDK:", error);
+      scriptLoadingPromise = null;
+      resolve(false);
+    };
+
+    document.head.appendChild(script);
+  });
+
+  return scriptLoadingPromise;
+}
+
+// Start preloading immediately
+if (typeof window !== "undefined") {
+  preloadRazorpayScript();
 }
 
 export default function CheckoutRazorpay({
@@ -43,104 +111,38 @@ export default function CheckoutRazorpay({
   autoTrigger = false,
 }: CheckoutRazorpayProps) {
   const [loading, setLoading] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
   const hasTriggered = useRef(false);
+  const orderCreationPromise = useRef<Promise<any> | null>(null);
 
-  // Load Razorpay script dynamically
-  async function loadRazorpayScript(): Promise<boolean> {
-    if (window.Razorpay) return true;
-
-    return new Promise<boolean>((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-
-      script.onload = () => {
-        console.log("Razorpay SDK loaded successfully");
-        resolve(true);
-      };
-
-      script.onerror = (error) => {
-        console.error("Failed to load Razorpay SDK:", error);
-        resolve(false);
-      };
-
-      // Set a timeout to prevent hanging
-      const timeout = setTimeout(() => {
-        console.error("Razorpay SDK load timeout");
-        resolve(false);
-      }, 10000); // 10 second timeout
-
-      script.onload = () => {
-        clearTimeout(timeout);
-        console.log("Razorpay SDK loaded successfully");
-        resolve(true);
-      };
-
-      script.onerror = (error) => {
-        clearTimeout(timeout);
-        console.error("Failed to load Razorpay SDK:", error);
-        resolve(false);
-      };
-
-      document.head.appendChild(script);
-    });
-  }
-
-  const handlePayment = useCallback(async () => {
-    console.log("handlePayment called with:", {
-      disabled,
-      loading,
-      hasTriggered: hasTriggered.current,
-      amount,
-      orderData: !!orderData,
-    });
-
-    if (disabled || loading) {
-      console.log("handlePayment early return due to:", {
-        disabled,
-        loading,
-      });
-      return;
+  // Check if script is already loaded on mount
+  useEffect(() => {
+    if (window.Razorpay || window.__razorpayScriptLoaded) {
+      setScriptLoaded(true);
     }
+  }, []);
 
-    // Set hasTriggered to true to prevent multiple calls
-    hasTriggered.current = true;
-    setLoading(true);
+  // Preload script when component mounts
+  useEffect(() => {
+    const loadScript = async () => {
+      const loaded = await preloadRazorpayScript();
+      setScriptLoaded(loaded);
+    };
+    loadScript();
+  }, []);
 
+  // Pre-create order when component mounts (for autoTrigger)
+  useEffect(() => {
+    if (autoTrigger && !hasTriggered.current && scriptLoaded && orderData) {
+      // Pre-create order in background
+      orderCreationPromise.current = createOrderInBackground();
+    }
+  }, [autoTrigger, scriptLoaded, orderData]);
+
+  // Create order in background without blocking UI
+  const createOrderInBackground = async () => {
     try {
-      // Load Razorpay script
-      console.log("Loading Razorpay SDK...");
-      const scriptLoaded = await loadRazorpayScript();
-      console.log("Razorpay script loaded:", scriptLoaded);
-      console.log("window.Razorpay available:", !!window.Razorpay);
-
-      if (!scriptLoaded) {
-        throw new Error(
-          "Failed to load Razorpay SDK. Please check your internet connection and try again."
-        );
-      }
-
-      // Check if environment variables are configured
-      console.log("Checking environment variables...");
-      console.log(
-        "NEXT_PUBLIC_RAZORPAY_KEY_ID:",
-        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-      );
-
-      if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
-        throw new Error(
-          "Razorpay configuration is missing. Please check your environment variables."
-        );
-      }
-
-      // Create order on server
-      console.log("Creating order on server...");
-      console.log("Order data being sent:", {
-        amount: amount,
-        currency,
-        notes: notes,
-        orderData: orderData,
-      });
+      console.log("Pre-creating order in background...");
 
       const createOrderResponse = await fetch("/api/razorpay/create-order", {
         method: "POST",
@@ -149,48 +151,116 @@ export default function CheckoutRazorpay({
           amount: amount,
           currency,
           notes: notes,
-          ...orderData, // Include all order data
+          ...orderData,
         }),
       });
 
       const createOrderData = await createOrderResponse.json();
-      console.log("Order creation response:", createOrderData);
-      console.log("Order creation status:", createOrderResponse.status);
 
       if (!createOrderResponse.ok) {
-        console.error("Create order failed:", createOrderData);
         throw new Error(createOrderData?.error || "Failed to create order");
       }
 
+      console.log("Order pre-created successfully:", createOrderData);
+      return createOrderData;
+    } catch (error) {
+      console.error("Background order creation failed:", error);
+      return null;
+    }
+  };
+
+  const handlePayment = useCallback(async () => {
+    console.log("handlePayment called with:", {
+      disabled,
+      loading,
+      hasTriggered: hasTriggered.current,
+      amount,
+      orderData: !!orderData,
+      scriptLoaded,
+    });
+
+    if (disabled || loading) {
+      console.log("handlePayment early return due to:", { disabled, loading });
+      return;
+    }
+
+    // Set hasTriggered to true to prevent multiple calls
+    hasTriggered.current = true;
+    setLoading(true);
+
+    try {
+      // Wait for script to load (should be fast if preloaded)
+      if (!scriptLoaded) {
+        console.log("Waiting for Razorpay script to load...");
+        const loaded = await preloadRazorpayScript();
+        setScriptLoaded(loaded);
+
+        if (!loaded) {
+          throw new Error("Failed to load Razorpay SDK");
+        }
+      }
+
+      // Check environment variables
+      if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+        throw new Error("Razorpay configuration is missing");
+      }
+
+      // Use pre-created order or create new one
+      let createOrderData;
+      if (orderCreationPromise.current) {
+        console.log("Using pre-created order...");
+        createOrderData = await orderCreationPromise.current;
+        orderCreationPromise.current = null;
+      } else {
+        console.log("Creating order on demand...");
+        const createOrderResponse = await fetch("/api/razorpay/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: amount,
+            currency,
+            notes: notes,
+            ...orderData,
+          }),
+        });
+
+        createOrderData = await createOrderResponse.json();
+
+        if (!createOrderResponse.ok) {
+          throw new Error(createOrderData?.error || "Failed to create order");
+        }
+      }
+
       if (!createOrderData?.order) {
-        console.error("Invalid order response:", createOrderData);
         throw new Error("Invalid order response from server");
       }
 
       const { order, localOrderId, key } = createOrderData;
 
-      // Verify we have the required data
       if (!key) {
         throw new Error("Razorpay key not provided by server");
       }
 
-      console.log("Order created successfully:", {
-        orderId: order.id,
-        localOrderId,
-      });
+      console.log("Order ready, opening Razorpay checkout...");
 
       // Configure Razorpay checkout options
       const options = {
-        key: key, // NEXT_PUBLIC_RAZORPAY_KEY_ID
+        key: key,
         amount: order.amount,
         currency: order.currency,
         name: "Duchess Pastry",
         description: "Delicious pastries and cakes",
-        image: "/duchess-logo.png", // Your logo
+        image: "/duchess-logo.png",
         order_id: order.id,
         handler: async function (response: RazorpayResponse) {
           try {
+            console.log("=== RAZORPAY SUCCESS CALLBACK STARTED ===");
             console.log("Payment successful, verifying...", response);
+            console.log("Response structure:", {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            });
 
             // Verify payment on server
             const verifyResponse = await fetch("/api/razorpay/verify-payment", {
@@ -205,18 +275,36 @@ export default function CheckoutRazorpay({
             });
 
             const verifyData = await verifyResponse.json();
+            console.log("Verification response:", verifyData);
 
             if (verifyResponse.ok && verifyData.success) {
               toast.success(
                 "Payment successful! Your order has been confirmed."
               );
-              // Pass the localOrderId along with the verification data
               const successData = {
                 ...verifyData,
                 localOrderId: localOrderId,
               };
-              console.log("Calling onSuccess with data:", successData);
-              onSuccess?.(successData);
+              console.log("=== CALLING ONSUCCESS CALLBACK ===");
+              console.log(
+                "Success data being passed to onSuccess:",
+                successData
+              );
+              console.log("onSuccess function exists:", !!onSuccess);
+              console.log("onSuccess function type:", typeof onSuccess);
+
+              // Call onSuccess callback
+              if (onSuccess) {
+                console.log("Calling onSuccess callback...");
+                try {
+                  onSuccess(successData);
+                  console.log("onSuccess callback executed successfully");
+                } catch (callbackError) {
+                  console.error("Error in onSuccess callback:", callbackError);
+                }
+              } else {
+                console.warn("onSuccess callback is not provided");
+              }
             } else {
               console.error("Payment verification failed:", verifyData);
               toast.error(
@@ -231,14 +319,13 @@ export default function CheckoutRazorpay({
           }
         },
         prefill: {
-          // You can prefill customer details if available
           name: "",
           email: "",
           contact: "",
         },
         notes: order.notes || {},
         theme: {
-          color: "#F37254", // Razorpay brand color
+          color: "#F37254",
         },
         modal: {
           ondismiss: function () {
@@ -250,12 +337,8 @@ export default function CheckoutRazorpay({
         },
       };
 
-      console.log("Initializing Razorpay checkout...");
-      console.log("Razorpay options:", options);
-
       // Initialize and open Razorpay checkout
       const rzp = new window.Razorpay(options);
-      console.log("Razorpay instance created:", !!rzp);
 
       // Handle payment failure
       rzp.on("payment.failed", function (resp: any) {
@@ -265,14 +348,13 @@ export default function CheckoutRazorpay({
         onFailure?.(resp);
       });
 
-      // Open checkout
+      // Open checkout immediately
       console.log("Opening Razorpay checkout...");
       rzp.open();
       console.log("Razorpay checkout opened");
     } catch (error: any) {
       console.error("Checkout error:", error);
 
-      // Provide more specific error messages
       let errorMessage = "Checkout failed. Please try again.";
 
       if (error.message.includes("Failed to load Razorpay SDK")) {
@@ -304,6 +386,7 @@ export default function CheckoutRazorpay({
     onClose,
     disabled,
     loading,
+    scriptLoaded,
   ]);
 
   // Auto-trigger payment when component mounts (for checkout flow)
@@ -313,9 +396,16 @@ export default function CheckoutRazorpay({
       disabled,
       loading,
       hasTriggered: hasTriggered.current,
+      scriptLoaded,
     });
 
-    if (autoTrigger && !disabled && !loading && !hasTriggered.current) {
+    if (
+      autoTrigger &&
+      !disabled &&
+      !loading &&
+      !hasTriggered.current &&
+      scriptLoaded
+    ) {
       console.log("Auto-triggering payment...");
       handlePayment();
     }
@@ -326,7 +416,7 @@ export default function CheckoutRazorpay({
         hasTriggered.current = false;
       }
     };
-  }, [autoTrigger, disabled, loading, handlePayment]);
+  }, [autoTrigger, disabled, loading, handlePayment, scriptLoaded]);
 
   // If autoTrigger is true, don't render the button (payment will be triggered automatically)
   if (autoTrigger) {

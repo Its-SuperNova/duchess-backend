@@ -74,6 +74,12 @@ import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
 import CheckoutRazorpay from "@/components/CheckoutRazorpay";
+import { optimizeCheckoutFlow } from "@/lib/performance-utils";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
+import React from "react";
+
+// Preload CheckoutRazorpay component for better performance
+const PreloadedCheckoutRazorpay = React.memo(CheckoutRazorpay);
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
@@ -642,6 +648,20 @@ export default function CheckoutClient() {
 
   const deliveryBreakdown = getDeliveryFeeBreakdown();
 
+  // Preload Razorpay component when user reaches checkout
+  useEffect(() => {
+    // Optimize checkout flow performance
+    optimizeCheckoutFlow();
+    console.log("Checkout flow optimization initiated");
+  }, []);
+
+  // Handle performance metrics
+  const handlePerformanceMetrics = (metrics: any) => {
+    console.log("Checkout Performance Metrics:", metrics);
+    // You can send these metrics to your analytics service
+    // or use them for optimization insights
+  };
+
   // Payment processing function - Create order and open Razorpay
   const handlePaymentConfirm = async () => {
     if (isPaymentInProgress) return; // Prevent multiple payment attempts
@@ -772,6 +792,7 @@ export default function CheckoutClient() {
   // Razorpay payment success handler
   const handlePaymentSuccess = async (paymentData: any) => {
     try {
+      console.log("=== PAYMENT SUCCESS HANDLER STARTED ===");
       console.log("Payment successful:", paymentData);
       console.log("Payment data structure:", {
         localOrderId: paymentData.localOrderId,
@@ -873,13 +894,37 @@ export default function CheckoutClient() {
       }
 
       // Navigate to animation page with order ID
-      router.replace(
+      console.log("=== NAVIGATING TO CONFIRMATION PAGE ===");
+      console.log(
+        "Navigation URL:",
         "/checkout/order-confirmation-animation?orderId=" + orderId
       );
+      console.log("Router object:", router);
+      console.log("Current pathname:", window.location.pathname);
+
+      // Try navigation
+      try {
+        router.replace(
+          "/checkout/order-confirmation-animation?orderId=" + orderId
+        );
+        console.log("Navigation command executed successfully");
+      } catch (navError) {
+        console.error("Navigation error:", navError);
+        // Fallback: try window.location
+        try {
+          window.location.href =
+            "/checkout/order-confirmation-animation?orderId=" + orderId;
+          console.log("Fallback navigation executed");
+        } catch (fallbackError) {
+          console.error("Fallback navigation also failed:", fallbackError);
+        }
+      }
     } catch (error) {
       console.error("Error handling payment success:", error);
       setPaymentError(
-        "Payment successful but there was an error processing your order. Please contact support."
+        `Payment success handling failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   };
@@ -892,6 +937,12 @@ export default function CheckoutClient() {
     );
     setIsRazorpayPaymentOpen(false);
     setIsPaymentDialogOpen(true); // Reopen payment dialog for retry
+  };
+
+  // Test navigation function
+  const testNavigation = () => {
+    console.log("Testing navigation to confirmation page...");
+    router.replace("/checkout/order-confirmation-animation?orderId=test123");
   };
 
   // Persist lightweight checkout context for payment step
@@ -965,6 +1016,7 @@ export default function CheckoutClient() {
 
   return (
     <div className="min-h-screen bg-[#F5F6FB] pb-28">
+      <PerformanceMonitor onMetrics={handlePerformanceMetrics} />
       {/* Header */}
       <div className="bg-[#F5F6FB]">
         <div className="max-w-[1200px] mx-auto px-4 py-4">
@@ -2361,6 +2413,14 @@ export default function CheckoutClient() {
               >
                 {isProcessingPayment ? "Processing..." : "Proceed to Payment"}
               </Button>
+              {/* Test button for debugging */}
+              <Button
+                onClick={testNavigation}
+                variant="outline"
+                className="rounded-[18px] h-[48px] text-[16px] font-medium"
+              >
+                Test Navigation
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -2374,7 +2434,7 @@ export default function CheckoutClient() {
               total,
               orderData: paymentOrderData,
             })}
-            <CheckoutRazorpay
+            <PreloadedCheckoutRazorpay
               amount={total}
               currency="INR"
               notes={{
