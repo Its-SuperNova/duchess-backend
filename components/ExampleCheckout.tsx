@@ -66,8 +66,8 @@ export default function ExampleCheckout() {
 
           <div className="pt-4">
             <CheckoutRazorpay
-              amountInRupees={amount}
-              orderNotes={{
+              amount={amount}
+              notes={{
                 customer_notes: notes,
                 source: "example_checkout",
               }}

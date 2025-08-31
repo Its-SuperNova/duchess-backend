@@ -136,7 +136,7 @@ export default function CheckoutRazorpay({
       // Create order on server
       console.log("Creating order on server...");
       console.log("Order data being sent:", {
-        amountInRupees: amount,
+        amount: amount,
         currency,
         notes: notes,
         orderData: orderData,
@@ -146,7 +146,7 @@ export default function CheckoutRazorpay({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amountInRupees: amount,
+          amount: amount,
           currency,
           notes: notes,
           ...orderData, // Include all order data

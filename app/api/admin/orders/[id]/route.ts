@@ -156,7 +156,7 @@ export async function GET(
           // Try to extract city, state, and pincode from the address text
           const addressParts = notesData.addressText
             .split(",")
-            .map((part) => part.trim());
+            .map((part: string) => part.trim());
 
           // Simple parsing logic - you might want to improve this based on your address format
           let city = "Unknown";
