@@ -758,6 +758,7 @@ export default function CheckoutClient() {
 
       // Send order confirmation email
       try {
+        console.log("Cart items for email:", cart);
         console.log("Attempting to send order confirmation email...");
         console.log("Email data:", {
           email: session?.user?.email,

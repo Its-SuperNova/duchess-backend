@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -22,6 +23,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fetch order details from database
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) {
+      console.error("Error fetching order:", orderError);
+      return NextResponse.json(
+        { success: false, error: "Order not found" },
+        { status: 404 }
+      );
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -31,18 +47,108 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fetch correct product prices from database
+    const itemsWithPrices = await Promise.all(
+      items.map(async (item: any) => {
+        try {
+          // Extract product ID from item name or use a fallback
+          const productId = item.productId || item.id || item.name;
+
+          // Fetch product details from database
+          const { data: product, error } = await supabase
+            .from("products")
+            .select("id, name, price, weight_options, piece_options")
+            .eq("name", item.name)
+            .single();
+
+          if (error || !product) {
+            console.log(
+              `Product not found for: ${item.name}, using fallback price`
+            );
+            return {
+              ...item,
+              price: item.price || 0, // Use existing price as fallback
+            };
+          }
+
+          // Get the correct price based on product options
+          let correctPrice = product.price || 0;
+
+          // If product has weight or piece options, use the first active option
+          if (product.weight_options && product.weight_options.length > 0) {
+            const activeWeightOption = product.weight_options.find(
+              (opt: any) => opt.isActive
+            );
+            if (activeWeightOption) {
+              correctPrice =
+                parseInt(activeWeightOption.price) || product.price || 0;
+            }
+          } else if (
+            product.piece_options &&
+            product.piece_options.length > 0
+          ) {
+            const activePieceOption = product.piece_options.find(
+              (opt: any) => opt.isActive
+            );
+            if (activePieceOption) {
+              correctPrice =
+                parseInt(activePieceOption.price) || product.price || 0;
+            }
+          }
+
+          console.log(
+            `Product: ${item.name}, Original price: ${item.price}, Correct price: ${correctPrice}`
+          );
+
+          return {
+            ...item,
+            price: correctPrice,
+          };
+        } catch (error) {
+          console.error(`Error fetching price for ${item.name}:`, error);
+          return {
+            ...item,
+            price: item.price || 0, // Use existing price as fallback
+          };
+        }
+      })
+    );
+
+    console.log("Items with corrected prices:", itemsWithPrices);
+
     // Calculate totals
-    const subtotal = items.reduce((sum: number, item: any) => {
-      const price = item.price || 0;
-      const quantity = item.quantity || 0;
-      return sum + price * quantity;
+    console.log(
+      "Items received for email:",
+      JSON.stringify(itemsWithPrices, null, 2)
+    );
+
+    const subtotal = itemsWithPrices.reduce((sum: number, item: any) => {
+      const price = parseFloat(item.price) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      const itemTotal = price * quantity;
+      console.log(
+        `Item: ${item.name}, Price: ${price}, Qty: ${quantity}, Total: ${itemTotal}`
+      );
+      return sum + itemTotal;
     }, 0);
 
-    const deliveryCharge = 50; // Fixed delivery charge
-    const gst = subtotal * 0.18; // 18% GST
-    const total = subtotal + deliveryCharge + gst;
+    console.log("Subtotal calculated:", subtotal);
 
-    const orderDetails = items
+    // Use actual order data for calculations
+    const deliveryCharge = order.delivery_charge || 0;
+    const cgst = order.cgst || 0;
+    const sgst = order.sgst || 0;
+    const total = order.total_amount || subtotal + deliveryCharge + cgst + sgst;
+
+    console.log("Final calculations from order data:", {
+      subtotal,
+      deliveryCharge,
+      cgst,
+      sgst,
+      total,
+    });
+
+    const orderDetails = itemsWithPrices
       .map(
         (item: any) => `
           <tr>
@@ -57,9 +163,9 @@ export async function POST(req: Request) {
               </span>
             </td>
             <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
-              <div style="font-weight: 600; color: #2d3748;">₹${
-                (item.price || 0) * (item.quantity || 0)
-              }</div>
+              <div style="font-weight: 600; color: #2d3748;">₹${(
+                (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)
+              ).toFixed(2)}</div>
             </td>
           </tr>
         `
@@ -104,6 +210,7 @@ export async function POST(req: Request) {
               font-weight: 700; 
               letter-spacing: -0.5px; 
               margin-bottom: 8px; 
+              color: white !important; 
             }
             .tagline { 
               font-size: 14px; 
@@ -111,6 +218,7 @@ export async function POST(req: Request) {
               font-weight: 400; 
               letter-spacing: 0.5px; 
               text-transform: uppercase; 
+              color: white !important; 
             }
             .content { 
               padding: 48px 20px; 
@@ -232,8 +340,8 @@ export async function POST(req: Request) {
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">Duchess Pastry</div>
-              <div class="tagline">Artisan Confections</div>
+              <div class="logo" style="color: white !important; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px;">Duchess Pastry</div>
+              <div class="tagline" style="color: white !important; font-size: 14px; opacity: 0.8; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase;">Artisan Confections</div>
             </div>
             
             <div class="content">
@@ -277,8 +385,14 @@ export async function POST(req: Request) {
                     )}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">GST (18%):</td>
-                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${gst.toFixed(
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (9%):</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${cgst.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">SGST (9%):</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${sgst.toFixed(
                       2
                     )}</td>
                   </tr>
@@ -371,6 +485,7 @@ export async function POST(req: Request) {
               font-weight: 700; 
               letter-spacing: -0.5px; 
               margin-bottom: 8px; 
+              color: white !important; 
             }
             .tagline { 
               font-size: 14px; 
@@ -378,6 +493,7 @@ export async function POST(req: Request) {
               font-weight: 400; 
               letter-spacing: 0.5px; 
               text-transform: uppercase; 
+              color: white !important; 
             }
             .content { 
               padding: 48px 20px; 
@@ -477,8 +593,8 @@ export async function POST(req: Request) {
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">Duchess Pastry</div>
-              <div class="tagline">New Order Alert</div>
+              <div class="logo" style="color: white !important; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px;">Duchess Pastry</div>
+              <div class="tagline" style="color: white !important; font-size: 14px; opacity: 0.8; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase;">New Order Alert</div>
             </div>
             
             <div class="content">
@@ -535,8 +651,14 @@ export async function POST(req: Request) {
                     )}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">GST (18%):</td>
-                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${gst.toFixed(
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (9%):</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${cgst.toFixed(
+                      2
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">SGST (9%):</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${sgst.toFixed(
                       2
                     )}</td>
                   </tr>

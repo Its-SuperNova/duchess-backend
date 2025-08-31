@@ -197,6 +197,75 @@ export default function OrderDetailPage() {
           title: "Success",
           description: `Order status updated to ${newStatus}`,
         });
+
+        // Send out for delivery email notification
+        if (newStatus === "out_for_delivery") {
+          try {
+            console.log("Sending out for delivery email notification...");
+            console.log("Email data being sent:", {
+              orderId: order.id,
+              customerEmail: order.customer.email,
+              customerName: order.customer.name,
+              orderNumber: order.order_number,
+              deliveryAddress:
+                order.delivery_address?.full_address || "Address not specified",
+              estimatedTime: order.estimated_time_delivery,
+            });
+
+            const emailResponse = await fetch("/api/order/out-for-delivery", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                orderId: order.id,
+                customerEmail: order.customer.email,
+                customerName: order.customer.name,
+                orderNumber: order.order_number,
+                deliveryAddress:
+                  order.delivery_address?.full_address ||
+                  "Address not specified",
+                estimatedTime: order.estimated_time_delivery,
+              }),
+            });
+
+            console.log("Email response status:", emailResponse.status);
+            console.log("Email response ok:", emailResponse.ok);
+
+            if (emailResponse.ok) {
+              const emailResult = await emailResponse.json();
+              console.log(
+                "Out for delivery email sent successfully:",
+                emailResult
+              );
+              toast({
+                title: "Email Sent",
+                description:
+                  "Customer has been notified that their order is out for delivery",
+              });
+            } else {
+              const errorData = await emailResponse.json().catch(() => ({}));
+              console.error(
+                "Failed to send out for delivery email:",
+                errorData
+              );
+              toast({
+                title: "Email Error",
+                description:
+                  "Order status updated but failed to send email notification",
+                variant: "destructive",
+              });
+            }
+          } catch (emailError) {
+            console.error("Error sending out for delivery email:", emailError);
+            toast({
+              title: "Email Error",
+              description:
+                "Order status updated but failed to send email notification",
+              variant: "destructive",
+            });
+          }
+        }
       } else {
         throw new Error(result.error || "Failed to update order status");
       }
