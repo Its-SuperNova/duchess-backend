@@ -770,13 +770,11 @@ export default function CheckoutClient() {
       setPaymentOrderData(orderData);
       setPaymentOrderId("pending"); // Will be set after Razorpay order creation
 
-      // Close the payment dialog and open Razorpay payment
+      // Keep the payment dialog open and show loading state
+      // The dialog will close when Razorpay gateway is ready to open
       console.log("Setting up Razorpay payment flow...");
-      setIsPaymentDialogOpen(false);
       setIsRazorpayPaymentOpen(true);
-      console.log(
-        "Payment dialog closed, Razorpay component should render now"
-      );
+      console.log("Payment dialog remains open with loading state");
     } catch (err) {
       console.error("Error creating order:", err);
       setPaymentError(
@@ -784,7 +782,7 @@ export default function CheckoutClient() {
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
-    } finally {
+      // Only reset processing state on error
       setIsProcessingPayment(false);
     }
   };
@@ -939,10 +937,11 @@ export default function CheckoutClient() {
     setIsPaymentDialogOpen(true); // Reopen payment dialog for retry
   };
 
-  // Test navigation function
-  const testNavigation = () => {
-    console.log("Testing navigation to confirmation page...");
-    router.replace("/checkout/order-confirmation-animation?orderId=test123");
+  // Handle when Razorpay is ready to open the gateway
+  const handleRazorpayReady = () => {
+    console.log("Razorpay is ready to open gateway, closing payment dialog...");
+    setIsPaymentDialogOpen(false); // Close the payment dialog
+    setIsProcessingPayment(false); // Stop the loading state
   };
 
   // Persist lightweight checkout context for payment step
@@ -2341,69 +2340,83 @@ export default function CheckoutClient() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Order Summary</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Item Total:</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Discount:</span>
-                      <span>-₹{discount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span>Delivery Fee:</span>
-                    <span className="text-green-600 font-medium">Free</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CGST (9%):</span>
-                    <span>₹{cgstAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>SGST (9%):</span>
-                    <span>₹{sgstAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="border-t pt-1 mt-2">
-                    <div className="flex justify-between font-semibold">
-                      <span>Total:</span>
-                      <span>₹{total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Delivery Address</h4>
-                <p className="text-sm text-gray-700">{addressText}</p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Contact: {contactInfo.name}, {contactInfo.phone}
-                </p>
-              </div>
-
-              {selectedCoupon && (
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2 text-green-800">
-                    Applied Coupon
-                  </h4>
-                  <p className="text-sm text-green-700 font-mono">
-                    {selectedCoupon}
-                  </p>
-                  <p className="text-sm text-green-600 mt-1">
-                    Discount: ₹{discount.toFixed(2)}
+            {isProcessingPayment ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Preparing Payment Gateway
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Please wait while we set up your payment...
                   </p>
                 </div>
-              )}
-
-              {paymentError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-700 text-sm">{paymentError}</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Order Summary</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Item Total:</span>
+                      <span>₹{subtotal.toFixed(2)}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Discount:</span>
+                        <span>-₹{discount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Delivery Fee:</span>
+                      <span className="text-green-600 font-medium">Free</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>CGST (9%):</span>
+                      <span>₹{cgstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>SGST (9%):</span>
+                      <span>₹{sgstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="border-t pt-1 mt-2">
+                      <div className="flex justify-between font-semibold">
+                        <span>Total:</span>
+                        <span>₹{total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Delivery Address</h4>
+                  <p className="text-sm text-gray-700">{addressText}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Contact: {contactInfo.name}, {contactInfo.phone}
+                  </p>
+                </div>
+
+                {selectedCoupon && (
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-medium mb-2 text-green-800">
+                      Applied Coupon
+                    </h4>
+                    <p className="text-sm text-green-700 font-mono">
+                      {selectedCoupon}
+                    </p>
+                    <p className="text-sm text-green-600 mt-1">
+                      Discount: ₹{discount.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+
+                {paymentError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-700 text-sm">{paymentError}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <DialogFooter className="gap-2">
               <Button
@@ -2411,15 +2424,9 @@ export default function CheckoutClient() {
                 disabled={isProcessingPayment}
                 className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
               >
-                {isProcessingPayment ? "Processing..." : "Proceed to Payment"}
-              </Button>
-              {/* Test button for debugging */}
-              <Button
-                onClick={testNavigation}
-                variant="outline"
-                className="rounded-[18px] h-[48px] text-[16px] font-medium"
-              >
-                Test Navigation
+                {isProcessingPayment
+                  ? "Initiating Payment..."
+                  : "Proceed to Payment"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -2454,6 +2461,7 @@ export default function CheckoutClient() {
                 setPaymentOrderData(null);
               }}
               autoTrigger={true}
+              onReadyToOpen={handleRazorpayReady}
             />
           </>
         )}

@@ -22,6 +22,7 @@ interface CheckoutRazorpayProps {
   className?: string;
   disabled?: boolean;
   autoTrigger?: boolean;
+  onReadyToOpen?: () => void; // New prop for parent to signal readiness
 }
 
 declare global {
@@ -109,6 +110,7 @@ export default function CheckoutRazorpay({
   className = "",
   disabled = false,
   autoTrigger = false,
+  onReadyToOpen,
 }: CheckoutRazorpayProps) {
   const [loading, setLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -243,6 +245,13 @@ export default function CheckoutRazorpay({
 
       console.log("Order ready, opening Razorpay checkout...");
 
+      // Notify parent component that we're ready to open the gateway
+      // This will close the payment dialog and show the Razorpay gateway
+      if (onReadyToOpen) {
+        console.log("Notifying parent component to close payment dialog...");
+        onReadyToOpen();
+      }
+
       // Configure Razorpay checkout options
       const options = {
         key: key,
@@ -324,9 +333,7 @@ export default function CheckoutRazorpay({
           contact: "",
         },
         notes: order.notes || {},
-        theme: {
-          color: "#F37254",
-        },
+
         modal: {
           ondismiss: function () {
             console.log("Payment modal dismissed");
@@ -387,6 +394,7 @@ export default function CheckoutRazorpay({
     disabled,
     loading,
     scriptLoaded,
+    onReadyToOpen,
   ]);
 
   // Auto-trigger payment when component mounts (for checkout flow)

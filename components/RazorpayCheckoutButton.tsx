@@ -137,9 +137,7 @@ export default function RazorpayCheckoutButton({
           contact: orderData.contactNumber || "",
         },
         notes: order.notes || {},
-        theme: {
-          color: "#F37254",
-        },
+
         modal: {
           ondismiss: function () {
             toast.info("Payment cancelled");

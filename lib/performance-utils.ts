@@ -22,6 +22,20 @@ export function preloadRazorpayScript(): Promise<boolean> {
     script.async = true;
     script.defer = true;
 
+    // Production optimizations
+    script.crossOrigin = "anonymous";
+
+    // Preconnect to Razorpay domains
+    const preconnectLink = document.createElement("link");
+    preconnectLink.rel = "preconnect";
+    preconnectLink.href = "https://checkout.razorpay.com";
+    document.head.appendChild(preconnectLink);
+
+    const preconnectLink2 = document.createElement("link");
+    preconnectLink2.rel = "preconnect";
+    preconnectLink2.href = "https://api.razorpay.com";
+    document.head.appendChild(preconnectLink2);
+
     script.onload = () => {
       console.log("Razorpay script preloaded successfully");
       resolve(true);
@@ -38,7 +52,7 @@ export function preloadRazorpayScript(): Promise<boolean> {
       console.error("Razorpay script preload timeout");
       razorpayScriptPromise = null;
       resolve(false);
-    }, 3000); // 3 second timeout for preloading
+    }, 2000); // Reduced timeout for production
 
     script.onload = () => {
       clearTimeout(timeout);
@@ -69,7 +83,7 @@ export function preloadImages(imageUrls: string[]): void {
   });
 }
 
-// Preload API endpoints
+// Preload API endpoints with connection pooling
 export function preloadAPIEndpoints(endpoints: string[]): void {
   if (typeof window === "undefined") return;
 
@@ -104,6 +118,17 @@ export function optimizeCheckoutFlow(): void {
     "/api/razorpay/verify-payment",
     // Add other critical endpoints here
   ]);
+
+  // Add DNS prefetch for better performance
+  const dnsPrefetch = document.createElement("link");
+  dnsPrefetch.rel = "dns-prefetch";
+  dnsPrefetch.href = "https://checkout.razorpay.com";
+  document.head.appendChild(dnsPrefetch);
+
+  const dnsPrefetch2 = document.createElement("link");
+  dnsPrefetch2.rel = "dns-prefetch";
+  dnsPrefetch2.href = "https://api.razorpay.com";
+  document.head.appendChild(dnsPrefetch2);
 }
 
 // Check if Razorpay is ready
@@ -113,7 +138,7 @@ export function isRazorpayReady(): boolean {
 }
 
 // Wait for Razorpay to be ready
-export function waitForRazorpay(timeout = 5000): Promise<boolean> {
+export function waitForRazorpay(timeout = 3000): Promise<boolean> {
   return new Promise((resolve) => {
     if (isRazorpayReady()) {
       resolve(true);
@@ -126,11 +151,22 @@ export function waitForRazorpay(timeout = 5000): Promise<boolean> {
         clearTimeout(timeoutId);
         resolve(true);
       }
-    }, 100);
+    }, 50); // Faster checking interval
 
     const timeoutId = setTimeout(() => {
       clearInterval(checkInterval);
       resolve(false);
     }, timeout);
   });
+}
+
+// Production-specific performance monitoring
+export function monitorPerformance(operation: string, startTime: number): void {
+  const duration = Date.now() - startTime;
+  console.log(`Performance: ${operation} took ${duration}ms`);
+
+  // Send to analytics if needed
+  if (duration > 2000) {
+    console.warn(`Slow operation detected: ${operation} took ${duration}ms`);
+  }
 }
