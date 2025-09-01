@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,9 +62,9 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-// Import server actions
+// Import optimized server actions
 import {
-  getProducts,
+  getAdminProducts,
   deleteProduct,
   toggleProductVisibility,
 } from "@/lib/actions/products";
@@ -86,29 +86,76 @@ export default function ProductsPage() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const itemsPerPage = 8;
 
-  // Fetch products and categories on component mount
-  const fetchData = async () => {
+  // Debounced search term for better performance
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch products with optimized backend function
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const [productsData, categoriesData] = await Promise.all([
-        getProducts(),
-        getCategories(),
-      ]);
-      setProducts(productsData || []);
-      setCategories(categoriesData || []);
+      const result = await getAdminProducts({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: debouncedSearchTerm,
+        categoryFilter,
+        stockFilter,
+        orderTypeFilter,
+      });
+
+      setProducts(result.products || []);
+      setTotalCount(result.totalCount || 0);
+      setHasMore(result.hasMore || false);
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to fetch products and categories");
+      console.error("Error fetching products:", error);
+      toast.error("Failed to fetch products");
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    currentPage,
+    debouncedSearchTerm,
+    categoryFilter,
+    stockFilter,
+    orderTypeFilter,
+  ]);
+
+  // Fetch categories (only once on mount)
+  const fetchCategories = useCallback(async () => {
+    try {
+      const categoriesData = await getCategories();
+      setCategories(categoriesData || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to fetch categories");
+    }
+  }, []);
+
+  // Fetch data on mount and when filters change
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, categoryFilter, stockFilter, orderTypeFilter]);
 
   // Delete product
   const confirmDelete = async () => {
@@ -116,9 +163,8 @@ export default function ProductsPage() {
       try {
         setDeleting(true);
         await deleteProduct(productToDelete);
-        setProducts(
-          products.filter((product) => product.id !== productToDelete)
-        );
+        // Refresh the current page data
+        await fetchProducts();
         setIsDeleteDialogOpen(false);
         setProductToDelete(null);
         toast.success("Product deleted successfully");
@@ -143,6 +189,7 @@ export default function ProductsPage() {
   ) => {
     try {
       await toggleProductVisibility(productId, checked);
+      // Update local state immediately for better UX
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
           product.id === productId
@@ -302,50 +349,10 @@ export default function ProductsPage() {
     };
   };
 
-  // Filter products based on search term, category, stock status, and order type
-  const filteredProducts = products.filter((product) => {
-    // Search filter
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.short_description &&
-        product.short_description
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()));
-
-    // Category filter
-    const matchesCategory =
-      categoryFilter === "all" || product.categories?.name === categoryFilter;
-
-    // Stock filter
-    const stockStatus = getStockStatus(product);
-    const matchesStock =
-      stockFilter === "all" ||
-      (stockFilter === "in-stock" && stockStatus === "in-stock") ||
-      (stockFilter === "low-stock" && stockStatus === "low-stock") ||
-      (stockFilter === "out-of-stock" && stockStatus === "out-of-stock");
-
-    // Order type filter
-    const orderType = getOrderType(product);
-    const matchesOrderType =
-      orderTypeFilter === "all" ||
-      (orderTypeFilter === "weight" && product.selling_type === "weight") ||
-      (orderTypeFilter === "piece" && product.selling_type === "piece") ||
-      (orderTypeFilter === "both" && product.selling_type === "both");
-
-    return matchesSearch && matchesCategory && matchesStock && matchesOrderType;
-  });
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, categoryFilter, stockFilter, orderTypeFilter]);
-
   // Pagination calculations
-  const totalItems = filteredProducts.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalCount);
 
   // Pagination handlers
   const goToPage = (page: number) => {
@@ -377,7 +384,7 @@ export default function ProductsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 10 }).map((_, index) => (
+            {Array.from({ length: 8 }).map((_, index) => (
               <TableRow key={index}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
@@ -455,7 +462,7 @@ export default function ProductsPage() {
     </div>
   );
 
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
       <div className="flex-1 space-y-6 p-6 md:p-8">
         {/* Page Header Skeleton */}
@@ -494,7 +501,7 @@ export default function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             Products
             <span className="text-base font-medium text-muted-foreground">
-              (Total: {totalItems})
+              (Total: {totalCount})
             </span>
           </h1>
           <p className="text-muted-foreground">
@@ -603,17 +610,20 @@ export default function ProductsPage() {
               variant="outline"
               size="icon"
               className="flex-1 sm:flex-none"
-              onClick={() => fetchData()}
+              onClick={() => fetchProducts()}
               aria-label="Refresh"
+              disabled={loading}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
         </div>
       </div>
 
       {/* Products Table or Empty State */}
-      {totalItems === 0 ? (
+      {totalCount === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-blue-100 p-4 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
@@ -655,7 +665,7 @@ export default function ProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentProducts.map((product) => {
+                {products.map((product) => {
                   const stockStatus = getStockStatus(product);
                   const priceData = getProductPrice(product);
                   const orderType = getOrderType(product);
@@ -676,9 +686,6 @@ export default function ProductsPage() {
                             <div className="font-medium truncate">
                               {product.name}
                             </div>
-                            <div className="text-sm text-muted-foreground line-clamp-1 truncate">
-                              {product.short_description}
-                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -689,11 +696,6 @@ export default function ProductsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">{priceData.display}</div>
-                        {product.has_offer && product.offer_percentage && (
-                          <div className="text-sm text-green-600">
-                            {product.offer_percentage}% off
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <Badge variant="secondary" className="text-xs">
@@ -768,7 +770,7 @@ export default function ProductsPage() {
       ) : (
         // Card view implementation would go here
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {currentProducts.map((product) => {
+          {products.map((product) => {
             const stockStatus = getStockStatus(product);
             const priceData = getProductPrice(product);
             const orderType = getOrderType(product);
@@ -785,11 +787,6 @@ export default function ProductsPage() {
                     fill
                     className="object-cover"
                   />
-                  {product.has_offer && product.offer_percentage && (
-                    <Badge className="absolute top-2 left-2 bg-red-500 text-white">
-                      {product.offer_percentage}% OFF
-                    </Badge>
-                  )}
                 </div>
 
                 <CardContent className="p-4 flex flex-col flex-grow">
@@ -806,11 +803,6 @@ export default function ProductsPage() {
                       {stockStatus.replace("-", " ")}
                     </Badge>
                   </div>
-
-                  {/* Description */}
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3 flex-grow">
-                    {product.short_description}
-                  </p>
 
                   {/* Price and Badges Section */}
                   <div className="space-y-2 mb-4">
@@ -873,14 +865,14 @@ export default function ProductsPage() {
       )}
 
       {/* Pagination */}
-      {totalItems > 0 && (
+      {totalCount > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Showing{" "}
             <strong>
-              {startIndex + 1} - {Math.min(endIndex, totalItems)}
+              {startIndex + 1} - {endIndex}
             </strong>{" "}
-            of <strong>{totalItems}</strong> products
+            of <strong>{totalCount}</strong> products
           </div>
 
           {totalPages > 1 && (

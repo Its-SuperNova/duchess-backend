@@ -816,6 +816,198 @@ export async function getPaginatedProductsByCategorySlug(
   }
 }
 
+// Get paginated products for admin with only required fields - OPTIMIZED
+export async function getAdminProducts({
+  page = 1,
+  limit = 8,
+  search = "",
+  categoryFilter = "all",
+  stockFilter = "all",
+  orderTypeFilter = "all",
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryFilter?: string;
+  stockFilter?: string;
+  orderTypeFilter?: string;
+} = {}) {
+  try {
+    return await withRetry(async () => {
+      const offset = (page - 1) * limit;
+      
+      // Build the base query with only required fields
+      let query = supabaseAdmin
+        .from("products")
+        .select(
+          `
+          id,
+          name,
+          banner_image,
+          is_active,
+          selling_type,
+          weight_options,
+          piece_options,
+          categories (
+            name
+          )
+        `,
+          { count: "exact" }
+        );
+
+      // Apply search filter
+      if (search.trim()) {
+        query = query.or(
+          `name.ilike.%${search.trim()}%,short_description.ilike.%${search.trim()}%`
+        );
+      }
+
+      // Apply category filter
+      if (categoryFilter !== "all") {
+        query = query.eq("categories.name", categoryFilter);
+      }
+
+      // Apply order type filter
+      if (orderTypeFilter !== "all") {
+        query = query.eq("selling_type", orderTypeFilter);
+      }
+
+      // Apply stock filter (we'll handle this in the application layer for now)
+      // This could be optimized further with database functions if needed
+
+      // Execute the query with pagination
+      const { data: products, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) {
+        console.error("Error fetching admin products:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      // Apply stock filter in application layer
+      let filteredProducts = products || [];
+      if (stockFilter !== "all") {
+        filteredProducts = filteredProducts.filter((product) => {
+          const stockStatus = getProductStockStatus(product);
+          return stockStatus === stockFilter;
+        });
+      }
+
+      return {
+        products: filteredProducts,
+        totalCount: count || 0,
+        hasMore: (offset + limit) < (count || 0),
+      };
+    });
+  } catch (error) {
+    console.error("Error in getAdminProducts:", error);
+    throw new Error("Failed to fetch admin products");
+  }
+}
+
+// Helper function to determine product stock status
+function getProductStockStatus(product: any): string {
+  if (!product.is_active) return "out-of-stock";
+
+  // Use selling_type to determine which stock to check
+  if (product.selling_type === "weight" || product.selling_type === "both") {
+    // Check weight stock for weight-based products
+    if (product.weight_options && product.weight_options.length > 0) {
+      const activeWeightOptions = product.weight_options.filter(
+        (opt: any) => opt.isActive
+      );
+      if (activeWeightOptions.length > 0) {
+        const totalStock = activeWeightOptions.reduce(
+          (sum: number, opt: any) => {
+            const stock = parseInt(opt.stock) || 0;
+            return sum + stock;
+          },
+          0
+        );
+
+        if (totalStock === 0) return "out-of-stock";
+        if (totalStock <= 5) return "low-stock";
+        return "in-stock";
+      }
+      return "out-of-stock"; // Has weight options but none are active
+    }
+  }
+
+  // Check piece stock for piece-based products or fallback
+  if (product.piece_options && product.piece_options.length > 0) {
+    const activePieceOptions = product.piece_options.filter(
+      (opt: any) => opt.isActive
+    );
+    if (activePieceOptions.length > 0) {
+      const totalStock = activePieceOptions.reduce(
+        (sum: number, opt: any) => {
+          const stock = parseInt(opt.stock) || 0;
+          return sum + stock;
+        },
+        0
+      );
+
+      if (totalStock === 0) return "out-of-stock";
+      if (totalStock <= 5) return "low-stock";
+      return "in-stock";
+    }
+  }
+
+  return "out-of-stock";
+}
+
+// Get total count of products for admin (for pagination)
+export async function getAdminProductsCount({
+  search = "",
+  categoryFilter = "all",
+  stockFilter = "all",
+  orderTypeFilter = "all",
+}: {
+  search?: string;
+  categoryFilter?: string;
+  stockFilter?: string;
+  orderTypeFilter?: string;
+} = {}) {
+  try {
+    return await withRetry(async () => {
+      // Build the base query
+      let query = supabaseAdmin
+        .from("products")
+        .select("*", { count: "exact", head: true });
+
+      // Apply search filter
+      if (search.trim()) {
+        query = query.or(
+          `name.ilike.%${search.trim()}%,short_description.ilike.%${search.trim()}%`
+        );
+      }
+
+      // Apply category filter
+      if (categoryFilter !== "all") {
+        query = query.eq("categories.name", categoryFilter);
+      }
+
+      // Apply order type filter
+      if (orderTypeFilter !== "all") {
+        query = query.eq("selling_type", orderTypeFilter);
+      }
+
+      const { count, error } = await query;
+
+      if (error) {
+        console.error("Error fetching admin products count:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return count || 0;
+    });
+  } catch (error) {
+    console.error("Error in getAdminProductsCount:", error);
+    return 0;
+  }
+}
+
 // Test function to verify database connectivity
 export async function testDatabaseConnection() {
   try {

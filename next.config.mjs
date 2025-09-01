@@ -10,7 +10,16 @@ const nextConfig = {
   
   // Image optimization
   images: {
-    domains: ['checkout.razorpay.com', 'api.razorpay.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'checkout.razorpay.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.razorpay.com',
+      },
+    ],
     formats: ['image/webp', 'image/avif'],
   },
   

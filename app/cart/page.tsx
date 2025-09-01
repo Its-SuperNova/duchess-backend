@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TrashBinTrash } from "@solar-icons/react";
 import dynamic from "next/dynamic";
+import CartSkeleton from "@/components/cart-skeleton";
 
 // Dynamically import Lottie to reduce initial bundle size
 const Lottie = dynamic(() => import("lottie-react"), {
@@ -32,7 +33,12 @@ const Icon = dynamic(
 ) as any;
 
 export default function CartPage() {
-  const { cart, updateQuantity, removeFromCart } = useCart();
+  const {
+    cart,
+    updateQuantity,
+    removeFromCart,
+    isLoading: cartLoading,
+  } = useCart();
   const router = useRouter();
   const [zeroPurchaseAnimation, setZeroPurchaseAnimation] = useState(null);
 
@@ -52,6 +58,27 @@ export default function CartPage() {
       loadAnimation();
     }
   }, [cart.length]);
+
+  // Get cart item count from localStorage for skeleton (fallback to 3 if not available)
+  const getSkeletonItemCount = () => {
+    if (typeof window !== "undefined") {
+      try {
+        const storedCart = localStorage.getItem("cart");
+        if (storedCart) {
+          const parsedCart = JSON.parse(storedCart);
+          return Math.max(1, Math.min(parsedCart.length, 5)); // Between 1 and 5 items
+        }
+      } catch (error) {
+        console.error("Error parsing stored cart for skeleton:", error);
+      }
+    }
+    return 3; // Default fallback
+  };
+
+  // Show skeleton loader while cart is loading
+  if (cartLoading) {
+    return <CartSkeleton itemCount={getSkeletonItemCount()} />;
+  }
 
   // Render cart items component
   const renderCartItems = () => {
