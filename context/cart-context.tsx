@@ -292,12 +292,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [cart]);
 
-  const clearCart = useCallback(() => {
+  const clearCart = useCallback(async () => {
     setCart([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem("cart");
     }
-  }, []);
+
+    // Clear database cart for authenticated users
+    if (session?.user?.email) {
+      try {
+        const response = await fetch("/api/cart/clear", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) {
+          console.error("Failed to clear database cart");
+        } else {
+          console.log("Database cart cleared successfully");
+        }
+      } catch (error) {
+        console.error("Error clearing database cart:", error);
+      }
+    }
+  }, [session?.user?.email]);
 
   const updateCartItemCustomization = useCallback(
     async (

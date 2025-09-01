@@ -254,63 +254,6 @@ export default function ConfirmationClient() {
           </div>
         </div>
 
-        {/* Contact Section */}
-        <div className="bg-white rounded-[20px] p-6 shadow-sm">
-          <div className="text-center">
-            <h2 className="text-lg font-semibold mb-3">
-              Complete Your Payment
-            </h2>
-            <p className="text-gray-600 mb-6">
-              To complete your payment and place your order, please contact
-              Duchess Pastry
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {/* Call Button 1 */}
-              <a
-                href="tel:+919080022593"
-                className="flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-[12px] transition-colors font-medium"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-                Call: 9080022593
-              </a>
-
-              {/* Call Button 2 */}
-              <a
-                href="tel:+917603831952"
-                className="flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-[12px] transition-colors font-medium"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-                Call: 7603831952
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Order Information Section */}
         <div className="bg-white rounded-[20px] p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Order Information</h2>
@@ -417,23 +360,13 @@ export default function ConfirmationClient() {
           </div>
         </div>
 
-        {/* Delivery & Notes Section */}
-        {(order.delivery_address_text ||
-          order.note ||
-          order.notes ||
-          order.coupon_code) && (
+        {/* Delivery & Coupon Section */}
+        {(order.delivery_address_text || order.coupon_code) && (
           <div className="bg-white rounded-[20px] p-6 shadow-sm space-y-4">
             {order.delivery_address_text && (
               <div>
                 <h3 className="font-medium mb-2">Delivery Address</h3>
                 <p className="text-gray-600">{order.delivery_address_text}</p>
-              </div>
-            )}
-
-            {(order.note || order.notes) && (
-              <div>
-                <h3 className="font-medium mb-2">Order Note</h3>
-                <p className="text-gray-600">{order.note || order.notes}</p>
               </div>
             )}
 
