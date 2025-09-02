@@ -472,16 +472,6 @@ export default function CheckoutRazorpay({
             onFailure?.(error);
           }
         },
-        prefill: {
-          name: "",
-          email: "",
-          contact: "",
-        },
-        notes: {
-          ...order.notes,
-          mobile_flow: "true",
-          prevent_reload: "true",
-        },
       };
 
       // Initialize and open Razorpay checkout
