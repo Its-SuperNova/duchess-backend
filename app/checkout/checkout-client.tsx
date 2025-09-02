@@ -25,7 +25,7 @@ import {
   InfoCircle,
 } from "@solar-icons/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -212,7 +212,7 @@ export default function CheckoutClient() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isRazorpayPaymentOpen, setIsRazorpayPaymentOpen] = useState(false);
-  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+
   const [paymentOrderData, setPaymentOrderData] = useState<any>(null);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
@@ -769,21 +769,20 @@ export default function CheckoutClient() {
 
       console.log("Applied coupon data:", appliedCouponData);
       console.log("Extracted coupon ID:", couponId);
-      console.log("Creating order with data:", orderData);
+      console.log("Preparing order data for Razorpay:", orderData);
 
-      // Store order data for Razorpay payment (we'll create the order in Razorpay API)
+      // Store order data for Razorpay payment
+      // Note: Orders are now only created in the database after successful payment verification
       setPaymentOrderData(orderData);
-      setPaymentOrderId("pending"); // Will be set after Razorpay order creation
 
-      // Keep the payment dialog open and show loading state
-      // The dialog will close when Razorpay gateway is ready to open
+      // Open Razorpay payment dialog
       console.log("Setting up Razorpay payment flow...");
       setIsRazorpayPaymentOpen(true);
-      console.log("Payment dialog remains open with loading state");
+      console.log("Payment dialog opened");
     } catch (err) {
-      console.error("Error creating order:", err);
+      console.error("Error preparing payment:", err);
       setPaymentError(
-        `Payment failed: ${
+        `Payment preparation failed: ${
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
@@ -803,37 +802,19 @@ export default function CheckoutClient() {
         success: paymentData.success,
         message: paymentData.message,
       });
+      console.log(
+        "Full payment data object:",
+        JSON.stringify(paymentData, null, 2)
+      );
 
       // Get the order ID from the payment data
-      let orderId = paymentData.localOrderId || paymentData.orderId;
+      const orderId = paymentData.localOrderId || paymentData.orderId;
       console.log("Extracted orderId:", orderId);
 
-      // Fallback: if orderId is still undefined, try to get it from the order data
-      if (!orderId && paymentOrderData) {
-        console.log(
-          "OrderId is undefined, trying to get from paymentOrderData"
-        );
-        console.log("Payment order data:", paymentOrderData);
-        // Try to get the order ID from the database using the user's email and recent orders
-        try {
-          const recentOrderResponse = await fetch(
-            `/api/orders/recent?email=${session?.user?.email}`
-          );
-          if (recentOrderResponse.ok) {
-            const recentOrderData = await recentOrderResponse.json();
-            if (recentOrderData.order) {
-              orderId = recentOrderData.order.id;
-              console.log("Found recent order ID:", orderId);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching recent order:", error);
-        }
-      }
-
-      // If still no orderId, show error and don't proceed
+      // Verify we have a valid order ID
       if (!orderId) {
         console.error("Could not determine order ID for confirmation");
+        console.error("Available payment data keys:", Object.keys(paymentData));
         setPaymentError(
           "Payment successful but could not confirm order. Please contact support with your payment details."
         );
@@ -887,19 +868,21 @@ export default function CheckoutClient() {
         // Don't fail the order if email fails
       }
 
-      // Clear cart after successful payment
-      try {
-        clearCart();
-        console.log("Cart cleared after successful payment");
-      } catch (cartError) {
-        console.error("Failed to clear cart:", cartError);
-        // Don't fail the success flow if cart clearing fails
-      }
-
-      // Show success overlay immediately to prevent cart flicker
+      // Show success overlay FIRST to prevent cart flicker
       console.log("=== SHOWING SUCCESS OVERLAY ===");
       setSuccessOrderId(orderId);
       setShowSuccessOverlay(true);
+
+      // Clear cart in the background after showing overlay
+      setTimeout(() => {
+        try {
+          clearCart();
+          console.log("Cart cleared after showing success overlay");
+        } catch (cartError) {
+          console.error("Failed to clear cart:", cartError);
+          // Don't fail the success flow if cart clearing fails
+        }
+      }, 100);
     } catch (error) {
       console.error("Error handling payment success:", error);
       setPaymentError(
@@ -928,12 +911,18 @@ export default function CheckoutClient() {
   };
 
   // Handle animation completion
-  const handleAnimationComplete = () => {
-    console.log("Animation completed, clearing success state");
-    setShowSuccessOverlay(false);
-    setSuccessOrderId(null);
-    clearCheckoutContext();
-  };
+  const handleAnimationComplete = useCallback(() => {
+    console.log("=== ANIMATION COMPLETION CALLBACK TRIGGERED ===");
+    console.log("Animation completed, overlay will handle navigation");
+    console.log("Success overlay state:", {
+      showSuccessOverlay,
+      successOrderId,
+    });
+
+    // The overlay will handle navigation to the confirmation page
+    // We don't need to clear the success state here as the user will be redirected
+    // The cleanup will happen naturally when the component unmounts
+  }, [showSuccessOverlay, successOrderId]);
 
   // Persist lightweight checkout context for payment step
   useEffect(() => {
@@ -980,7 +969,8 @@ export default function CheckoutClient() {
   }
 
   // Redirect to home if cart is empty (only after loading is complete)
-  if (cart.length === 0) {
+  // BUT don't redirect if we're showing the success overlay
+  if (cart.length === 0 && !showSuccessOverlay) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F6FB]">
         <div className="text-center">
@@ -1016,6 +1006,7 @@ export default function CheckoutClient() {
       {/* Show success overlay if payment was successful */}
       {showSuccessOverlay && successOrderId && (
         <CheckoutSuccessOverlay
+          key={`success-${successOrderId}`}
           orderId={successOrderId}
           isVisible={showSuccessOverlay}
           onAnimationComplete={handleAnimationComplete}
@@ -2474,7 +2465,6 @@ export default function CheckoutClient() {
                 onFailure={handlePaymentFailure}
                 onClose={() => {
                   setIsRazorpayPaymentOpen(false);
-                  setPaymentOrderId(null);
                   setPaymentOrderData(null);
                 }}
                 autoTrigger={true}

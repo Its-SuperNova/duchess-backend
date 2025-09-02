@@ -30,17 +30,38 @@ export default function CheckoutSuccessOverlay({
   const router = useRouter();
   const [animationStarted, setAnimationStarted] = useState(false);
 
+  console.log("CheckoutSuccessOverlay rendered with props:", {
+    orderId,
+    isVisible,
+    onAnimationComplete,
+  });
+
   useEffect(() => {
+    console.log("CheckoutSuccessOverlay useEffect triggered:", {
+      isVisible,
+      animationStarted,
+    });
     if (isVisible && !animationStarted) {
+      console.log("Starting animation sequence...");
       setAnimationStarted(true);
 
-      // Navigate to confirmation page after animation completes
-      const timer = setTimeout(() => {
-        onAnimationComplete();
-        router.replace(`/checkout/confirmation?orderId=${orderId}`);
-      }, 4000); // 4 seconds for animation to complete
+      // Simple 4-second timer for navigation
+      console.log("🎬 Setting up simple 4-second navigation timer");
+      console.log("Order ID for navigation:", orderId);
 
-      return () => clearTimeout(timer);
+      setTimeout(() => {
+        console.log("🚀 4 seconds elapsed - navigating now!");
+        console.log(
+          "Navigating to:",
+          `/checkout/confirmation?orderId=${orderId}`
+        );
+
+        // Call completion callback
+        onAnimationComplete();
+
+        // Navigate immediately
+        window.location.href = `/checkout/confirmation?orderId=${orderId}`;
+      }, 4000);
     }
   }, [isVisible, animationStarted, orderId, router, onAnimationComplete]);
 

@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 interface RazorpayCheckoutButtonProps {
   amountInRupees: number;
   orderData: any; // The complete order data to be saved
-  onSuccess?: (orderId: string) => void;
+  onSuccess?: (paymentData: any) => void;
   onFailure?: (error: any) => void;
   className?: string;
   disabled?: boolean;
@@ -64,7 +64,7 @@ export default function RazorpayCheckoutButton({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amountInRupees,
+          amount: amountInRupees,
           currency: "INR",
           notes: {
             order_type: "checkout",
@@ -80,7 +80,7 @@ export default function RazorpayCheckoutButton({
         throw new Error(createOrderData?.error || "Failed to create order");
       }
 
-      const { order, localOrderId } = createOrderData;
+      const { order, razorpayOrderId } = createOrderData;
 
       // Configure Razorpay checkout options
       const options = {
@@ -101,7 +101,6 @@ export default function RazorpayCheckoutButton({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                localOrderId,
               }),
             });
 
@@ -112,12 +111,17 @@ export default function RazorpayCheckoutButton({
                 "Payment successful! Your order has been confirmed."
               );
 
-              // Call success callback with order ID
-              onSuccess?.(localOrderId);
+              // Call success callback with the payment data in expected format
+              onSuccess?.({
+                localOrderId: verifyData.localOrderId,
+                orderId: verifyData.localOrderId,
+                success: true,
+                message: "Payment verified successfully",
+              });
 
               // Navigate to order confirmation
               router.push(
-                `/checkout/order-confirmation-animation?orderId=${localOrderId}`
+                `/checkout/order-confirmation-animation?orderId=${verifyData.localOrderId}`
               );
             } else {
               toast.error(

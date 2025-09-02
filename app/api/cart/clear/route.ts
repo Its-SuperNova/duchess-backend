@@ -21,11 +21,40 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Clear all cart items for the user
+    // Get the user's cart
+    const { data: cart, error: cartError } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (cartError) {
+      if (cartError.code === "PGRST116") {
+        // Cart doesn't exist, which means it's already empty
+        return NextResponse.json({
+          success: true,
+          message: "Cart is already empty",
+        });
+      }
+      console.error("Error fetching cart:", cartError);
+      return NextResponse.json(
+        { error: "Failed to fetch cart" },
+        { status: 500 }
+      );
+    }
+
+    if (!cart) {
+      return NextResponse.json({
+        success: true,
+        message: "Cart is already empty",
+      });
+    }
+
+    // Clear all cart items for the user's cart
     const { error: deleteError } = await supabase
       .from("cart_items")
       .delete()
-      .eq("user_id", user.id);
+      .eq("cart_id", cart.id);
 
     if (deleteError) {
       console.error("Error clearing cart:", deleteError);

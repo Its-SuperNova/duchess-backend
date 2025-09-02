@@ -42,8 +42,24 @@ async function handlePaymentCaptured(payload: any) {
   const { payment } = payload.payment.entity;
   const { order_id } = payload.payment.entity;
 
-  // Update payment record
+  // Check if payment record exists (it might not if order was created after verification)
   const { data: paymentRecord, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, order_id")
+    .eq("razorpay_order_id", order_id)
+    .single();
+
+  if (paymentError || !paymentRecord) {
+    console.log(
+      "Payment record not found for order_id:",
+      order_id,
+      "This is expected if order was created after verification"
+    );
+    return; // Don't throw error, just log and return
+  }
+
+  // Update payment record
+  const { error: updatePaymentError } = await supabase
     .from("payments")
     .update({
       razorpay_payment_id: payment.id,
@@ -51,13 +67,14 @@ async function handlePaymentCaptured(payload: any) {
       webhook_received: true,
       updated_at: new Date().toISOString(),
     })
-    .eq("razorpay_order_id", order_id)
-    .select("id, order_id")
-    .single();
+    .eq("id", paymentRecord.id);
 
-  if (paymentError) {
-    console.error("Error updating payment for payment.captured:", paymentError);
-    throw paymentError;
+  if (updatePaymentError) {
+    console.error(
+      "Error updating payment for payment.captured:",
+      updatePaymentError
+    );
+    throw updatePaymentError;
   }
 
   // Update order status
@@ -84,8 +101,24 @@ async function handlePaymentFailed(payload: any) {
   const { payment } = payload.payment.entity;
   const { order_id } = payload.payment.entity;
 
-  // Update payment record
+  // Check if payment record exists (it might not if order was created after verification)
   const { data: paymentRecord, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, order_id")
+    .eq("razorpay_order_id", order_id)
+    .single();
+
+  if (paymentError || !paymentRecord) {
+    console.log(
+      "Payment record not found for order_id:",
+      order_id,
+      "This is expected if order was created after verification"
+    );
+    return; // Don't throw error, just log and return
+  }
+
+  // Update payment record
+  const { error: updatePaymentError } = await supabase
     .from("payments")
     .update({
       razorpay_payment_id: payment.id,
@@ -93,13 +126,14 @@ async function handlePaymentFailed(payload: any) {
       webhook_received: true,
       updated_at: new Date().toISOString(),
     })
-    .eq("razorpay_order_id", order_id)
-    .select("id, order_id")
-    .single();
+    .eq("id", paymentRecord.id);
 
-  if (paymentError) {
-    console.error("Error updating payment for payment.failed:", paymentError);
-    throw paymentError;
+  if (updatePaymentError) {
+    console.error(
+      "Error updating payment for payment.failed:",
+      updatePaymentError
+    );
+    throw updatePaymentError;
   }
 
   // Update order status
@@ -125,21 +159,35 @@ async function handlePaymentFailed(payload: any) {
 async function handleOrderPaid(payload: any) {
   const { order } = payload.order.entity;
 
-  // Update payment record
+  // Check if payment record exists (it might not if order was created after verification)
   const { data: paymentRecord, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, order_id")
+    .eq("razorpay_order_id", order.id)
+    .single();
+
+  if (paymentError || !paymentRecord) {
+    console.log(
+      "Payment record not found for order_id:",
+      order.id,
+      "This is expected if order was created after verification"
+    );
+    return; // Don't throw error, just log and return
+  }
+
+  // Update payment record
+  const { error: updatePaymentError } = await supabase
     .from("payments")
     .update({
       payment_status: "captured",
       webhook_received: true,
       updated_at: new Date().toISOString(),
     })
-    .eq("razorpay_order_id", order.id)
-    .select("id, order_id")
-    .single();
+    .eq("id", paymentRecord.id);
 
-  if (paymentError) {
-    console.error("Error updating payment for order.paid:", paymentError);
-    throw paymentError;
+  if (updatePaymentError) {
+    console.error("Error updating payment for order.paid:", updatePaymentError);
+    throw updatePaymentError;
   }
 
   // Update order status
@@ -166,8 +214,24 @@ async function handleRefundProcessed(payload: any) {
   const { refund } = payload.refund.entity;
   const { order_id } = payload.refund.entity;
 
-  // Update payment record
+  // Check if payment record exists (it might not if order was created after verification)
   const { data: paymentRecord, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, order_id")
+    .eq("razorpay_order_id", order_id)
+    .single();
+
+  if (paymentError || !paymentRecord) {
+    console.log(
+      "Payment record not found for order_id:",
+      order_id,
+      "This is expected if order was created after verification"
+    );
+    return; // Don't throw error, just log and return
+  }
+
+  // Update payment record
+  const { error: updatePaymentError } = await supabase
     .from("payments")
     .update({
       razorpay_refund_id: refund.id,
@@ -175,13 +239,14 @@ async function handleRefundProcessed(payload: any) {
       webhook_received: true,
       updated_at: new Date().toISOString(),
     })
-    .eq("razorpay_order_id", order_id)
-    .select("id, order_id")
-    .single();
+    .eq("id", paymentRecord.id);
 
-  if (paymentError) {
-    console.error("Error updating payment for refund.processed:", paymentError);
-    throw paymentError;
+  if (updatePaymentError) {
+    console.error(
+      "Error updating payment for refund.processed:",
+      updatePaymentError
+    );
+    throw updatePaymentError;
   }
 
   // Update order status

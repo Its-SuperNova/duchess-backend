@@ -237,7 +237,7 @@ export default function CheckoutRazorpay({
         throw new Error("Invalid order response from server");
       }
 
-      const { order, localOrderId, key } = createOrderData;
+      const { order, key } = createOrderData;
 
       if (!key) {
         throw new Error("Razorpay key not provided by server");
@@ -279,7 +279,6 @@ export default function CheckoutRazorpay({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                localOrderId,
               }),
             });
 
@@ -291,8 +290,10 @@ export default function CheckoutRazorpay({
                 "Payment successful! Your order has been confirmed."
               );
               const successData = {
-                ...verifyData,
-                localOrderId: localOrderId,
+                localOrderId: verifyData.localOrderId,
+                orderId: verifyData.localOrderId,
+                success: verifyData.success,
+                message: verifyData.message,
               };
               console.log("=== CALLING ONSUCCESS CALLBACK ===");
               console.log(
