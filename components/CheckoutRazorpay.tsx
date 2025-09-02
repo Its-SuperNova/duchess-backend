@@ -182,6 +182,51 @@ export default function CheckoutRazorpay({
     }
   };
 
+  // Check payment status immediately (for webhook-processed payments)
+  const checkPaymentStatusImmediately = async (orderId: string, rzpInstance: any) => {
+    console.log("Checking payment status immediately for order:", orderId);
+    
+    try {
+      const response = await fetch("/api/razorpay/check-payment-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ razorpay_order_id: orderId }),
+      });
+
+      const data = await response.json();
+      console.log("Immediate payment status check:", data);
+
+      if (data.status === "success") {
+        console.log("Payment already completed! Closing modal and triggering success...");
+        
+        // Close Razorpay modal immediately
+        rzpInstance.close();
+        
+        // Trigger success flow
+        const successData = {
+          localOrderId: data.orderId,
+          orderId: data.orderId,
+          success: true,
+          message: "Payment completed successfully",
+        };
+        
+        onSuccess?.(successData);
+        return true; // Payment found and handled
+      } else if (data.status === "authorized") {
+        console.log("Payment authorized but not captured, checking again in 1 second...");
+        // Payment is in progress, check again shortly
+        setTimeout(() => {
+          checkPaymentStatusImmediately(orderId, rzpInstance);
+        }, 1000);
+        return true; // Don't check again immediately
+      }
+    } catch (error) {
+      console.error("Error in immediate payment status check:", error);
+    }
+    
+    return false; // Payment not found or not completed
+  };
+
   // Poll payment status for mobile UPI flows
   const pollPaymentStatus = async (orderId: string, rzpInstance: any) => {
     console.log("Starting payment status polling for order:", orderId);
@@ -497,7 +542,19 @@ export default function CheckoutRazorpay({
 
         // Start polling to check if payment was completed
         console.log("Starting payment status polling for mobile UPI flow...");
+        
+        // Also check if payment was already completed via webhook
+        checkPaymentStatusImmediately(order.id, rzp);
+        
+        // Start background polling as backup
         pollPaymentStatus(order.id, rzp);
+      });
+
+      // Handle when user sees payment options (modal is fully loaded)
+      rzp.on("payment.method_selected", function (resp: any) {
+        console.log("Payment method selected, checking if payment was already completed...");
+        // Check if payment was completed while user was in external app
+        checkPaymentStatusImmediately(order.id, rzp);
       });
 
       // Handle modal close events
@@ -508,10 +565,39 @@ export default function CheckoutRazorpay({
         onClose?.();
       });
 
+      // Handle when modal is fully loaded and visible
+      rzp.on("modal.ready", function () {
+        console.log("Razorpay modal is ready and visible");
+        // Give webhooks a moment to process, then check payment status
+        setTimeout(() => {
+          console.log("Modal ready - checking payment status...");
+          checkPaymentStatusImmediately(order.id, rzp);
+        }, 1000);
+      });
+
+      // Handle when payment options are displayed (user can see payment methods)
+      rzp.on("payment.options_displayed", function () {
+        console.log("Payment options displayed, checking if payment was completed...");
+        checkPaymentStatusImmediately(order.id, rzp);
+      });
+
       // Open checkout immediately
       console.log("Opening Razorpay checkout...");
       rzp.open();
       console.log("Razorpay checkout opened");
+      
+      // Add a listener for when the modal is about to show
+      // This helps catch payments that were completed while the modal was loading
+      setTimeout(() => {
+        console.log("Checking payment status after modal load...");
+        checkPaymentStatusImmediately(order.id, rzp);
+      }, 2000); // Wait 2 seconds for webhooks to process
+
+      // Also check when the modal is fully visible and user can interact
+      setTimeout(() => {
+        console.log("Modal should be fully visible now, checking payment status...");
+        checkPaymentStatusImmediately(order.id, rzp);
+      }, 3000); // Wait 3 seconds for modal to be fully loaded
     } catch (error: any) {
       console.error("Checkout error:", error);
 
