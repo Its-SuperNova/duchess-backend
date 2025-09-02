@@ -116,6 +116,7 @@ export default function CheckoutRazorpay({
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const hasTriggered = useRef(false);
   const orderCreationPromise = useRef<Promise<any> | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if script is already loaded on mount
   useEffect(() => {
@@ -140,6 +141,16 @@ export default function CheckoutRazorpay({
       orderCreationPromise.current = createOrderInBackground();
     }
   }, [autoTrigger, scriptLoaded, orderData]);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Create order in background without blocking UI
   const createOrderInBackground = async () => {
@@ -169,6 +180,84 @@ export default function CheckoutRazorpay({
       console.error("Background order creation failed:", error);
       return null;
     }
+  };
+
+  // Poll payment status for mobile UPI flows
+  const pollPaymentStatus = async (orderId: string, rzpInstance: any) => {
+    console.log("Starting payment status polling for order:", orderId);
+
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20; // Poll for 20 seconds (20 * 1 second intervals)
+
+    const poll = async () => {
+      attempts++;
+      console.log(`Payment status poll attempt ${attempts}/${maxAttempts}`);
+
+      try {
+        const response = await fetch("/api/razorpay/check-payment-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ razorpay_order_id: orderId }),
+        });
+
+        const data = await response.json();
+        console.log("Payment status response:", data);
+
+        if (data.status === "success") {
+          console.log("Payment completed successfully via polling!");
+          clearInterval(pollingIntervalRef.current!);
+          pollingIntervalRef.current = null;
+
+          // Close Razorpay modal
+          rzpInstance.close();
+
+          // Trigger success flow
+          const successData = {
+            localOrderId: data.orderId,
+            orderId: data.orderId,
+            success: true,
+            message: "Payment completed successfully",
+          };
+
+          onSuccess?.(successData);
+          return;
+        } else if (data.status === "failed") {
+          console.log("Payment failed via polling");
+          clearInterval(pollingIntervalRef.current!);
+          pollingIntervalRef.current = null;
+
+          rzpInstance.close();
+          onFailure?.({ error: "Payment failed" });
+          return;
+        }
+
+        // If max attempts reached, stop polling
+        if (attempts >= maxAttempts) {
+          console.log("Max polling attempts reached, stopping");
+          clearInterval(pollingIntervalRef.current!);
+          pollingIntervalRef.current = null;
+
+          // Don't close modal, let user handle it
+          console.log(
+            "Payment status unclear after polling, user should check manually"
+          );
+        }
+      } catch (error) {
+        console.error("Error polling payment status:", error);
+        attempts++;
+      }
+    };
+
+    // Start polling every second
+    pollingIntervalRef.current = setInterval(poll, 1000);
+
+    // Initial poll
+    poll();
   };
 
   const handlePayment = useCallback(async () => {
@@ -252,7 +341,7 @@ export default function CheckoutRazorpay({
         onReadyToOpen();
       }
 
-      // Configure Razorpay checkout options
+      // Configure Razorpay checkout options with mobile UPI optimization
       const options = {
         key: key,
         amount: order.amount,
@@ -261,6 +350,61 @@ export default function CheckoutRazorpay({
         description: "Delicious pastries and cakes",
         image: "/duchess-logo.png",
         order_id: order.id,
+
+        // Mobile UPI optimization
+        config: {
+          display: {
+            blocks: {
+              banks: {
+                name: "Pay using UPI",
+                instruments: [
+                  {
+                    method: "upi",
+                  },
+                ],
+              },
+            },
+            sequence: ["block.banks"],
+            preferences: {
+              show_default_blocks: false,
+            },
+          },
+        },
+
+        // Prevent reload after external app navigation
+        retry: {
+          enabled: false,
+        },
+
+        // Handle external app navigation gracefully
+        remember_customer: false,
+
+        // Mobile-specific settings to prevent reload issues
+        modal: {
+          ondismiss: function () {
+            console.log("Payment modal dismissed");
+            toast.info("Payment cancelled");
+            onClose?.();
+            onFailure?.({ error: "Payment cancelled by user" });
+          },
+          escape: false, // Prevent accidental dismissal
+          handleback: false, // Prevent back button from closing modal
+        },
+
+        // Disable auto-focus to prevent mobile keyboard issues
+        prefill: {
+          name: "",
+          email: "",
+          contact: "",
+        },
+
+        // Mobile UPI specific settings
+        notes: {
+          ...order.notes,
+          mobile_flow: "true",
+          prevent_reload: "true",
+        },
+
         handler: async function (response: RazorpayResponse) {
           try {
             console.log("=== RAZORPAY SUCCESS CALLBACK STARTED ===");
@@ -333,27 +477,45 @@ export default function CheckoutRazorpay({
           email: "",
           contact: "",
         },
-        notes: order.notes || {},
-
-        modal: {
-          ondismiss: function () {
-            console.log("Payment modal dismissed");
-            toast.info("Payment cancelled");
-            onClose?.();
-            onFailure?.({ error: "Payment cancelled by user" });
-          },
+        notes: {
+          ...order.notes,
+          mobile_flow: "true",
+          prevent_reload: "true",
         },
       };
 
       // Initialize and open Razorpay checkout
       const rzp = new window.Razorpay(options);
 
-      // Handle payment failure
+      // Enhanced event handling for mobile UPI flows
       rzp.on("payment.failed", function (resp: any) {
         console.error("Payment failed:", resp);
         toast.error(`Payment failed: ${resp.error.description}`);
         onClose?.();
         onFailure?.(resp);
+      });
+
+      // Handle external app navigation (UPI apps)
+      rzp.on("payment.razorpay_wallet_selected", function (resp: any) {
+        console.log("External UPI app selected:", resp);
+        // Don't close the modal, let user complete payment in external app
+      });
+
+      // Handle when user returns from external app
+      rzp.on("payment.razorpay_wallet_dismissed", function (resp: any) {
+        console.log("User returned from external UPI app:", resp);
+
+        // Start polling to check if payment was completed
+        console.log("Starting payment status polling for mobile UPI flow...");
+        pollPaymentStatus(order.id, rzp);
+      });
+
+      // Handle modal close events
+      rzp.on("modal.close", function () {
+        console.log("Razorpay modal closed");
+        // Check if this was due to successful payment
+        // If not, treat as cancellation
+        onClose?.();
       });
 
       // Open checkout immediately

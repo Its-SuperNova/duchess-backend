@@ -28,6 +28,14 @@ async function handleWebhookEvent(event: any) {
         await handleRefundFailed(event.payload);
         break;
 
+      case "payment.authorized":
+        await handlePaymentAuthorized(event.payload);
+        break;
+
+      case "payment.captured":
+        await handlePaymentCaptured(event.payload);
+        break;
+
       default:
         console.log("Unhandled webhook event:", event.event);
     }
@@ -94,6 +102,56 @@ async function handlePaymentCaptured(payload: any) {
   }
 
   console.log("Payment and order updated for payment.captured:", order_id);
+}
+
+// Handle payment authorized event (important for mobile UPI flows)
+async function handlePaymentAuthorized(payload: any) {
+  const { payment } = payload.payment.entity;
+  const { order_id } = payload.payment.entity;
+
+  console.log(
+    "Payment authorized for order:",
+    order_id,
+    "Payment ID:",
+    payment.id
+  );
+
+  // Check if payment record exists
+  const { data: paymentRecord, error: paymentError } = await supabase
+    .from("payments")
+    .select("id, order_id")
+    .eq("razorpay_order_id", order_id)
+    .single();
+
+  if (paymentError || !paymentRecord) {
+    console.log(
+      "Payment record not found for order_id:",
+      order_id,
+      "This is expected if order was created after verification"
+    );
+    return;
+  }
+
+  // Update payment record to authorized status
+  const { error: updatePaymentError } = await supabase
+    .from("payments")
+    .update({
+      razorpay_payment_id: payment.id,
+      payment_status: "authorized",
+      webhook_received: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", paymentRecord.id);
+
+  if (updatePaymentError) {
+    console.error(
+      "Error updating payment for payment.authorized:",
+      updatePaymentError
+    );
+    throw updatePaymentError;
+  }
+
+  console.log("Payment authorized and updated for order:", order_id);
 }
 
 // Handle payment failed event
