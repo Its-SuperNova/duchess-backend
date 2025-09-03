@@ -1,27 +1,38 @@
-"use client"
+"use client";
 
-import type React from "react"
-import Image from "next/image"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Upload, X, ImageIcon } from "lucide-react"
+import type React from "react";
+import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
+import { useImageUpload } from "@/lib/hooks/useImageUpload";
+import { getThumbnailUrl } from "@/lib/cloudinary-client";
 
 interface ProductGalleryCardProps {
-  additionalImages: string[]
-  setAdditionalImages: (images: string[]) => void
-  mediaSlots: number
-  setMediaSlots: (slots: number) => void
-  urlInputIndex: number
-  setUrlInputIndex: (index: number) => void
-  mediaUrls: string[]
-  setMediaUrls: (urls: string[]) => void
-  handleAdditionalImageUpload: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void
-  removeAdditionalImage: (index: number) => void
-  handleUrlChange: (index: number, url: string) => void
-  handleUrlSubmit: (index: number) => void
+  additionalImages: string[];
+  setAdditionalImages: (images: string[]) => void;
+  mediaSlots: number;
+  setMediaSlots: (slots: number) => void;
+  urlInputIndex: number;
+  setUrlInputIndex: (index: number) => void;
+  mediaUrls: string[];
+  setMediaUrls: (urls: string[]) => void;
+  handleAdditionalImageUpload: (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => void;
+  removeAdditionalImage: (index: number) => void;
+  handleUrlChange: (index: number, url: string) => void;
+  handleUrlSubmit: (index: number) => void;
 }
 
 export function ProductGalleryCard({
@@ -33,17 +44,44 @@ export function ProductGalleryCard({
   setUrlInputIndex,
   mediaUrls,
   setMediaUrls,
-  handleAdditionalImageUpload,
   removeAdditionalImage,
   handleUrlChange,
   handleUrlSubmit,
 }: ProductGalleryCardProps) {
+  const { uploadImage, isUploading, error } = useImageUpload({
+    folder: "products/gallery",
+    onError: (error) => console.error("Upload error:", error),
+  });
+
+  const handleImageUpload = async (index: number, file: File) => {
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      const newImages = [...additionalImages];
+      newImages[index] = imageUrl;
+      setAdditionalImages(newImages);
+    }
+  };
+
+  const handleFileSelect = async (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleImageUpload(index, file);
+      // Reset input value
+      e.target.value = "";
+    }
+  };
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Product Gallery</CardTitle>
         <div className="flex items-center gap-2">
-          <Select value={mediaSlots.toString()} onValueChange={(value) => setMediaSlots(Number.parseInt(value))}>
+          <Select
+            value={mediaSlots.toString()}
+            onValueChange={(value) => setMediaSlots(Number.parseInt(value))}
+          >
             <SelectTrigger className="w-20">
               <SelectValue />
             </SelectTrigger>
@@ -66,11 +104,17 @@ export function ProductGalleryCard({
                 <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                   {additionalImages[index] ? (
                     <>
-                      {additionalImages[index].includes(".mp4") || additionalImages[index].includes("video") ? (
-                        <video src={additionalImages[index]} className="w-full h-full object-cover" controls muted />
+                      {additionalImages[index].includes(".mp4") ||
+                      additionalImages[index].includes("video") ? (
+                        <video
+                          src={additionalImages[index]}
+                          className="w-full h-full object-cover"
+                          controls
+                          muted
+                        />
                       ) : (
                         <Image
-                          src={additionalImages[index] || "/placeholder.svg"}
+                          src={getThumbnailUrl(additionalImages[index], 200)}
                           alt={`Media ${index + 1}`}
                           fill
                           className="object-cover"
@@ -89,7 +133,9 @@ export function ProductGalleryCard({
                   ) : (
                     <div className="text-center p-2">
                       <ImageIcon className="h-6 w-6 mx-auto text-gray-400" />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Media {index + 1}</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Media {index + 1}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -101,15 +147,21 @@ export function ProductGalleryCard({
                     htmlFor={`media-${index}`}
                     className="cursor-pointer inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-2 py-1 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground flex-1"
                   >
-                    <Upload className="h-3 w-3 mr-1" />
-                    Upload
+                    {isUploading ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Upload className="h-3 w-3 mr-1" />
+                    )}
+                    {isUploading ? "Uploading..." : "Upload"}
                   </Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="h-8 px-2 text-xs"
-                    onClick={() => setUrlInputIndex(urlInputIndex === index ? -1 : index)}
+                    onClick={() =>
+                      setUrlInputIndex(urlInputIndex === index ? -1 : index)
+                    }
                   >
                     URL
                   </Button>
@@ -151,15 +203,20 @@ export function ProductGalleryCard({
                 id={`media-${index}`}
                 className="hidden"
                 accept="image/*,video/*"
-                onChange={(e) => handleAdditionalImageUpload(index, e)}
+                onChange={(e) => handleFileSelect(index, e)}
+                disabled={isUploading}
               />
             </div>
           ))}
         </div>
         <p className="text-xs text-muted-foreground mt-4">
-          Supports images (PNG, JPG, GIF) and videos (MP4, WebM). Max 10MB per file.
+          Supports images (PNG, JPG, GIF) and videos (MP4, WebM). Max 5MB per
+          file. Images will be automatically optimized.
         </p>
+        {error && (
+          <p className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</p>
+        )}
       </CardContent>
     </Card>
-  )
+  );
 }

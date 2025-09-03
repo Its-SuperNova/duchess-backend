@@ -1,23 +1,42 @@
-"use client"
+"use client";
 
-import type React from "react"
-import Image from "next/image"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Upload, X, ImageIcon } from "lucide-react"
+import type React from "react";
+import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
+import { useImageUpload } from "@/lib/hooks/useImageUpload";
+import { getThumbnailUrl } from "@/lib/cloudinary-client";
 
 interface BannerImageUploadCardProps {
-  bannerImage: string | null
-  setBannerImage: (image: string | null) => void
-  handleBannerImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  bannerImage: string | null;
+  setBannerImage: (image: string | null) => void;
 }
 
 export function BannerImageUploadCard({
   bannerImage,
   setBannerImage,
-  handleBannerImageUpload,
 }: BannerImageUploadCardProps) {
+  const { uploadImage, isUploading, error } = useImageUpload({
+    folder: "products/banner",
+    onSuccess: (url) => setBannerImage(url),
+    onError: (error) => console.error("Upload error:", error),
+  });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadImage(file);
+      // Reset input value
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setBannerImage(null);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -29,13 +48,18 @@ export function BannerImageUploadCard({
             <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               {bannerImage ? (
                 <>
-                  <Image src={bannerImage || "/placeholder.svg"} alt="Preview" fill className="object-cover" />
+                  <Image
+                    src={getThumbnailUrl(bannerImage, 400)}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
                   <Button
                     type="button"
                     size="icon"
                     variant="destructive"
                     className="absolute top-2 right-2 h-8 w-8"
-                    onClick={() => setBannerImage(null)}
+                    onClick={handleRemoveImage}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -51,25 +75,36 @@ export function BannerImageUploadCard({
             </div>
           </div>
 
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+
           <div>
             <Label
               htmlFor="banner-image"
               className="cursor-pointer inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground w-full"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Choose Banner Image
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              {isUploading ? "Uploading..." : "Choose Banner Image"}
             </Label>
             <input
               type="file"
               id="banner-image"
               className="hidden"
               accept="image/*"
-              onChange={handleBannerImageUpload}
+              onChange={handleFileSelect}
+              disabled={isUploading}
             />
-            <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF, Max 2MB</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              PNG, JPG or GIF, Max 5MB. Images will be automatically optimized.
+            </p>
           </div>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,3 +1,5 @@
+import path from 'path';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
@@ -18,6 +20,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'api.razorpay.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
       },
     ],
     formats: ['image/webp', 'image/avif'],
@@ -70,6 +76,12 @@ const nextConfig = {
         },
       };
     }
+
+    // Add webpack alias for client-side utilities
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@/lib/cloudinary-client': path.resolve('./lib/cloudinary-client.ts'),
+    };
     
     return config;
   },

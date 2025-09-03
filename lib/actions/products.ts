@@ -3,6 +3,7 @@
 import { supabaseAdmin, withRetry } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getProductPrice } from "@/lib/utils";
+import { getThumbnailUrl } from "@/lib/cloudinary-client";
 
 // Get all products with category information
 export async function getProducts() {
@@ -380,7 +381,9 @@ export async function getActiveProducts({
               id: product.id,
               name: product.name,
               is_veg: product.is_veg,
-              banner_image: product.banner_image,
+              banner_image: product.banner_image
+                ? getThumbnailUrl(product.banner_image, 400)
+                : null,
               categories: product.categories,
               price: price,
             };
@@ -835,12 +838,10 @@ export async function getAdminProducts({
   try {
     return await withRetry(async () => {
       const offset = (page - 1) * limit;
-      
+
       // Build the base query with only required fields
-      let query = supabaseAdmin
-        .from("products")
-        .select(
-          `
+      let query = supabaseAdmin.from("products").select(
+        `
           id,
           name,
           banner_image,
@@ -852,8 +853,8 @@ export async function getAdminProducts({
             name
           )
         `,
-          { count: "exact" }
-        );
+        { count: "exact" }
+      );
 
       // Apply search filter
       if (search.trim()) {
@@ -876,7 +877,11 @@ export async function getAdminProducts({
       // This could be optimized further with database functions if needed
 
       // Execute the query with pagination
-      const { data: products, error, count } = await query
+      const {
+        data: products,
+        error,
+        count,
+      } = await query
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -897,7 +902,7 @@ export async function getAdminProducts({
       return {
         products: filteredProducts,
         totalCount: count || 0,
-        hasMore: (offset + limit) < (count || 0),
+        hasMore: offset + limit < (count || 0),
       };
     });
   } catch (error) {
@@ -940,13 +945,10 @@ function getProductStockStatus(product: any): string {
       (opt: any) => opt.isActive
     );
     if (activePieceOptions.length > 0) {
-      const totalStock = activePieceOptions.reduce(
-        (sum: number, opt: any) => {
-          const stock = parseInt(opt.stock) || 0;
-          return sum + stock;
-        },
-        0
-      );
+      const totalStock = activePieceOptions.reduce((sum: number, opt: any) => {
+        const stock = parseInt(opt.stock) || 0;
+        return sum + stock;
+      }, 0);
 
       if (totalStock === 0) return "out-of-stock";
       if (totalStock <= 5) return "low-stock";

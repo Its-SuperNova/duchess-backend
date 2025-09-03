@@ -197,32 +197,15 @@ export default function CreateProductPage() {
     });
   };
 
-  // Handle banner image upload
-  const handleBannerImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle additional image upload
+  // Handle additional image upload (for URL inputs)
   const handleAdditionalImageUpload = (
     index: number,
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newImages = [...additionalImages];
-        newImages[index] = reader.result as string;
-        setAdditionalImages(newImages);
-      };
-      reader.readAsDataURL(file);
+      // This is now handled by the Cloudinary upload in the component
+      console.log("File upload handled by Cloudinary component");
     }
   };
 
@@ -483,7 +466,6 @@ export default function CreateProductPage() {
                 <BannerImageUploadCard
                   bannerImage={bannerImage}
                   setBannerImage={setBannerImage}
-                  handleBannerImageUpload={handleBannerImageUpload}
                 />
               </div>
             )}

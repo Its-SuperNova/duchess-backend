@@ -125,27 +125,7 @@ export default function CategoriesPage() {
     setIsEditDialogOpen(true);
   };
 
-  // Handle category image upload
-  const handleCategoryImageUpload = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (2MB limit)
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("File size must be less than 2MB");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setCategoryImage(result);
-        setFormData((prev) => ({ ...prev, image: result }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Category image upload is now handled directly by the CategoryImageUpload component
 
   // Handle form input changes
   const handleChange = (
@@ -810,7 +790,6 @@ export default function CategoriesPage() {
                 <CategoryImageUpload
                   categoryImage={categoryImage}
                   setCategoryImage={setCategoryImage}
-                  handleImageUpload={handleCategoryImageUpload}
                 />
               </div>
             </div>
@@ -880,7 +859,6 @@ export default function CategoriesPage() {
                 <CategoryImageUpload
                   categoryImage={categoryImage}
                   setCategoryImage={setCategoryImage}
-                  handleImageUpload={handleCategoryImageUpload}
                 />
               </div>
             </div>

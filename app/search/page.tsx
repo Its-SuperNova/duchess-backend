@@ -1,5 +1,6 @@
 import SearchClient from "./search-client";
 import { getCategories } from "@/lib/actions/categories";
+import { getThumbnailUrl } from "@/lib/cloudinary-client";
 
 export default async function SearchPage() {
   // Fetch categories from database
@@ -11,7 +12,9 @@ export default async function SearchPage() {
       .filter((category: any) => (category as any).is_active)
       .map((category: any) => ({
         name: (category as any).name,
-        image: (category as any).image || "/images/categories/sweets-bowl.png", // fallback image
+        image: (category as any).image
+          ? getThumbnailUrl((category as any).image, 300)
+          : "/images/categories/sweets-bowl.png", // fallback image
       }));
   } catch (error) {
     console.error("Failed to fetch categories:", error);

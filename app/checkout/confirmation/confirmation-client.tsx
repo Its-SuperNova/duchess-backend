@@ -391,7 +391,7 @@ export default function ConfirmationClient() {
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50">
         <Button
           asChild
-          className="w-full bg-[#523435] hover:bg-[#4a2a2a] py-4 text-lg font-semibold"
+          className="w-full bg-[#523435] hover:bg-[#4a2a2a] py-4 text-lg font-semibold rounded-full"
         >
           <Link href={`/orders/track/${order.id}`}>Track Order</Link>
         </Button>

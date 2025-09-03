@@ -17,6 +17,7 @@ import { useCart } from "@/context/cart-context";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSelection } from "@/context/product-selection-context";
 import { useRouter } from "next/navigation";
+import { getThumbnailUrl } from "@/lib/cloudinary-client";
 // Removed Lottie imports - using simple SVG icons instead
 import {
   Drawer,
@@ -195,7 +196,9 @@ export default function ProductAddToCart({
         id: parseInt(product.id.replace(/\D/g, "")) || 0,
         name: product.name,
         price: price,
-        image: product.banner_image || "/placeholder.svg",
+        image: product.banner_image
+          ? getThumbnailUrl(product.banner_image, 300)
+          : "/placeholder.svg",
         quantity: orderType === "piece" ? pieceQuantity : 1,
         category: product.categories?.name || "Pastry",
         variant:

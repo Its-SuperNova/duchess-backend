@@ -42,6 +42,10 @@ import { useFavorites } from "@/context/favorites-context";
 import { useCart } from "@/context/cart-context";
 import { Button } from "@/components/ui/button";
 import { getProductById } from "@/lib/actions/products";
+import {
+  getThumbnailUrl,
+  getResponsiveImageUrls,
+} from "@/lib/cloudinary-client";
 import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
 import { useProductSelection } from "@/context/product-selection-context";
@@ -422,7 +426,7 @@ export default function ProductPage() {
                 product.piece_options?.[selectedPieceOption]?.price || "0"
               )
             : price,
-        image: images[0] || "/placeholder.svg",
+        image: images[0] ? getThumbnailUrl(images[0], 300) : "/placeholder.svg",
         quantity: orderType === "piece" ? pieceQuantity : 1,
         category: product.categories?.name || "Product",
         variant: variant,
@@ -456,6 +460,14 @@ export default function ProductPage() {
     if (!product) return [];
     const images = [product.banner_image].filter(Boolean);
     return [...images, ...product.additional_images];
+  };
+
+  // Get optimized image URLs for display
+  const getOptimizedImages = () => {
+    const allImages = getAllImages();
+    return allImages
+      .map((img) => (img ? getThumbnailUrl(img, 800) : null))
+      .filter(Boolean);
   };
 
   // Render stock status
