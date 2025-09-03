@@ -334,7 +334,7 @@ export async function getActiveProducts({
   {
     id: string;
     name: string;
-    banner_image: string;
+    banner_image: string | null;
     is_veg: boolean;
     price: number;
     categories: { name: string } | { name: string }[] | null;

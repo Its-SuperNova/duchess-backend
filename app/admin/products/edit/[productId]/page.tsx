@@ -232,17 +232,7 @@ export default function EditProductPage() {
     });
   };
 
-  // Handle banner image upload
-  const handleBannerImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Banner image upload is now handled by the BannerImageUploadCard component
 
   // Handle additional image upload
   const handleAdditionalImageUpload = (
@@ -614,7 +604,6 @@ export default function EditProductPage() {
                 <BannerImageUploadCard
                   bannerImage={bannerImage}
                   setBannerImage={setBannerImage}
-                  handleBannerImageUpload={handleBannerImageUpload}
                 />
               </div>
             )}
