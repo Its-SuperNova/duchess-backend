@@ -136,10 +136,16 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/orders/recent");
+      const response = await fetch(
+        `/api/orders/recent?email=${encodeURIComponent(
+          session?.user?.email || ""
+        )}`
+      );
       if (response.ok) {
         const data = await response.json();
         setOrders(data.orders || []);
+      } else {
+        console.error("Failed to fetch orders:", response.status);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -218,8 +224,17 @@ export default function OrdersPage() {
   const getDaysAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Reset time to start of day for accurate day comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const orderDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    const diffTime = today.getTime() - orderDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
@@ -227,6 +242,15 @@ export default function OrdersPage() {
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
     return `${Math.floor(diffDays / 365)} years ago`;
+  };
+
+  const getOrderTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
   const handleTrackOrder = (orderId: string) => {
@@ -462,6 +486,9 @@ export default function OrdersPage() {
                               <p className="text-[11px] lg:text-[12px] text-blue-600 dark:text-blue-400 font-medium">
                                 {getDaysAgo(order.created_at)}
                               </p>
+                              <p className="text-[10px] lg:text-[11px] text-gray-500 dark:text-gray-400">
+                                {getOrderTime(order.created_at)}
+                              </p>
                             </div>
                           </div>
 
@@ -592,6 +619,9 @@ export default function OrdersPage() {
                             <div className="text-right shrink-0 self-start">
                               <p className="text-[11px] lg:text-[12px] text-blue-600 dark:text-blue-400 font-medium">
                                 {getDaysAgo(order.created_at)}
+                              </p>
+                              <p className="text-[10px] lg:text-[11px] text-gray-500 dark:text-gray-400">
+                                {getOrderTime(order.created_at)}
                               </p>
                             </div>
                           </div>

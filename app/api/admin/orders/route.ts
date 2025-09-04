@@ -63,10 +63,10 @@ export async function GET() {
         },
         products: itemsCount,
         amount: `₹${order.total_amount?.toFixed(2) || "0.00"}`,
-        paymentStatus: order.payment_status || "pending",
         orderStatus: order.status || "pending",
         date: formatRelativeDate(order.created_at),
         fullDate: formatFullDate(order.created_at),
+        orderTime: formatOrderTime(order.created_at),
         total_amount: order.total_amount,
         paid_amount: order.paid_amount,
         discount_amount: order.discount_amount,
@@ -119,10 +119,20 @@ export async function GET() {
 function formatRelativeDate(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 1) return "1 day ago";
+  // Reset time to start of day for accurate day comparison
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const orderDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+
+  const diffTime = today.getTime() - orderDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
   if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
@@ -136,5 +146,15 @@ function formatFullDate(dateString: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+// Helper function to format order time
+function formatOrderTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   });
 }

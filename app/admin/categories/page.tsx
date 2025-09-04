@@ -522,23 +522,25 @@ export default function CategoriesPage() {
             <Table className="admin-table">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="hidden md:table-cell">
+                  <TableHead className="min-w-[200px]">Category</TableHead>
+                  <TableHead className="hidden md:table-cell min-w-[250px]">
                     Description
                   </TableHead>
-                  <TableHead>Products</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Visibility</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="min-w-[120px]">Products</TableHead>
+                  <TableHead className="min-w-[80px]">Status</TableHead>
+                  <TableHead className="min-w-[100px]">Visibility</TableHead>
+                  <TableHead className="text-right min-w-[120px]">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCategories.map((category) => (
                   <TableRow key={category.id}>
-                    <TableCell>
+                    <TableCell className="min-w-0">
                       <div className="flex items-center space-x-3">
                         {category.image ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden">
+                          <div className="min-w-[40px] min-h-[40px] w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
                             <Image
                               src={category.image}
                               alt={category.name}
@@ -548,12 +550,14 @@ export default function CategoriesPage() {
                             />
                           </div>
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
+                          <div className="min-w-[40px] min-h-[40px] w-10 h-10 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400 flex-shrink-0">
                             <Tag className="h-5 w-5" />
                           </div>
                         )}
-                        <div>
-                          <div className="font-medium">{category.name}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">
+                            {category.name}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -563,7 +567,10 @@ export default function CategoriesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
+                      <Badge
+                        variant="outline"
+                        className="whitespace-nowrap min-w-fit"
+                      >
                         {category.products_count} products
                       </Badge>
                     </TableCell>
@@ -667,7 +674,10 @@ export default function CategoriesPage() {
                   )}
                   <div>
                     <h3 className="font-semibold">{category.name}</h3>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge
+                      variant="outline"
+                      className="text-xs whitespace-nowrap"
+                    >
                       {category.products_count} products
                     </Badge>
                   </div>

@@ -30,33 +30,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get the most recent order for this user
-    const { data: order, error: orderError } = await supabase
+    // Get all orders for this user
+    const { data: orders, error: orderError } = await supabase
       .from("orders")
-      .select("*")
+      .select(
+        `
+          *,
+          order_items (
+            id,
+            product_name,
+            product_image,
+            category,
+            quantity,
+            unit_price,
+            total_price,
+            variant
+          ),
+          addresses (
+            id,
+            address_name,
+            full_address,
+            city
+          ),
+          coupons (
+            id,
+            code,
+            value
+          )
+        `
+      )
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .order("created_at", { ascending: false });
 
     if (orderError) {
-      console.error("Error fetching recent order:", orderError);
+      console.error("Error fetching orders:", orderError);
       return NextResponse.json(
-        { error: "Failed to fetch recent order" },
+        { error: "Failed to fetch orders" },
         { status: 500 }
       );
     }
 
-    if (!order) {
-      return NextResponse.json(
-        { error: "No recent order found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ order });
+    return NextResponse.json({
+      orders: orders || [],
+      count: orders?.length || 0,
+    });
   } catch (error) {
-    console.error("Error in recent order API:", error);
+    console.error("Error in orders API:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

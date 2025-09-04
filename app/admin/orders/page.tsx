@@ -47,10 +47,10 @@ interface Order {
   };
   products: number;
   amount: string;
-  paymentStatus: string;
   orderStatus: string;
   date: string;
   fullDate: string;
+  orderTime: string;
   total_amount: number;
   paid_amount: number;
   discount_amount: number;
@@ -85,20 +85,6 @@ interface Order {
   created_at: string;
 }
 
-// Helper function to get badge color based on status
-const getPaymentStatusColor = (status: string) => {
-  switch (status) {
-    case "paid":
-      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-    case "failed":
-      return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-    default:
-      return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-  }
-};
-
 const getOrderStatusColor = (status: string) => {
   switch (status) {
     case "delivered":
@@ -120,6 +106,7 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const router = useRouter();
 
   // Fetch orders from database
@@ -147,12 +134,25 @@ export default function OrdersPage() {
     fetchOrders();
   }, []);
 
-  // Filter orders based on search term
+  // Filter orders based on search term and tab selection
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredOrders(orders);
+    let filtered = orders;
+
+    // Filter by tab (active/completed)
+    if (activeTab === "active") {
+      filtered = filtered.filter(
+        (order) =>
+          !["delivered", "cancelled"].includes(order.orderStatus.toLowerCase())
+      );
     } else {
-      const filtered = orders.filter(
+      filtered = filtered.filter((order) =>
+        ["delivered", "cancelled"].includes(order.orderStatus.toLowerCase())
+      );
+    }
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(
         (order) =>
           order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.customer.name
@@ -160,13 +160,14 @@ export default function OrdersPage() {
             .includes(searchTerm.toLowerCase()) ||
           order.customer.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredOrders(filtered);
     }
-  }, [searchTerm, orders]);
+
+    setFilteredOrders(filtered);
+  }, [searchTerm, orders, activeTab]);
 
   if (loading) {
     return (
-      <div className="flex-1 space-y-6 p-6 md:p-8">
+      <div className="flex-1 space-y-6 p-6 md:p-8 bg-[#f5f5f5] min-h-screen">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -189,7 +190,7 @@ export default function OrdersPage() {
 
   if (error) {
     return (
-      <div className="flex-1 space-y-6 p-6 md:p-8">
+      <div className="flex-1 space-y-6 p-6 md:p-8 bg-[#f5f5f5] min-h-screen">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -200,7 +201,7 @@ export default function OrdersPage() {
             </p>
           </div>
         </div>
-        <Card className="border-dashed">
+        <Card className="border-dashed bg-white rounded-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-red-100 p-4 text-red-600 dark:bg-red-900 dark:text-red-400">
               <ShoppingBag className="h-10 w-10" />
@@ -219,7 +220,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex-1 space-y-6 p-6 md:p-8 bg-[#f5f5f5] min-h-screen">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -230,7 +231,31 @@ export default function OrdersPage() {
             Manage and track customer orders ({filteredOrders.length} orders)
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {/* Tabs */}
+          <div className="flex bg-white rounded-lg p-1 border border-gray-200">
+            <button
+              onClick={() => setActiveTab("active")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                activeTab === "active"
+                  ? "bg-[#f2f3f5] text-gray-900"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-[#f2f3f5]/50"
+              }`}
+            >
+              Active Orders
+            </button>
+            <button
+              onClick={() => setActiveTab("completed")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                activeTab === "completed"
+                  ? "bg-[#f2f3f5] text-gray-900"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-[#f2f3f5]/50"
+              }`}
+            >
+              Completed Orders
+            </button>
+          </div>
+
           <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
             <FileDown className="mr-2 h-4 w-4" />
             Export CSV
@@ -265,7 +290,7 @@ export default function OrdersPage() {
 
       {/* Orders Table or Empty State */}
       {filteredOrders.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed bg-white rounded-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-64 h-64 mx-auto mb-4">
               <Lottie
@@ -290,7 +315,7 @@ export default function OrdersPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="bg-white rounded-xl">
           <div className="overflow-x-auto">
             <Table className="admin-table">
               <TableHeader>
@@ -303,11 +328,9 @@ export default function OrdersPage() {
                     Products
                   </TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Payment
-                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Date</TableHead>
+                  <TableHead className="hidden md:table-cell">Time</TableHead>
                   <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -352,14 +375,6 @@ export default function OrdersPage() {
                     <TableCell className="font-medium">
                       {order.amount}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge
-                        className={getPaymentStatusColor(order.paymentStatus)}
-                        variant="outline"
-                      >
-                        {order.paymentStatus}
-                      </Badge>
-                    </TableCell>
                     <TableCell>
                       <Badge
                         className={getOrderStatusColor(order.orderStatus)}
@@ -375,6 +390,11 @@ export default function OrdersPage() {
                           {order.fullDate}
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <span className="text-sm text-muted-foreground">
+                        {order.orderTime}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       <Button
