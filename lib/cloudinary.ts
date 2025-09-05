@@ -36,6 +36,9 @@ export async function uploadImageToCloudinary(
             folder: options.folder || "duchess-pastries",
             public_id: options.public_id,
             resource_type: "image",
+            // No quality setting = preserve original quality
+            // No fetch_format = keep original format
+            flags: "immutable_cache", // Use immutable cache for better performance
           },
           (error, result) => {
             if (error) {

@@ -234,21 +234,16 @@ export default function EditProductPage() {
 
   // Banner image upload is now handled by the BannerImageUploadCard component
 
-  // Handle additional image upload
+  // Handle additional image upload - now handled by ProductGalleryCard component
   const handleAdditionalImageUpload = (
     index: number,
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newImages = [...additionalImages];
-        newImages[index] = reader.result as string;
-        setAdditionalImages(newImages);
-      };
-      reader.readAsDataURL(file);
-    }
+    // This function is no longer used as ProductGalleryCard handles uploads directly
+    // Keeping it for compatibility but it won't be called
+    console.log(
+      "handleAdditionalImageUpload called but not used - ProductGalleryCard handles uploads"
+    );
   };
 
   // Remove additional image
@@ -392,7 +387,17 @@ export default function EditProductPage() {
           ? parseFloat(formData.offerUpToPrice)
           : 0,
         banner_image: bannerImage,
-        additional_images: additionalImages.filter((img) => img),
+        additional_images: additionalImages.filter((img) => {
+          // Filter out base64 data URLs and only keep Cloudinary URLs
+          if (img && img.startsWith("data:")) {
+            console.warn(
+              "⚠️ Found base64 image in additionalImages, skipping:",
+              img.substring(0, 50) + "..."
+            );
+            return false;
+          }
+          return img;
+        }),
         selling_type: formData.sellingType,
         weight_options: formData.weightOptions,
         piece_options: formData.pieceOptions,

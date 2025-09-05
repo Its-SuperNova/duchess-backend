@@ -865,7 +865,26 @@ export async function getAdminProducts({
 
       // Apply category filter
       if (categoryFilter !== "all") {
-        query = query.eq("categories.name", categoryFilter);
+        // First get the category ID from the category name
+        const { data: category, error: categoryError } = await supabaseAdmin
+          .from("categories")
+          .select("id")
+          .eq("name", categoryFilter)
+          .single();
+
+        if (categoryError) {
+          console.error("Error fetching category:", categoryError);
+          // If category not found, return empty results
+          return {
+            products: [],
+            totalCount: 0,
+            hasMore: false,
+          };
+        }
+
+        if (category) {
+          query = query.eq("category_id", category.id);
+        }
       }
 
       // Apply order type filter
@@ -987,7 +1006,22 @@ export async function getAdminProductsCount({
 
       // Apply category filter
       if (categoryFilter !== "all") {
-        query = query.eq("categories.name", categoryFilter);
+        // First get the category ID from the category name
+        const { data: category, error: categoryError } = await supabaseAdmin
+          .from("categories")
+          .select("id")
+          .eq("name", categoryFilter)
+          .single();
+
+        if (categoryError) {
+          console.error("Error fetching category:", categoryError);
+          // If category not found, return 0 count
+          return 0;
+        }
+
+        if (category) {
+          query = query.eq("category_id", category.id);
+        }
       }
 
       // Apply order type filter

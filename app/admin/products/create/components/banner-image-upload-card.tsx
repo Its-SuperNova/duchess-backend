@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 import { useImageUpload } from "@/lib/hooks/useImageUpload";
-import { getThumbnailUrl } from "@/lib/cloudinary-client";
 
 interface BannerImageUploadCardProps {
   bannerImage: string | null;
@@ -20,8 +19,17 @@ export function BannerImageUploadCard({
 }: BannerImageUploadCardProps) {
   const { uploadImage, isUploading, error } = useImageUpload({
     folder: "products/banner",
-    onSuccess: (url) => setBannerImage(url),
-    onError: (error) => console.error("Upload error:", error),
+    onSuccess: (url) => {
+      console.log("🎉 Product banner image uploaded successfully:", {
+        url: url,
+        folder: "products/banner",
+        timestamp: new Date().toISOString(),
+        type: "banner_image",
+      });
+      setBannerImage(url);
+    },
+    onError: (error) =>
+      console.error("❌ Product banner image upload error:", error),
   });
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +57,7 @@ export function BannerImageUploadCard({
               {bannerImage ? (
                 <>
                   <Image
-                    src={getThumbnailUrl(bannerImage, 400)}
+                    src={bannerImage}
                     alt="Preview"
                     fill
                     className="object-cover"

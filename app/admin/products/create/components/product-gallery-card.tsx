@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 import { useImageUpload } from "@/lib/hooks/useImageUpload";
-import { getThumbnailUrl } from "@/lib/cloudinary-client";
 
 interface ProductGalleryCardProps {
   additionalImages: string[];
@@ -26,7 +25,7 @@ interface ProductGalleryCardProps {
   setUrlInputIndex: (index: number) => void;
   mediaUrls: string[];
   setMediaUrls: (urls: string[]) => void;
-  handleAdditionalImageUpload: (
+  handleAdditionalImageUpload?: (
     index: number,
     e: React.ChangeEvent<HTMLInputElement>
   ) => void;
@@ -44,13 +43,25 @@ export function ProductGalleryCard({
   setUrlInputIndex,
   mediaUrls,
   setMediaUrls,
+  handleAdditionalImageUpload,
   removeAdditionalImage,
   handleUrlChange,
   handleUrlSubmit,
 }: ProductGalleryCardProps) {
+  // Note: This component uses its own upload logic via useImageUpload hook
+  // The handleAdditionalImageUpload prop is kept for compatibility but not used
   const { uploadImage, isUploading, error } = useImageUpload({
     folder: "products/gallery",
-    onError: (error) => console.error("Upload error:", error),
+    onSuccess: (url) => {
+      console.log("🎉 Product gallery image uploaded successfully:", {
+        url: url,
+        folder: "products/gallery",
+        timestamp: new Date().toISOString(),
+        type: "gallery_image",
+      });
+    },
+    onError: (error) =>
+      console.error("❌ Product gallery image upload error:", error),
   });
 
   const handleImageUpload = async (index: number, file: File) => {
@@ -114,7 +125,7 @@ export function ProductGalleryCard({
                         />
                       ) : (
                         <Image
-                          src={getThumbnailUrl(additionalImages[index], 200)}
+                          src={additionalImages[index]}
                           alt={`Media ${index + 1}`}
                           fill
                           className="object-cover"

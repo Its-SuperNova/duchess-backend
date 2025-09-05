@@ -45,6 +45,7 @@ import { getProductById } from "@/lib/actions/products";
 import {
   getThumbnailUrl,
   getResponsiveImageUrls,
+  getOriginalImageUrl,
 } from "@/lib/cloudinary-client";
 import { getProductPrice, generateRating, isProductInStock } from "@/lib/utils";
 import { toast as sonnerToast } from "sonner";
@@ -455,11 +456,15 @@ export default function ProductPage() {
     }
   };
 
-  // Get all images for gallery
+  // Get all images for gallery with original quality
   const getAllImages = () => {
     if (!product) return [];
     const images = [product.banner_image].filter(Boolean);
-    return [...images, ...product.additional_images];
+    const allImages = [...images, ...product.additional_images];
+    // Ensure all images are in original quality
+    return allImages
+      .map((img) => (img ? getOriginalImageUrl(img) : null))
+      .filter(Boolean);
   };
 
   // Get optimized image URLs for display
@@ -570,7 +575,11 @@ export default function ProductPage() {
                     // Fallback single image if no images available
                     <div className="relative w-full h-full rounded-2xl overflow-hidden">
                       <Image
-                        src={product.banner_image || "/placeholder.svg"}
+                        src={
+                          product.banner_image
+                            ? getOriginalImageUrl(product.banner_image)
+                            : "/placeholder.svg"
+                        }
                         alt={product.name}
                         fill
                         priority

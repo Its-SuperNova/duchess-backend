@@ -53,6 +53,14 @@ export function useImageUpload(
       const result = await response.json();
       const imageUrl = result.data.secure_url;
 
+      // Log successful upload
+      console.log("✅ Image uploaded successfully:", {
+        url: imageUrl,
+        folder: options.folder || "duchess-pastries",
+        publicId: result.data.public_id,
+        timestamp: new Date().toISOString(),
+      });
+
       // Call success callback
       if (options.onSuccess) {
         options.onSuccess(imageUrl);
@@ -80,4 +88,3 @@ export function useImageUpload(
     error,
   };
 }
-

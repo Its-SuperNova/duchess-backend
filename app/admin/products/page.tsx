@@ -47,6 +47,7 @@ import {
   Search,
   Trash2,
   RefreshCw,
+  Upload,
 } from "lucide-react";
 import { HiOutlineSquares2X2 } from "react-icons/hi2";
 import { CiCircleList } from "react-icons/ci";
@@ -69,6 +70,7 @@ import {
   toggleProductVisibility,
 } from "@/lib/actions/products";
 import { getCategories } from "@/lib/actions/categories";
+import { BulkImageUpdate } from "./components/bulk-image-update";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -83,6 +85,7 @@ export default function ProductsPage() {
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [showBulkUpdate, setShowBulkUpdate] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -508,13 +511,23 @@ export default function ProductsPage() {
             Manage your product catalog and inventory
           </p>
         </div>
-        <Button
-          onClick={() => router.push("/admin/products/create")}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Product
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            onClick={() => setShowBulkUpdate(true)}
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Bulk Update Images
+          </Button>
+          <Button
+            onClick={() => router.push("/admin/products/create")}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Product
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -963,6 +976,25 @@ export default function ProductsPage() {
           )}
         </div>
       )}
+
+      {/* Bulk Image Update Dialog */}
+      <Dialog open={showBulkUpdate} onOpenChange={setShowBulkUpdate}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Bulk Update Product Images</DialogTitle>
+            <DialogDescription>
+              Update banner images for multiple products at once. This will
+              upload images to Cloudinary and update the product records.
+            </DialogDescription>
+          </DialogHeader>
+          <BulkImageUpdate
+            onUpdateComplete={() => {
+              setShowBulkUpdate(false);
+              fetchProducts(); // Refresh the products list
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

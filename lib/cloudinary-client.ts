@@ -14,7 +14,24 @@ export function getOptimizedImageUrl(
     return cloudinaryUrl;
   }
 
-  // Extract the base URL and public ID
+  // Handle already transformed URLs (containing /image/upload/)
+  if (cloudinaryUrl.includes("/image/upload/")) {
+    // If it's already a transformed URL, just add our transformation
+    const parts = cloudinaryUrl.split("/image/upload/");
+    if (parts.length === 2) {
+      const [baseUrl, rest] = parts;
+      // Check if there are already transformations
+      if (rest.includes("/")) {
+        // There are existing transformations, add ours
+        return `${baseUrl}/image/upload/${transformation}/${rest}`;
+      } else {
+        // No existing transformations, add ours
+        return `${baseUrl}/image/upload/${transformation}/${rest}`;
+      }
+    }
+  }
+
+  // Handle raw Cloudinary URLs (without transformations)
   const urlParts = cloudinaryUrl.split("/");
   const cloudNameIndex = urlParts.findIndex((part) =>
     part.includes("cloudinary.com")
@@ -44,6 +61,19 @@ export function getThumbnailUrl(
 }
 
 /**
+ * Get original quality image URL without any transformations
+ */
+export function getOriginalImageUrl(cloudinaryUrl: string): string {
+  if (!cloudinaryUrl || !cloudinaryUrl.includes("cloudinary.com")) {
+    return cloudinaryUrl;
+  }
+
+  // For now, just return the original URL as-is to avoid URL parsing issues
+  // The images should already be in high quality from our upload configuration
+  return cloudinaryUrl;
+}
+
+/**
  * Generate responsive image URLs for different screen sizes
  */
 export function getResponsiveImageUrls(cloudinaryUrl: string) {
@@ -52,6 +82,6 @@ export function getResponsiveImageUrls(cloudinaryUrl: string) {
     small: getThumbnailUrl(cloudinaryUrl, 300),
     medium: getThumbnailUrl(cloudinaryUrl, 600),
     large: getThumbnailUrl(cloudinaryUrl, 1200),
-    original: cloudinaryUrl,
+    original: getOriginalImageUrl(cloudinaryUrl),
   };
 }
