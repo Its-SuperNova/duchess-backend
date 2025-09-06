@@ -32,7 +32,7 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        primary: "#523435",
+        primary: "#3B82F6",
       },
       borderRadius: {
         lg: "var(--radius)",

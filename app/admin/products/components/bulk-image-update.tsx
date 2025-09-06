@@ -27,7 +27,7 @@ interface Product {
   banner_image: string | null;
   categories?: {
     name: string;
-  };
+  }[];
 }
 
 interface UploadResult {

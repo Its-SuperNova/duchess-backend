@@ -18,12 +18,12 @@ import {
   Tags,
   Users,
   ImageIcon,
-  CreditCard,
   MessageSquare,
   Ticket,
   Settings,
   X,
   User,
+  Home,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
@@ -93,6 +93,11 @@ export default function Sidebar({
       icon: LayoutDashboard,
     },
     {
+      name: "Home Customization",
+      href: "/admin/home-customization",
+      icon: Home,
+    },
+    {
       name: "Orders",
       href: "/admin/orders",
       icon: ShoppingBag,
@@ -116,11 +121,6 @@ export default function Sidebar({
       name: "Banners",
       href: "/admin/banners",
       icon: ImageIcon,
-    },
-    {
-      name: "Payments",
-      href: "/admin/payments",
-      icon: CreditCard,
     },
     {
       name: "Reviews",

@@ -10,8 +10,8 @@ export async function getCategories() {
       async () => {
         const { data: categories, error } = await supabaseAdmin
           .from("categories")
-          .select("id, name, image") // Only fetch essential columns
-          .eq("is_active", true) // Filter active categories on server side
+          .select("id, name, image, is_active") // Include is_active field
+          .order("name", { ascending: true })
           .limit(50); // Limit to prevent large queries
 
         if (error) {
@@ -19,8 +19,14 @@ export async function getCategories() {
           throw new Error(`Database error: ${error.message}`);
         }
 
-        // Custom ordering for categories
-        const categoryOrder = [
+        // Get category order from settings table
+        const { data: orderSetting, error: orderError } = await supabaseAdmin
+          .from("category_order_settings")
+          .select("setting_value")
+          .eq("setting_key", "category_order")
+          .single();
+
+        let categoryOrder = [
           "Cakes",
           "Chocolates",
           "Cookies",
@@ -28,6 +34,15 @@ export async function getCategories() {
           "Muffins & Cupcakes",
           "Brownies & Brookies",
         ];
+
+        // Use saved order if available
+        if (orderSetting && !orderError) {
+          try {
+            categoryOrder = orderSetting.setting_value;
+          } catch (e) {
+            console.warn("Failed to parse category order, using default");
+          }
+        }
 
         // Sort categories according to the custom order
         const sortedCategories = (categories || []).sort((a, b) => {
@@ -247,5 +262,60 @@ export async function getCategoriesWithProductCounts() {
   } catch (error) {
     console.error("Error in getCategoriesWithProductCounts:", error);
     throw new Error("Failed to fetch categories");
+  }
+}
+
+// Update category order - Saves order to category_order_settings table
+export async function updateCategoryOrder(
+  categoryOrders: { id: string; order: number }[]
+) {
+  try {
+    return await withRetry(async () => {
+      // Get current categories to map IDs to names
+      const { data: categories, error: categoriesError } = await supabaseAdmin
+        .from("categories")
+        .select("id, name");
+
+      if (categoriesError) {
+        throw new Error(
+          `Failed to fetch categories: ${categoriesError.message}`
+        );
+      }
+
+      // Create ordered array of category names based on the new order
+      const orderedCategoryNames = categoryOrders
+        .sort((a, b) => a.order - b.order)
+        .map(({ id }) => {
+          const category = categories?.find((cat) => cat.id === id);
+          return category?.name;
+        })
+        .filter(Boolean); // Remove any undefined values
+
+      // Save the new order to the settings table
+      const { data, error } = await supabaseAdmin
+        .from("category_order_settings")
+        .upsert(
+          {
+            setting_key: "category_order",
+            setting_value: orderedCategoryNames,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "setting_key",
+          }
+        );
+
+      if (error) {
+        console.error("Error updating category order:", error);
+        throw new Error(`Failed to update category order: ${error.message}`);
+      }
+
+      revalidatePath("/admin/category-management");
+      revalidatePath("/"); // Revalidate home page to reflect new order
+      return { success: true };
+    });
+  } catch (error) {
+    console.error("Error in updateCategoryOrder:", error);
+    throw new Error("Failed to update category order");
   }
 }
