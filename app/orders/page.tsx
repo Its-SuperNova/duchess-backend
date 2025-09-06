@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -107,7 +107,7 @@ interface OrderItem {
   variant?: string;
 }
 
-export default function OrdersPage() {
+function OrdersPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -654,5 +654,13 @@ export default function OrdersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OrdersPageContent />
+    </Suspense>
   );
 }
