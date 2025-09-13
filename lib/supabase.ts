@@ -119,6 +119,7 @@ export interface Product {
 
   // Status and timestamps
   is_active: boolean;
+  show_on_home: boolean;
   created_at: string;
   updated_at: string;
 }

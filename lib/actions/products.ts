@@ -426,7 +426,95 @@ export async function getActiveProductsCount() {
   }
 }
 
-// Get specific featured products for homepage (exact 12 products) - OPTIMIZED
+// Get homepage sections with their products for sectioned display
+export async function getHomepageSectionsWithProducts() {
+  try {
+    return await withRetry(
+      async () => {
+        // Get all active homepage sections with their products
+        const { data: sections, error } = await supabaseAdmin
+          .from("product_sections")
+          .select(
+            `
+            id,
+            name,
+            title,
+            description,
+            display_order,
+            max_products,
+            current_products_count,
+            section_products (
+              display_order,
+              products!inner (
+                id,
+                name,
+                banner_image,
+                is_veg,
+                weight_options,
+                piece_options,
+                categories (
+                  name
+                )
+              )
+            )
+          `
+          )
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+
+        if (error) {
+          console.error(
+            "Error fetching homepage sections with products:",
+            error
+          );
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        if (!sections || sections.length === 0) {
+          console.log("No active homepage sections found");
+          return [];
+        }
+
+        // Transform the data to group products by section
+        const sectionsWithProducts = sections.map((section) => ({
+          id: section.id,
+          name: section.name,
+          title: section.title,
+          description: section.description,
+          display_order: section.display_order,
+          max_products: section.max_products,
+          current_products_count: section.current_products_count,
+          products:
+            section.section_products
+              ?.sort((a: any, b: any) => a.display_order - b.display_order)
+              .map((sp: any) => sp.products) || [],
+        }));
+
+        console.log(
+          "Homepage sections with products:",
+          sectionsWithProducts.length
+        );
+        sectionsWithProducts.forEach((section) => {
+          console.log(
+            `Section "${section.title}": ${section.products.length} products`
+          );
+        });
+
+        return sectionsWithProducts;
+      },
+      2,
+      5000 // Increased timeout to 5 seconds
+    );
+  } catch (error) {
+    console.error("Error in getHomepageSectionsWithProducts:", error);
+    console.warn(
+      "Returning empty sections array due to database connection issues"
+    );
+    return [];
+  }
+}
+
+// Get specific featured products for homepage from sections - OPTIMIZED
 export async function getHomepageProducts({
   limit = 12,
   offset = 0,
@@ -434,35 +522,72 @@ export async function getHomepageProducts({
   try {
     return await withRetry(
       async () => {
-        const { data: products, error } = await supabaseAdmin
-          .from("products")
-          .select(
-            `
-            id,
-            name,
-            banner_image,
-            is_veg,
-            weight_options,
-            piece_options,
-            categories (
-              name
-            )
-          `
-          )
+        // First, get all active homepage sections ordered by display_order
+        const { data: sections, error: sectionsError } = await supabaseAdmin
+          .from("product_sections")
+          .select("id, display_order, max_products")
           .eq("is_active", true)
-          .eq("show_on_home", true) // Use the new boolean column
-          .order("created_at", { ascending: false })
-          .limit(12); // Ensure we only get 12 products
+          .order("display_order", { ascending: true });
 
-        if (error) {
-          console.error("Error fetching homepage products:", error);
-          throw new Error(`Database error: ${error.message}`);
+        if (sectionsError) {
+          console.error("Error fetching homepage sections:", sectionsError);
+          throw new Error(`Database error: ${sectionsError.message}`);
         }
 
-        console.log("Products with show_on_home=true:", products?.length || 0);
-        console.log("Product names found:", products?.map((p) => p.name) || []);
+        if (!sections || sections.length === 0) {
+          console.log("No active homepage sections found");
+          return [];
+        }
 
-        return products || [];
+        // Get products from all sections, ordered by section display_order and product display_order
+        const { data: sectionProducts, error: productsError } =
+          await supabaseAdmin
+            .from("section_products")
+            .select(
+              `
+            display_order,
+            products!inner (
+              id,
+              name,
+              banner_image,
+              is_veg,
+              weight_options,
+              piece_options,
+              categories (
+                name
+              )
+            )
+          `
+            )
+            .in(
+              "section_id",
+              sections.map((s) => s.id)
+            )
+            .eq("products.is_active", true)
+            .order("display_order", { ascending: true });
+
+        if (productsError) {
+          console.error(
+            "Error fetching homepage section products:",
+            productsError
+          );
+          throw new Error(`Database error: ${productsError.message}`);
+        }
+
+        // Extract products and apply limit
+        const products = sectionProducts?.map((sp) => sp.products) || [];
+        const limitedProducts = products.slice(offset, offset + limit);
+
+        console.log(
+          "Homepage products from sections:",
+          limitedProducts?.length || 0
+        );
+        console.log(
+          "Product names found:",
+          limitedProducts?.map((p) => p.name) || []
+        );
+
+        return limitedProducts;
       },
       2,
       5000 // Increased timeout to 5 seconds
@@ -1041,6 +1166,175 @@ export async function getAdminProductsCount({
   } catch (error) {
     console.error("Error in getAdminProductsCount:", error);
     return 0;
+  }
+}
+
+// Get all products for management (no pagination)
+export async function getAllProductsForManagement({
+  search = "",
+  categoryFilter = "all",
+  stockFilter = "all",
+  orderTypeFilter = "all",
+}: {
+  search?: string;
+  categoryFilter?: string;
+  stockFilter?: string;
+  orderTypeFilter?: string;
+} = {}) {
+  try {
+    return await withRetry(async () => {
+      // Build the base query with only required fields
+      let query = supabaseAdmin.from("products").select(
+        `
+          id,
+          name,
+          banner_image,
+          is_active,
+          selling_type,
+          weight_options,
+          piece_options,
+          show_on_home,
+          categories (
+            name
+          )
+        `,
+        { count: "exact" }
+      );
+
+      // Apply search filter
+      if (search.trim()) {
+        query = query.or(
+          `name.ilike.%${search.trim()}%,short_description.ilike.%${search.trim()}%`
+        );
+      }
+
+      // Apply category filter
+      if (categoryFilter !== "all") {
+        // First get the category ID from the category name
+        const { data: category, error: categoryError } = await supabaseAdmin
+          .from("categories")
+          .select("id")
+          .eq("name", categoryFilter)
+          .single();
+
+        if (categoryError) {
+          console.error("Error fetching category:", categoryError);
+          // If category not found, return empty results
+          return {
+            products: [],
+            totalCount: 0,
+          };
+        }
+
+        if (category) {
+          query = query.eq("category_id", category.id);
+        }
+      }
+
+      // Apply order type filter
+      if (orderTypeFilter !== "all") {
+        query = query.eq("selling_type", orderTypeFilter);
+      }
+
+      // Execute the query without pagination
+      const {
+        data: products,
+        error,
+        count,
+      } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching all products:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      // Apply stock filter in application layer
+      let filteredProducts = products || [];
+      if (stockFilter !== "all") {
+        filteredProducts = filteredProducts.filter((product) => {
+          const stockStatus = getProductStockStatus(product);
+          return stockStatus === stockFilter;
+        });
+      }
+
+      return {
+        products: filteredProducts,
+        totalCount: count || 0,
+      };
+    });
+  } catch (error) {
+    console.error("Error in getAllProductsForManagement:", error);
+    throw new Error("Failed to fetch all products");
+  }
+}
+
+// Get products that are set to show on homepage for arrangement
+export async function getHomepageProductsForArrangement() {
+  try {
+    return await withRetry(async () => {
+      const { data: products, error } = await supabaseAdmin
+        .from("products")
+        .select(
+          `
+          id,
+          name,
+          banner_image,
+          is_veg,
+          weight_options,
+          piece_options,
+          selling_type,
+          show_on_home,
+          categories (
+            name
+          )
+        `
+        )
+        .eq("is_active", true)
+        .eq("show_on_home", true)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(
+          "Error fetching homepage products for arrangement:",
+          error
+        );
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return products || [];
+    });
+  } catch (error) {
+    console.error("Error in getHomepageProductsForArrangement:", error);
+    throw new Error("Failed to fetch homepage products for arrangement");
+  }
+}
+
+// Update product arrangement order
+export async function updateProductArrangement(productIds: string[]) {
+  try {
+    return await withRetry(async () => {
+      // Update each product with its new position
+      const updates = productIds.map((productId, index) => ({
+        id: productId,
+        display_order: index + 1, // 1-based ordering
+      }));
+
+      // Use upsert to update multiple products
+      const { data, error } = await supabaseAdmin
+        .from("products")
+        .upsert(updates, { onConflict: "id" })
+        .select("id, name, display_order");
+
+      if (error) {
+        console.error("Error updating product arrangement:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return data;
+    });
+  } catch (error) {
+    console.error("Error in updateProductArrangement:", error);
+    throw new Error("Failed to update product arrangement");
   }
 }
 

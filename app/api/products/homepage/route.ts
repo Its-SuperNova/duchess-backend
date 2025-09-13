@@ -8,40 +8,71 @@ export const revalidate = 3600;
 // It always returns the 12 featured products for the homepage
 export async function GET() {
   try {
-    // Fetch only essential product data for homepage display
-    // Optimized to only include fields needed for ProductCard and basic info
-    const { data: products, error } = await supabase
-      .from("products")
+    // First, get all active homepage sections ordered by display_order
+    const { data: sections, error: sectionsError } = await supabase
+      .from("product_sections")
+      .select("id, display_order, max_products")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
+
+    if (sectionsError) {
+      console.error("Error fetching homepage sections:", sectionsError);
+      return NextResponse.json(
+        { error: "Failed to fetch sections" },
+        { status: 500 }
+      );
+    }
+
+    if (!sections || sections.length === 0) {
+      console.log("No active homepage sections found");
+      return NextResponse.json({
+        success: true,
+        products: [],
+      });
+    }
+
+    // Get products from all sections, ordered by section display_order and product display_order
+    const { data: sectionProducts, error: productsError } = await supabase
+      .from("section_products")
       .select(
         `
-        id,
-        name,
-        banner_image,
-        is_veg,
-        has_offer,
-        offer_percentage,
-        weight_options,
-        piece_options,
-        selling_type,
-        categories (
-          name
+        display_order,
+        products!inner (
+          id,
+          name,
+          banner_image,
+          is_veg,
+          has_offer,
+          offer_percentage,
+          weight_options,
+          piece_options,
+          selling_type,
+          categories (
+            name
+          )
         )
       `
       )
-      .eq("is_active", true)
-      .eq("show_on_home", true) // Use the new boolean column
-      .order("created_at", { ascending: false })
+      .in(
+        "section_id",
+        sections.map((s) => s.id)
+      )
+      .eq("products.is_active", true)
+      .order("display_order", { ascending: true })
       .limit(12); // Fixed limit for homepage
 
-    if (error) {
-      console.error("Error fetching homepage products:", error);
+    if (productsError) {
+      console.error("Error fetching homepage section products:", productsError);
       return NextResponse.json(
         { error: "Failed to fetch products" },
         { status: 500 }
       );
     }
 
-    console.log("API: Products with show_on_home=true:", products?.length || 0);
+    // Extract products
+    const products = sectionProducts?.map((sp) => sp.products) || [];
+
+    console.log("API: Homepage products from sections:", products?.length || 0);
     console.log(
       "API: Product names found:",
       products?.map((p) => p.name) || []

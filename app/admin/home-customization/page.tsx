@@ -319,7 +319,9 @@ export default function HomeCustomizationPage() {
         {/* Product Management */}
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => router.push("/admin/products")}
+          onClick={() =>
+            router.push("/admin/home-customization/product-management")
+          }
         >
           <CardContent className="p-6">
             <div className="flex flex-col items-center justify-center h-48 space-y-4">
@@ -329,7 +331,7 @@ export default function HomeCustomizationPage() {
               <div className="text-center">
                 <h3 className="text-lg font-semibold">Product Management</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Manage products and inventory
+                  Manage homepage product visibility
                 </p>
               </div>
               <div className="flex items-center text-primary text-sm font-medium">
