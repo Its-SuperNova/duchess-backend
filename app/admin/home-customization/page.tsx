@@ -21,9 +21,9 @@ import {
   RefreshCw,
   Eye,
   Layout,
-  Video,
   Grid3X3,
   ArrowRight,
+  Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -44,11 +44,6 @@ export default function HomeCustomizationPage() {
     promoBannerText: "Free delivery on orders above ₹500",
     showHeroVideo: false,
     heroVideoUrl: "",
-    showCategoryVideo: false,
-    categoryVideoUrl: "",
-    categoryVideoTitle: "Our Categories",
-    categoryVideoDescription:
-      "Explore our delicious range of pastries and desserts",
   });
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -90,11 +85,6 @@ export default function HomeCustomizationPage() {
       promoBannerText: "Free delivery on orders above ₹500",
       showHeroVideo: false,
       heroVideoUrl: "",
-      showCategoryVideo: false,
-      categoryVideoUrl: "",
-      categoryVideoTitle: "Our Categories",
-      categoryVideoDescription:
-        "Explore our delicious range of pastries and desserts",
     });
     setHasChanges(false);
   };
@@ -302,77 +292,6 @@ export default function HomeCustomizationPage() {
           </CardContent>
         </Card>
 
-        {/* Category Customization */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              Category Customization
-            </CardTitle>
-            <CardDescription>
-              Customize the category section with video content
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="showCategoryVideo"
-                checked={homeSettings.showCategoryVideo}
-                onCheckedChange={(checked) =>
-                  handleInputChange("showCategoryVideo", checked)
-                }
-              />
-              <Label htmlFor="showCategoryVideo">Show Category Video</Label>
-            </div>
-
-            {homeSettings.showCategoryVideo && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="categoryVideoTitle">Video Title</Label>
-                  <Input
-                    id="categoryVideoTitle"
-                    value={homeSettings.categoryVideoTitle}
-                    onChange={(e) =>
-                      handleInputChange("categoryVideoTitle", e.target.value)
-                    }
-                    placeholder="Enter video title"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="categoryVideoDescription">
-                    Video Description
-                  </Label>
-                  <Textarea
-                    id="categoryVideoDescription"
-                    value={homeSettings.categoryVideoDescription}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "categoryVideoDescription",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Enter video description"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="categoryVideoUrl">Category Video URL</Label>
-                  <Input
-                    id="categoryVideoUrl"
-                    value={homeSettings.categoryVideoUrl}
-                    onChange={(e) =>
-                      handleInputChange("categoryVideoUrl", e.target.value)
-                    }
-                    placeholder="https://example.com/category-video.mp4"
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Category Management */}
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
@@ -391,6 +310,30 @@ export default function HomeCustomizationPage() {
               </div>
               <div className="flex items-center text-primary text-sm font-medium">
                 <span>Manage Categories</span>
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Product Management */}
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => router.push("/admin/products")}
+        >
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center h-48 space-y-4">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Package className="h-8 w-8 text-primary" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold">Product Management</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage products and inventory
+                </p>
+              </div>
+              <div className="flex items-center text-primary text-sm font-medium">
+                <span>Manage Products</span>
                 <ArrowRight className="h-4 w-4 ml-2" />
               </div>
             </div>

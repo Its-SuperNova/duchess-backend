@@ -71,6 +71,7 @@ import {
 } from "@/lib/actions/products";
 import { getCategories } from "@/lib/actions/categories";
 import { BulkImageUpdate } from "./components/bulk-image-update";
+import { getProductThumbnailUrl } from "@/lib/image-utils";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -689,7 +690,7 @@ export default function ProductsPage() {
                         <div className="flex items-center space-x-3">
                           <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 shadow-sm">
                             <Image
-                              src={product.banner_image || "/placeholder.svg"}
+                              src={getProductThumbnailUrl(product)}
                               alt={product.name}
                               fill
                               className="object-cover"
@@ -795,7 +796,7 @@ export default function ProductsPage() {
               >
                 <div className="relative h-48 bg-gray-100">
                   <Image
-                    src={product.banner_image || "/placeholder.svg"}
+                    src={getProductThumbnailUrl(product)}
                     alt={product.name}
                     fill
                     className="object-cover"

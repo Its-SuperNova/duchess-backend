@@ -46,11 +46,30 @@ export function useImageUpload(
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Upload failed");
+        let errorMessage = "Upload failed";
+        try {
+          const errorData = await response.json();
+          errorMessage =
+            errorData.error || errorData.details || "Upload failed";
+        } catch (jsonError) {
+          // If JSON parsing fails, use the response status text
+          errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        console.error("Failed to parse response JSON:", jsonError);
+        throw new Error("Invalid response from server");
+      }
+
+      if (!result.data || !result.data.secure_url) {
+        throw new Error("Invalid response format from server");
+      }
+
       const imageUrl = result.data.secure_url;
 
       // Log successful upload
