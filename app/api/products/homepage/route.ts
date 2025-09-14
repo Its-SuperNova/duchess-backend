@@ -69,8 +69,8 @@ export async function GET() {
       );
     }
 
-    // Extract products
-    const products = sectionProducts?.map((sp) => sp.products) || [];
+    // Extract products and flatten the array
+    const products = sectionProducts?.map((sp) => sp.products).flat() || [];
 
     console.log("API: Homepage products from sections:", products?.length || 0);
     console.log(

@@ -17,7 +17,7 @@ interface AdminProductCardProps {
     weight_options: any;
     piece_options: any;
     categories?: { name: string } | null;
-    is_active: boolean;
+    is_active?: boolean;
   };
   section?: {
     id: string;

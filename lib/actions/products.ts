@@ -575,7 +575,7 @@ export async function getHomepageProducts({
         }
 
         // Extract products and apply limit
-        const products = sectionProducts?.map((sp) => sp.products) || [];
+        const products = sectionProducts?.map((sp) => sp.products).flat() || [];
         const limitedProducts = products.slice(offset, offset + limit);
 
         console.log(

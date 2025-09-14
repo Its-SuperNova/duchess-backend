@@ -48,6 +48,7 @@ interface Product {
   selling_type: string;
   display_order: number;
   categories: { name: string } | null;
+  is_active?: boolean;
 }
 
 interface Section {
@@ -58,7 +59,8 @@ interface Section {
   display_order: number;
   is_active: boolean;
   max_products: number;
-  products: Product[];
+  current_products_count: number;
+  products?: Product[];
 }
 
 export default function ProductArrangementPage() {
@@ -107,7 +109,7 @@ export default function ProductArrangementPage() {
     try {
       setLoading(true);
       const sectionsData = await getProductSections();
-      setSections(sectionsData);
+      setSections(sectionsData as Section[]);
     } catch (error) {
       console.error("Error loading sections:", error);
       toast({
@@ -128,7 +130,7 @@ export default function ProductArrangementPage() {
 
       // Save product order for each section
       for (const section of sections) {
-        if (section.products.length > 0) {
+        if (section.products && section.products.length > 0) {
           await updateProductOrderInSection(
             section.id,
             section.products.map((p) => p.id)
@@ -403,6 +405,11 @@ export default function ProductArrangementPage() {
     }
 
     // Remove product from source section
+    if (!sourceSection.products || !targetSection.products) {
+      setDraggedProduct(null);
+      return;
+    }
+
     const draggedProductData = sourceSection.products.find(
       (p) => p.id === draggedProduct.productId
     );

@@ -13,6 +13,9 @@ export default async function DebugHomepageSectionsPage() {
         getHomepageSectionsWithProducts(),
       ]);
 
+    // Type assertion to ensure homepageProducts is a flat array
+    const flatHomepageProducts = homepageProducts as any[];
+
     return (
       <div className="container mx-auto p-6 space-y-8">
         <h1 className="text-3xl font-bold">Homepage Sections Debug</h1>
@@ -81,10 +84,11 @@ export default async function DebugHomepageSectionsPage() {
             Homepage Products (What will be displayed)
           </h2>
           <p className="text-gray-600 mb-4">
-            Products that will be shown on homepage: {homepageProducts.length}
+            Products that will be shown on homepage:{" "}
+            {flatHomepageProducts.length}
           </p>
 
-          {homepageProducts.length === 0 ? (
+          {flatHomepageProducts.length === 0 ? (
             <div className="text-red-600 bg-red-50 p-4 rounded">
               <p className="font-semibold">
                 ⚠️ No products will be displayed on homepage!
@@ -96,7 +100,7 @@ export default async function DebugHomepageSectionsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {homepageProducts.map((product, index) => (
+              {flatHomepageProducts.map((product, index) => (
                 <div key={product.id} className="border p-4 rounded">
                   <h3 className="font-semibold">
                     {index + 1}. {product.name}
@@ -231,7 +235,8 @@ export default async function DebugHomepageSectionsPage() {
       <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold text-red-600">Error</h1>
         <p className="text-red-600">
-          Failed to load debug information: {error.message}
+          Failed to load debug information:{" "}
+          {error instanceof Error ? error.message : String(error)}
         </p>
       </div>
     );
