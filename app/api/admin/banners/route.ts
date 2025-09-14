@@ -40,7 +40,13 @@ export async function POST(request: NextRequest) {
     // Process each banner
     for (const banner of banners) {
       try {
-        const { imageUrl, isClickable, redirectUrl, position = 1 } = banner;
+        const {
+          imageUrl,
+          publicId,
+          isClickable,
+          redirectUrl,
+          position = 1,
+        } = banner;
 
         if (!imageUrl) {
           errors.push(`Banner ${position}: Image URL is required`);
@@ -69,11 +75,11 @@ export async function POST(request: NextRequest) {
         }
 
         const bannerData = {
-          name: `${type}-${deviceType}-${position}`,
           type,
           device_type: deviceType,
           position,
           image_url: imageUrl,
+          public_id: publicId || null,
           is_clickable: isClickable || false,
           redirect_url: isClickable ? redirectUrl : null,
           is_active: true,

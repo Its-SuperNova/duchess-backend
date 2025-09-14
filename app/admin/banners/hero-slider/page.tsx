@@ -10,10 +10,19 @@ import {
   Smartphone,
   Image as ImageIcon,
   Trash2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useState, useRef, useEffect } from "react";
 
 interface Slide {
@@ -21,8 +30,10 @@ interface Slide {
   title: string;
   desktopImage: File | null;
   desktopImageUrl: string;
+  desktopPublicId?: string;
   mobileImage: File | null;
   mobileImageUrl: string;
+  mobilePublicId?: string;
   isClickable: boolean;
   redirectUrl: string;
 }
@@ -30,14 +41,21 @@ interface Slide {
 export default function HeroSliderPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("desktop");
+  const [uploading, setUploading] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showSaveSuccessDialog, setShowSaveSuccessDialog] = useState(false);
+  const [showSaveErrorDialog, setShowSaveErrorDialog] = useState(false);
+  const [saveErrorMessage, setSaveErrorMessage] = useState("");
   const [slides, setSlides] = useState<Slide[]>([
     {
       id: 1,
       title: "Slide 1",
       desktopImage: null,
       desktopImageUrl: "",
+      desktopPublicId: "",
       mobileImage: null,
       mobileImageUrl: "",
+      mobilePublicId: "",
       isClickable: false,
       redirectUrl: "",
     },
@@ -51,8 +69,10 @@ export default function HeroSliderPage() {
         title: `Slide ${newSlideId}`,
         desktopImage: null,
         desktopImageUrl: "",
+        desktopPublicId: "",
         mobileImage: null,
         mobileImageUrl: "",
+        mobilePublicId: "",
         isClickable: false,
         redirectUrl: "",
       },
@@ -66,6 +86,59 @@ export default function HeroSliderPage() {
     }
   };
 
+  const uploadImageToCloudinary = async (
+    file: File,
+    slideId: number,
+    deviceType: "desktop" | "mobile"
+  ) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "duchess-pastries/banners/hero-slider");
+
+      const response = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Update the slide with the Cloudinary URL and public ID
+        setSlides(
+          slides.map((slide) =>
+            slide.id === slideId
+              ? deviceType === "desktop"
+                ? {
+                    ...slide,
+                    desktopImage: file,
+                    desktopImageUrl: result.imageUrl,
+                    desktopPublicId: result.publicId,
+                  }
+                : {
+                    ...slide,
+                    mobileImage: file,
+                    mobileImageUrl: result.imageUrl,
+                    mobilePublicId: result.publicId,
+                  }
+              : slide
+          )
+        );
+
+        setShowSuccessDialog(true);
+      } else {
+        console.error("Upload error:", result.error);
+        alert(`Upload failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Error uploading image. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleFileUpload = (
     event: React.ChangeEvent<HTMLInputElement>,
     slideId: number,
@@ -73,19 +146,21 @@ export default function HeroSliderPage() {
   ) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Create a preview URL for the image
-      const imageUrl = URL.createObjectURL(file);
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
+      }
 
-      // Update the slide with the image data for the specific device type
-      setSlides(
-        slides.map((slide) =>
-          slide.id === slideId
-            ? deviceType === "desktop"
-              ? { ...slide, desktopImage: file, desktopImageUrl: imageUrl }
-              : { ...slide, mobileImage: file, mobileImageUrl: imageUrl }
-            : slide
-        )
-      );
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert("File size must be less than 10MB");
+        return;
+      }
+
+      // Upload to Cloudinary
+      uploadImageToCloudinary(file, slideId, deviceType);
 
       // Reset the input value so the same file can be selected again
       event.target.value = "";
@@ -109,11 +184,13 @@ export default function HeroSliderPage() {
       return {
         image: slide.desktopImage,
         imageUrl: slide.desktopImageUrl,
+        publicId: slide.desktopPublicId,
       };
     } else {
       return {
         image: slide.mobileImage,
         imageUrl: slide.mobileImageUrl,
+        publicId: slide.mobilePublicId,
       };
     }
   };
@@ -138,16 +215,7 @@ export default function HeroSliderPage() {
     );
   };
 
-  const renderSlide = (slide: {
-    id: number;
-    title: string;
-    desktopImage: File | null;
-    desktopImageUrl: string;
-    mobileImage: File | null;
-    mobileImageUrl: string;
-    isClickable: boolean;
-    redirectUrl: string;
-  }) => {
+  const renderSlide = (slide: Slide) => {
     const currentImageData = getCurrentImageData(slide);
 
     return (
@@ -174,10 +242,11 @@ export default function HeroSliderPage() {
             Banner Image
           </Label>
           <div
-            className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer w-full"
-            style={{
-              aspectRatio: activeTab === "desktop" ? "1168/250" : "450/220",
-            }}
+            className={`border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer w-full ${
+              activeTab === "desktop"
+                ? "aspect-[1200/250] rounded-[28px]"
+                : "aspect-[450/220] rounded-[20px] md:rounded-[24px]"
+            }`}
             onClick={() =>
               !currentImageData.imageUrl &&
               triggerFileUpload(slide.id, activeTab as "desktop" | "mobile")
@@ -189,8 +258,13 @@ export default function HeroSliderPage() {
                 <img
                   src={currentImageData.imageUrl}
                   alt={`Banner for ${slide.title}`}
-                  className="w-full h-full object-cover rounded-lg"
+                  className={`w-full h-full object-cover ${
+                    activeTab === "desktop"
+                      ? "rounded-[28px]"
+                      : "rounded-[20px] md:rounded-[24px]"
+                  }`}
                 />
+                <div className="absolute inset-0 bg-black/10 rounded-[28px]"></div>
                 <div className="absolute top-2 right-2">
                   <Button
                     variant="ghost"
@@ -210,6 +284,11 @@ export default function HeroSliderPage() {
                 <ImageIcon className="h-8 w-8 text-gray-400" />
                 <p className="text-sm text-gray-600">
                   Upload a high-quality image for the banner
+                </p>
+                <p className="text-xs text-gray-500">
+                  {activeTab === "desktop"
+                    ? "Recommended: 1200x250px or similar ratio"
+                    : "Recommended: 450x220px or similar ratio"}
                 </p>
               </div>
             )}
@@ -250,13 +329,14 @@ export default function HeroSliderPage() {
               onClick={() =>
                 triggerFileUpload(slide.id, activeTab as "desktop" | "mobile")
               }
+              disabled={uploading}
             >
               <Upload className="h-4 w-4 mr-2" />
-              Choose Banner Image
+              {uploading ? "Uploading..." : "Choose Banner Image"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            PNG, JPG or GIF, Max 2MB
+            PNG, JPG or GIF, Max 10MB
           </p>
         </div>
 
@@ -325,6 +405,10 @@ export default function HeroSliderPage() {
           activeTab === "desktop"
             ? slide.desktopImageUrl
             : slide.mobileImageUrl,
+        publicId:
+          activeTab === "desktop"
+            ? slide.desktopPublicId
+            : slide.mobilePublicId,
         isClickable: slide.isClickable,
         redirectUrl: slide.redirectUrl,
         position: slide.id,
@@ -346,15 +430,18 @@ export default function HeroSliderPage() {
 
       if (response.ok) {
         console.log("Hero slider saved successfully:", result);
-        // You can add a success toast notification here
-        alert("Hero slider saved successfully!");
+        setShowSaveSuccessDialog(true);
       } else {
         console.error("Error saving hero slider:", result);
-        alert(`Error saving hero slider: ${result.error || "Unknown error"}`);
+        setSaveErrorMessage(result.error || "Unknown error occurred");
+        setShowSaveErrorDialog(true);
       }
     } catch (error) {
       console.error("Error saving hero slider:", error);
-      alert("Error saving hero slider. Please try again.");
+      setSaveErrorMessage(
+        "Network error. Please check your connection and try again."
+      );
+      setShowSaveErrorDialog(true);
     }
   };
 
@@ -373,9 +460,13 @@ export default function HeroSliderPage() {
           desktopImage: null,
           desktopImageUrl:
             banner.device_type === "desktop" ? banner.image_url : "",
+          desktopPublicId:
+            banner.device_type === "desktop" ? banner.public_id || "" : "",
           mobileImage: null,
           mobileImageUrl:
             banner.device_type === "mobile" ? banner.image_url : "",
+          mobilePublicId:
+            banner.device_type === "mobile" ? banner.public_id || "" : "",
           isClickable: banner.is_clickable,
           redirectUrl: banner.redirect_url || "",
         }));
@@ -396,7 +487,7 @@ export default function HeroSliderPage() {
   }, [activeTab]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -458,11 +549,106 @@ export default function HeroSliderPage() {
         </div>
       </div>
 
+      {/* Live Preview Section */}
+      <div className="bg-gray-50 rounded-lg p-6">
+        <h2 className="text-lg font-semibold mb-4">
+          Live Preview - {activeTab === "desktop" ? "Desktop" : "Mobile"} View
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          This shows exactly how your banners will appear on the homepage
+        </p>
+
+        {/* Desktop Preview */}
+        {activeTab === "desktop" && (
+          <div className="hidden lg:block w-full max-w-6xl mx-auto">
+            <div className="w-full aspect-[1200/250] overflow-hidden rounded-[28px] bg-white shadow-lg">
+              <div className="flex h-full">
+                {slides.map((slide, index) => {
+                  const currentImageData = getCurrentImageData(slide);
+                  return (
+                    <div
+                      key={slide.id}
+                      className="flex-[0_0_100%] min-w-0 relative rounded-[28px] mr-4 last:mr-0 h-full w-full"
+                    >
+                      <div className="relative w-full h-full rounded-[28px]">
+                        {currentImageData.imageUrl ? (
+                          <img
+                            src={currentImageData.imageUrl}
+                            alt={`Banner ${slide.id}`}
+                            className="w-full h-full object-cover rounded-[28px]"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 rounded-[28px] flex items-center justify-center">
+                            <div className="text-center text-gray-500">
+                              <ImageIcon className="h-12 w-12 mx-auto mb-2" />
+                              <p className="text-sm">No image uploaded</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/10 rounded-[28px]"></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Preview */}
+        {activeTab === "mobile" && (
+          <div className="block lg:hidden w-full">
+            <div className="w-full aspect-[450/220] overflow-hidden rounded-[20px] md:rounded-[24px] bg-white shadow-lg">
+              <div className="flex h-full">
+                {slides.map((slide, index) => {
+                  const currentImageData = getCurrentImageData(slide);
+                  return (
+                    <div
+                      key={slide.id}
+                      className="flex-[0_0_100%] min-w-0 relative rounded-[20px] md:rounded-[24px] mr-3 md:mr-4 last:mr-0 h-full"
+                    >
+                      <div className="relative w-full h-full rounded-[20px] md:rounded-[24px]">
+                        {currentImageData.imageUrl ? (
+                          <img
+                            src={currentImageData.imageUrl}
+                            alt={`Banner ${slide.id}`}
+                            className="w-full h-full object-cover rounded-[20px] md:rounded-[24px]"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 rounded-[20px] md:rounded-[24px] flex items-center justify-center">
+                            <div className="text-center text-gray-500">
+                              <ImageIcon className="h-8 w-8 mx-auto mb-2" />
+                              <p className="text-xs">No image uploaded</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/10 rounded-[20px] md:rounded-[24px]"></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Responsive Preview Info */}
+        <div className="mt-4 text-center">
+          <p className="text-xs text-gray-500">
+            {activeTab === "desktop"
+              ? "Desktop: 1200:250 aspect ratio, responsive width and height"
+              : "Mobile: 450:220 aspect ratio, full width responsive"}
+          </p>
+        </div>
+      </div>
+
       {/* Content based on active tab */}
       {activeTab === "desktop" && (
         <div className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold mb-4">Desktop Banners</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              Desktop Banner Configuration
+            </h2>
           </div>
 
           {/* Slides */}
@@ -473,13 +659,106 @@ export default function HeroSliderPage() {
       {activeTab === "mobile" && (
         <div className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold mb-4">Mobile Banners</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              Mobile Banner Configuration
+            </h2>
           </div>
 
           {/* Slides */}
           <div className="space-y-6">{slides.map(renderSlide)}</div>
         </div>
       )}
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold">
+                  Upload Successful
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">
+                  Your banner image has been uploaded to Cloudinary
+                  successfully.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex justify-end mt-4">
+            <Button
+              onClick={() => setShowSuccessDialog(false)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Success Dialog */}
+      <Dialog
+        open={showSaveSuccessDialog}
+        onOpenChange={setShowSaveSuccessDialog}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold">
+                  Save Successful
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">
+                  Your hero slider configuration has been saved successfully.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex justify-end mt-4">
+            <Button
+              onClick={() => setShowSaveSuccessDialog(false)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Error Dialog */}
+      <Dialog open={showSaveErrorDialog} onOpenChange={setShowSaveErrorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold">
+                  Save Failed
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">
+                  {saveErrorMessage}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex justify-end mt-4">
+            <Button
+              onClick={() => setShowSaveErrorDialog(false)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Try Again
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
