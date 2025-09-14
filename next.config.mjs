@@ -15,14 +15,6 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'checkout.razorpay.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'api.razorpay.com',
-      },
-      {
-        protocol: 'https',
         hostname: 'res.cloudinary.com',
       },
     ],
@@ -86,15 +78,6 @@ const nextConfig = {
     return config;
   },
   
-  // Content Security Policy for Razorpay
-  async rewrites() {
-    return [
-      {
-        source: '/api/razorpay/:path*',
-        destination: '/api/razorpay/:path*',
-      },
-    ];
-  },
 };
 
 export default nextConfig;

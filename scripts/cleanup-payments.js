@@ -23,7 +23,7 @@ async function cleanupPayments() {
     console.log('📋 Current payments in database:');
     const { data: payments, error: fetchError } = await supabase
       .from('payments')
-      .select('id, razorpay_order_id, amount, payment_status, created_at');
+      .select('id, external_order_id, amount, payment_status, created_at');
 
     if (fetchError) {
       console.error('❌ Error fetching payments:', fetchError);
@@ -38,7 +38,7 @@ async function cleanupPayments() {
     console.log(`Found ${payments.length} payments:`);
     payments.forEach((payment, index) => {
       console.log(`${index + 1}. ID: ${payment.id}`);
-      console.log(`   Razorpay Order ID: ${payment.razorpay_order_id}`);
+      console.log(`   External Order ID: ${payment.external_order_id}`);
       console.log(`   Amount: ₹${payment.amount}`);
       console.log(`   Status: ${payment.payment_status}`);
       console.log(`   Created: ${payment.created_at}`);
@@ -131,8 +131,8 @@ async function deleteTestPayments() {
     console.log('📝 Step 1: Finding test payments...');
     const { data: testPayments, error: fetchError } = await supabase
       .from('payments')
-      .select('id, razorpay_order_id')
-      .ilike('razorpay_order_id', '%test%');
+      .select('id, external_order_id')
+      .ilike('external_order_id', '%test%');
 
     if (fetchError) {
       console.error('❌ Error fetching test payments:', fetchError);
@@ -186,7 +186,7 @@ async function deletePaymentsByDate(date) {
     console.log('📝 Step 1: Finding payments for the specified date...');
     const { data: datePayments, error: fetchError } = await supabase
       .from('payments')
-      .select('id, razorpay_order_id, created_at')
+      .select('id, external_order_id, created_at')
       .gte('created_at', `${date}T00:00:00`)
       .lt('created_at', `${date}T23:59:59`);
 
@@ -242,7 +242,7 @@ async function deletePaymentsByStatus(status) {
     console.log('📝 Step 1: Finding payments with the specified status...');
     const { data: statusPayments, error: fetchError } = await supabase
       .from('payments')
-      .select('id, razorpay_order_id, payment_status')
+      .select('id, external_order_id, payment_status')
       .eq('payment_status', status);
 
     if (fetchError) {

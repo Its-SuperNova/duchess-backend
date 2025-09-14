@@ -25,8 +25,8 @@
 
 ### **1. Script Loading Optimizations**
 
-- ✅ DNS prefetch for Razorpay domains
-- ✅ Preconnect to Razorpay APIs
+- ✅ DNS prefetch for external domains
+- ✅ Preconnect to external APIs
 - ✅ Reduced timeout from 5s to 3s
 - ✅ Cross-origin optimizations
 - ✅ Faster checking intervals (50ms instead of 100ms)
@@ -128,7 +128,7 @@ export function monitorPerformance(operation: string, startTime: number): void {
 ### **1. Check Network Tab**
 
 - Look for slow-loading resources
-- Check if Razorpay script is loading from optimal CDN
+- Check if external scripts are loading from optimal CDN
 - Verify API response times
 
 ### **2. Monitor Database Performance**
@@ -158,9 +158,9 @@ LIMIT 10;
 ### **1. Service Worker (Optional)**
 
 ```javascript
-// Cache Razorpay script
+// Cache external scripts
 self.addEventListener("fetch", (event) => {
-  if (event.request.url.includes("checkout.razorpay.com")) {
+  if (event.request.url.includes("external-payment-provider.com")) {
     event.respondWith(
       caches.match(event.request).then((response) => {
         return response || fetch(event.request);

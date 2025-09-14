@@ -3,9 +3,9 @@ import { supabase } from "./supabase";
 export interface PaymentData {
   id: string;
   order_id: string;
-  razorpay_order_id: string;
-  razorpay_payment_id?: string;
-  razorpay_refund_id?: string;
+  external_order_id?: string;
+  external_payment_id?: string;
+  external_refund_id?: string;
   amount: number;
   currency: string;
   payment_status: "pending" | "captured" | "failed" | "refunded";
@@ -19,13 +19,15 @@ export interface PaymentData {
 }
 
 /**
- * Get payment by Razorpay order ID
+ * Get payment by external order ID
  */
-export async function getPaymentByRazorpayOrderId(razorpayOrderId: string): Promise<PaymentData | null> {
+export async function getPaymentByExternalOrderId(
+  externalOrderId: string
+): Promise<PaymentData | null> {
   const { data, error } = await supabase
     .from("payments")
     .select("*")
-    .eq("razorpay_order_id", razorpayOrderId)
+    .eq("external_order_id", externalOrderId)
     .single();
 
   if (error) {
@@ -39,7 +41,9 @@ export async function getPaymentByRazorpayOrderId(razorpayOrderId: string): Prom
 /**
  * Get payment by order ID
  */
-export async function getPaymentByOrderId(orderId: string): Promise<PaymentData | null> {
+export async function getPaymentByOrderId(
+  orderId: string
+): Promise<PaymentData | null> {
   const { data, error } = await supabase
     .from("payments")
     .select("*")
@@ -59,7 +63,9 @@ export async function getPaymentByOrderId(orderId: string): Promise<PaymentData 
 /**
  * Get all payments for an order
  */
-export async function getPaymentsByOrderId(orderId: string): Promise<PaymentData[]> {
+export async function getPaymentsByOrderId(
+  orderId: string
+): Promise<PaymentData[]> {
   const { data, error } = await supabase
     .from("payments")
     .select("*")
@@ -77,7 +83,9 @@ export async function getPaymentsByOrderId(orderId: string): Promise<PaymentData
 /**
  * Create a new payment record
  */
-export async function createPayment(paymentData: Omit<PaymentData, "id" | "created_at" | "updated_at">): Promise<PaymentData | null> {
+export async function createPayment(
+  paymentData: Omit<PaymentData, "id" | "created_at" | "updated_at">
+): Promise<PaymentData | null> {
   const { data, error } = await supabase
     .from("payments")
     .insert(paymentData)
@@ -96,8 +104,8 @@ export async function createPayment(paymentData: Omit<PaymentData, "id" | "creat
  * Update payment status
  */
 export async function updatePaymentStatus(
-  paymentId: string, 
-  status: PaymentData["payment_status"], 
+  paymentId: string,
+  status: PaymentData["payment_status"],
   additionalData?: Partial<PaymentData>
 ): Promise<boolean> {
   const updateData = {
@@ -122,7 +130,9 @@ export async function updatePaymentStatus(
 /**
  * Mark payment as signature verified
  */
-export async function markPaymentSignatureVerified(paymentId: string): Promise<boolean> {
+export async function markPaymentSignatureVerified(
+  paymentId: string
+): Promise<boolean> {
   const { error } = await supabase
     .from("payments")
     .update({
@@ -142,7 +152,9 @@ export async function markPaymentSignatureVerified(paymentId: string): Promise<b
 /**
  * Mark payment as webhook received
  */
-export async function markPaymentWebhookReceived(paymentId: string): Promise<boolean> {
+export async function markPaymentWebhookReceived(
+  paymentId: string
+): Promise<boolean> {
   const { error } = await supabase
     .from("payments")
     .update({
@@ -178,7 +190,7 @@ export async function getPaymentStats() {
     byStatus: {} as Record<string, { count: number; amount: number }>,
   };
 
-  data.forEach(payment => {
+  data.forEach((payment) => {
     if (!stats.byStatus[payment.payment_status]) {
       stats.byStatus[payment.payment_status] = { count: 0, amount: 0 };
     }
@@ -188,4 +200,3 @@ export async function getPaymentStats() {
 
   return stats;
 }
-

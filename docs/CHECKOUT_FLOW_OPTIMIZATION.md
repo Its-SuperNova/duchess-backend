@@ -8,7 +8,7 @@ The checkout flow has been optimized to provide a seamless user experience after
 
 ### Before Optimization
 
-- After Razorpay payment success, checkout page remained visible for a few seconds
+- After payment success, checkout page remained visible for a few seconds
 - Cart was cleared during this time, showing empty cart to user
 - Multiple route transitions: checkout → animation page → confirmation page
 - Poor user experience with visible cart flicker
@@ -81,7 +81,7 @@ interface CheckoutSuccessOverlayProps {
 
 ### Optimized Flow
 
-1. User completes payment in Razorpay
+1. User completes payment
 2. **Immediately**: Success overlay appears (no delay)
 3. **Behind scenes**: Cart is cleared and email is sent
 4. **4 seconds**: Success animation plays
@@ -102,7 +102,7 @@ interface CheckoutSuccessOverlayProps {
 CheckoutClient
 ├── CheckoutSuccessOverlay (conditional)
 ├── Main Checkout Content (hidden when overlay active)
-└── Razorpay Component
+└── Payment Component (to be implemented)
 ```
 
 ### State Flow

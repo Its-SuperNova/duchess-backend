@@ -3,16 +3,15 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔧 Razorpay Environment Setup');
-console.log('=============================\n');
+console.log('🔧 Environment Setup');
+console.log('====================\n');
 
 const envPath = path.join(__dirname, '../.env.local');
-const envExample = `# Razorpay Configuration (Test Mode)
-# Get these from: https://dashboard.razorpay.com/settings/api-keys
-RAZORPAY_KEY_ID=rzp_test_your_test_key_id_here
-RAZORPAY_KEY_SECRET=your_test_key_secret_here
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_your_test_key_id_here
-RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
+const envExample = `# Payment Configuration (To be implemented)
+# Add your payment provider configuration here
+# PAYMENT_PROVIDER_KEY=your_payment_provider_key_here
+# PAYMENT_PROVIDER_SECRET=your_payment_provider_secret_here
+# PAYMENT_WEBHOOK_SECRET=your_webhook_secret_here
 
 # Supabase Configuration
 # Get these from: https://supabase.com/dashboard/project/[YOUR_PROJECT]/settings/api
@@ -34,19 +33,17 @@ if (fs.existsSync(envPath)) {
   fs.writeFileSync(envPath, envExample);
   console.log('✅ .env.local created successfully!');
   console.log('\n📋 Next steps:');
-  console.log('1. Get your Razorpay API keys from: https://dashboard.razorpay.com/settings/api-keys');
+  console.log('1. Configure your payment provider API keys');
   console.log('2. Get your Supabase credentials from: https://supabase.com/dashboard/project/[YOUR_PROJECT]/settings/api');
   console.log('3. Replace the placeholder values in .env.local with your actual credentials');
   console.log('4. Restart your development server: npm run dev');
 }
 
 console.log('\n🔗 Useful Links:');
-console.log('- Razorpay Dashboard: https://dashboard.razorpay.com/');
 console.log('- Supabase Dashboard: https://supabase.com/dashboard');
-console.log('- Razorpay Documentation: https://razorpay.com/docs/');
-console.log('- Test Cards: https://razorpay.com/docs/payments/payments/test-mode/test-cards/');
+console.log('- Payment Provider Documentation: (to be configured)');
 
 console.log('\n📚 Documentation:');
-console.log('- Setup Guide: docs/RAZORPAY_SETUP.md');
-console.log('- Troubleshooting: docs/RAZORPAY_TROUBLESHOOTING.md');
-console.log('- Testing Guide: docs/RAZORPAY_TESTING.md');
+console.log('- Setup Guide: docs/ (to be created)');
+console.log('- Troubleshooting: docs/ (to be created)');
+console.log('- Testing Guide: docs/ (to be created)');

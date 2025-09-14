@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 
 interface PerformanceMetrics {
-  scriptLoadTime: number;
   orderCreationTime: number;
   paymentDialogOpenTime: number;
   totalCheckoutTime: number;
@@ -17,36 +16,20 @@ export default function PerformanceMonitor({
   onMetrics,
 }: PerformanceMonitorProps) {
   const startTime = useRef<number>(Date.now());
-  const scriptLoadStart = useRef<number>(0);
   const orderCreationStart = useRef<number>(0);
   const paymentDialogStart = useRef<number>(0);
   const metrics = useRef<PerformanceMetrics>({
-    scriptLoadTime: 0,
     orderCreationTime: 0,
     paymentDialogOpenTime: 0,
     totalCheckoutTime: 0,
   });
 
   useEffect(() => {
-    // Monitor script loading performance
-    const checkRazorpayReady = () => {
-      if ((window as any).Razorpay) {
-        const scriptLoadTime = Date.now() - scriptLoadStart.current;
-        metrics.current.scriptLoadTime = scriptLoadTime;
-        console.log(`Razorpay script loaded in ${scriptLoadTime}ms`);
-      } else {
-        setTimeout(checkRazorpayReady, 100);
-      }
-    };
-
-    scriptLoadStart.current = Date.now();
-    checkRazorpayReady();
-
     // Monitor order creation performance
     const originalFetch = window.fetch;
     window.fetch = function (...args) {
       const url = args[0] as string;
-      if (url.includes("/api/razorpay/create-order")) {
+      if (url.includes("/api/orders/create")) {
         orderCreationStart.current = Date.now();
         console.log("Order creation started");
 
@@ -61,42 +44,35 @@ export default function PerformanceMonitor({
     };
 
     // Monitor payment dialog opening
-    const originalRazorpay = (window as any).Razorpay;
-    if (originalRazorpay) {
-      (window as any).Razorpay = function (options: any) {
-        paymentDialogStart.current = Date.now();
-        console.log("Payment dialog opening started");
+    const handlePaymentStart = () => {
+      paymentDialogStart.current = Date.now();
+      console.log("Payment dialog opening started");
+    };
 
-        const instance = new originalRazorpay(options);
-        const originalOpen = instance.open;
+    const handlePaymentComplete = () => {
+      const paymentDialogOpenTime = Date.now() - paymentDialogStart.current;
+      metrics.current.paymentDialogOpenTime = paymentDialogOpenTime;
+      console.log(`Payment dialog opened in ${paymentDialogOpenTime}ms`);
 
-        instance.open = function () {
-          const paymentDialogOpenTime = Date.now() - paymentDialogStart.current;
-          metrics.current.paymentDialogOpenTime = paymentDialogOpenTime;
-          console.log(`Payment dialog opened in ${paymentDialogOpenTime}ms`);
+      // Calculate total checkout time
+      metrics.current.totalCheckoutTime = Date.now() - startTime.current;
+      console.log(
+        `Total checkout time: ${metrics.current.totalCheckoutTime}ms`
+      );
 
-          // Calculate total checkout time
-          metrics.current.totalCheckoutTime = Date.now() - startTime.current;
-          console.log(
-            `Total checkout time: ${metrics.current.totalCheckoutTime}ms`
-          );
+      // Send metrics to parent component
+      onMetrics?.(metrics.current);
+    };
 
-          // Send metrics to parent component
-          onMetrics?.(metrics.current);
-
-          return originalOpen.call(this);
-        };
-
-        return instance;
-      };
-    }
+    // Add event listeners for payment events
+    window.addEventListener("payment-start", handlePaymentStart);
+    window.addEventListener("payment-complete", handlePaymentComplete);
 
     // Cleanup
     return () => {
       window.fetch = originalFetch;
-      if (originalRazorpay) {
-        (window as any).Razorpay = originalRazorpay;
-      }
+      window.removeEventListener("payment-start", handlePaymentStart);
+      window.removeEventListener("payment-complete", handlePaymentComplete);
     };
   }, [onMetrics]);
 

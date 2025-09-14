@@ -152,11 +152,11 @@ async function checkSchema() {
       } else {
         const testPayment = {
           order_id: testOrderData.id, // Use real order ID
-          razorpay_order_id: 'test_razorpay_order_' + Date.now(),
+          external_order_id: 'test_external_order_' + Date.now(),
           amount: 100,
           currency: 'INR',
           payment_status: 'pending',
-          payment_method: 'razorpay',
+          payment_method: 'external',
           signature_verified: false,
           webhook_received: false,
           created_at: new Date().toISOString(),
@@ -166,7 +166,7 @@ async function checkSchema() {
               const { data: paymentInsert, error: paymentError } = await supabase
           .from('payments')
           .insert(testPayment)
-          .select('id, razorpay_order_id');
+          .select('id, external_order_id');
 
         if (paymentError) {
           console.error('❌ Payments table insert failed:', paymentError);
@@ -177,7 +177,7 @@ async function checkSchema() {
           await supabase
             .from('payments')
             .delete()
-            .eq('razorpay_order_id', paymentInsert[0].razorpay_order_id);
+            .eq('external_order_id', paymentInsert[0].external_order_id);
           console.log('🧹 Payments test data cleaned up');
         }
 

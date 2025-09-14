@@ -73,15 +73,11 @@ import { calculateDeliveryFee } from "@/lib/distance";
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
-import CheckoutRazorpay from "@/components/CheckoutRazorpay";
 import { optimizeCheckoutFlow } from "@/lib/performance-utils";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
 import CheckoutSkeleton from "@/components/checkout-skeleton";
 import React from "react";
-
-// Preload CheckoutRazorpay component for better performance
-const PreloadedCheckoutRazorpay = React.memo(CheckoutRazorpay);
 
 export default function CheckoutClient() {
   // Get cart items and functions from cart context
@@ -209,11 +205,6 @@ export default function CheckoutClient() {
 
   // Payment dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [isRazorpayPaymentOpen, setIsRazorpayPaymentOpen] = useState(false);
-
-  const [paymentOrderData, setPaymentOrderData] = useState<any>(null);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
@@ -653,7 +644,7 @@ export default function CheckoutClient() {
 
   const deliveryBreakdown = getDeliveryFeeBreakdown();
 
-  // Preload Razorpay component when user reaches checkout
+  // Optimize checkout flow performance
   useEffect(() => {
     // Optimize checkout flow performance
     optimizeCheckoutFlow();
@@ -667,13 +658,12 @@ export default function CheckoutClient() {
     // or use them for optimization insights
   };
 
-  // Payment processing function - Create order and open Razorpay
+  // Payment processing function - Placeholder for manual implementation
   const handlePaymentConfirm = async () => {
     if (isPaymentInProgress) return; // Prevent multiple payment attempts
 
     try {
-      setIsProcessingPayment(true);
-      setPaymentError(null);
+      setIsPaymentInProgress(true);
 
       // Find the complete address object based on the selected address text
       const selectedAddressObj = addresses.find(
@@ -681,233 +671,49 @@ export default function CheckoutClient() {
       );
 
       if (!selectedAddressObj) {
-        setPaymentError("Address not found. Please select a valid address.");
+        toast({
+          title: "Error",
+          description: "Address not found. Please select a valid address.",
+          variant: "destructive",
+        });
         return;
       }
 
-      // Get coupon data for coupon ID
-      let appliedCouponData = null;
-      let couponId = null;
-      try {
-        const appliedCouponRaw =
-          typeof window !== "undefined"
-            ? localStorage.getItem("appliedCoupon")
-            : null;
-        if (appliedCouponRaw) {
-          appliedCouponData = JSON.parse(appliedCouponRaw);
-          couponId = appliedCouponData?.id || null;
+      // TODO: Implement your custom payment flow here
+      console.log("Payment flow needs to be implemented manually");
 
-          // If no ID found but coupon code exists, warn but continue
-          if (!couponId && appliedCouponData?.code) {
-            console.warn(
-              "Applied coupon found but missing ID. Please reapply the coupon:",
-              appliedCouponData.code
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing applied coupon:", error);
-      }
-
-      // Prepare comprehensive order data
-      const orderData = {
-        subtotalAmount: subtotal,
-        discountAmount: discount,
-        deliveryFee: deliveryFee,
-        totalAmount: total,
-        note: note,
-        addressText: addressText,
-        couponCode: selectedCoupon,
-        couponId: couponId, // Add coupon ID for database relationship
-        contactInfo: contactInfo,
-        // Address ID for database relationship
-        deliveryAddressId: selectedAddressObj.id,
-        // Contact information for order
-        contactName: contactInfo.name,
-        contactNumber: contactInfo.phone,
-        contactAlternateNumber: contactInfo.alternatePhone || null,
-        // Enhanced customization options
-        customizationOptions: {
-          addTextOnCake: customizationOptions.addTextOnCake || false,
-          addCandles: customizationOptions.addCandles || false,
-          addKnife: customizationOptions.addKnife || false,
-          addMessageCard: customizationOptions.addMessageCard || false,
-          cakeText: cakeText || "",
-          messageCardText: messageCardText || "",
-        },
-        // Financial information
-        itemTotal: subtotal,
-        // Tax information
-        cgstAmount: cgstAmount,
-        sgstAmount: sgstAmount,
-        // Payment method
-        paymentMethod: "online",
-        specialInstructions: note || "",
-        // Cart items for order_items table
-        cartItems: cart.map((item) => ({
-          id: item.id,
-          product_id: item.id,
-          name: item.name,
-          image: item.image,
-          category: item.category,
-          quantity: item.quantity,
-          price: item.price,
-          variant: item.variant,
-          customization_options: {
-            addTextOnCake: item.addTextOnCake,
-            addCandles: item.addCandles,
-            addKnife: item.addKnife,
-            addMessageCard: item.addMessageCard,
-          },
-          cake_text: item.cakeText,
-          add_knife: item.addKnife,
-          add_candles: item.addCandles,
-          add_message_card: item.addMessageCard,
-          gift_card_text: item.giftCardText,
-        })),
-      };
-
-      console.log("Applied coupon data:", appliedCouponData);
-      console.log("Extracted coupon ID:", couponId);
-      console.log("Preparing order data for Razorpay:", orderData);
-
-      // Store order data for Razorpay payment
-      // Note: Orders are now only created in the database after successful payment verification
-      setPaymentOrderData(orderData);
-
-      // Open Razorpay payment dialog
-      console.log("Setting up Razorpay payment flow...");
-      setIsRazorpayPaymentOpen(true);
-      console.log("Payment dialog opened");
-    } catch (err) {
-      console.error("Error preparing payment:", err);
-      setPaymentError(
-        `Payment preparation failed: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
-      // Only reset processing state on error
-      setIsProcessingPayment(false);
-    }
-  };
-
-  // Razorpay payment success handler
-  const handlePaymentSuccess = async (paymentData: any) => {
-    try {
-      console.log("=== PAYMENT SUCCESS HANDLER STARTED ===");
-      console.log("Payment successful:", paymentData);
-      console.log("Payment data structure:", {
-        localOrderId: paymentData.localOrderId,
-        orderId: paymentData.orderId,
-        success: paymentData.success,
-        message: paymentData.message,
+      toast({
+        title: "Payment Flow",
+        description: "Payment integration needs to be implemented manually.",
+        variant: "default",
       });
-      console.log(
-        "Full payment data object:",
-        JSON.stringify(paymentData, null, 2)
-      );
-
-      // Get the order ID from the payment data
-      const orderId = paymentData.localOrderId || paymentData.orderId;
-      console.log("Extracted orderId:", orderId);
-
-      // Verify we have a valid order ID
-      if (!orderId) {
-        console.error("Could not determine order ID for confirmation");
-        console.error("Available payment data keys:", Object.keys(paymentData));
-        setPaymentError(
-          "Payment successful but could not confirm order. Please contact support with your payment details."
-        );
-        return;
-      }
-
-      // Send order confirmation email
-      try {
-        console.log("Cart items for email:", cart);
-        console.log("Attempting to send order confirmation email...");
-        console.log("Email data:", {
-          email: session?.user?.email,
-          orderId: orderId,
-          items: cart.map((item) => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        });
-
-        const emailResponse = await fetch("/api/order/confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: session?.user?.email,
-            orderId: orderId,
-            items: cart.map((item) => ({
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price,
-            })),
-          }),
-        });
-
-        if (emailResponse.ok) {
-          const emailResult = await emailResponse.json();
-          console.log(
-            "Order confirmation email sent successfully:",
-            emailResult
-          );
-        } else {
-          const errorData = await emailResponse.json().catch(() => ({}));
-          console.error("Failed to send order confirmation email:", {
-            status: emailResponse.status,
-            statusText: emailResponse.statusText,
-            error: errorData,
-          });
-        }
-      } catch (emailError) {
-        console.error("Error sending order confirmation email:", emailError);
-        // Don't fail the order if email fails
-      }
-
-      // Show success overlay FIRST to prevent cart flicker
-      console.log("=== SHOWING SUCCESS OVERLAY ===");
-      setSuccessOrderId(orderId);
-      setShowSuccessOverlay(true);
-
-      // Clear cart in the background after showing overlay
-      setTimeout(() => {
-        try {
-          clearCart();
-          console.log("Cart cleared after showing success overlay");
-        } catch (cartError) {
-          console.error("Failed to clear cart:", cartError);
-          // Don't fail the success flow if cart clearing fails
-        }
-      }, 100);
-    } catch (error) {
-      console.error("Error handling payment success:", error);
-      setPaymentError(
-        `Payment success handling failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+    } catch (err) {
+      console.error("Error in payment flow:", err);
+      toast({
+        title: "Error",
+        description: "Payment preparation failed. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPaymentInProgress(false);
     }
   };
 
-  // Razorpay payment failure handler
+  // Payment success handler - Placeholder for manual implementation
+  const handlePaymentSuccess = async (paymentData: any) => {
+    console.log("Payment success handler - needs manual implementation");
+    // TODO: Implement your custom payment success handling
+  };
+
+  // Payment failure handler - Placeholder for manual implementation
   const handlePaymentFailure = (error: any) => {
     console.error("Payment failed:", error);
-    setPaymentError(
-      "Payment failed. Please try again or contact support if the issue persists."
-    );
-    setIsRazorpayPaymentOpen(false);
-    setIsPaymentDialogOpen(true); // Reopen payment dialog for retry
-  };
-
-  // Handle when Razorpay is ready to open the gateway
-  const handleRazorpayReady = () => {
-    console.log("Razorpay is ready to open gateway, closing payment dialog...");
-    setIsPaymentDialogOpen(false); // Close the payment dialog
-    setIsProcessingPayment(false); // Stop the loading state
+    toast({
+      title: "Payment Failed",
+      description:
+        "Payment failed. Please try again or contact support if the issue persists.",
+      variant: "destructive",
+    });
   };
 
   // Handle animation completion
@@ -2348,15 +2154,15 @@ export default function CheckoutClient() {
                 </DialogDescription>
               </DialogHeader>
 
-              {isProcessingPayment ? (
+              {isPaymentInProgress ? (
                 <div className="flex flex-col items-center justify-center py-8 space-y-4">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                   <div className="text-center">
                     <h3 className="text-lg font-medium text-gray-900">
-                      Preparing Payment Gateway
+                      Processing...
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      Please wait while we set up your payment...
+                      Please wait while we process your request...
                     </p>
                   </div>
                 </div>
@@ -2417,61 +2223,22 @@ export default function CheckoutClient() {
                       </p>
                     </div>
                   )}
-
-                  {paymentError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="text-red-700 text-sm">{paymentError}</p>
-                    </div>
-                  )}
                 </div>
               )}
 
               <DialogFooter className="gap-2">
                 <Button
                   onClick={handlePaymentConfirm}
-                  disabled={isProcessingPayment}
+                  disabled={isPaymentInProgress}
                   className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
                 >
-                  {isProcessingPayment
-                    ? "Initiating Payment..."
-                    : "Proceed to Payment"}
+                  {isPaymentInProgress ? "Processing..." : "Proceed to Payment"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
-          {/* Razorpay Payment Component */}
-          {isRazorpayPaymentOpen && paymentOrderData && (
-            <>
-              {console.log("Rendering CheckoutRazorpay component with:", {
-                isRazorpayPaymentOpen,
-                hasPaymentOrderData: !!paymentOrderData,
-                total,
-                orderData: paymentOrderData,
-              })}
-              <PreloadedCheckoutRazorpay
-                amount={total}
-                currency="INR"
-                notes={{
-                  user_email: session?.user?.email || "",
-                  items: cart.map((item) => ({
-                    name: item.name,
-                    quantity: item.quantity,
-                    price: item.price,
-                  })),
-                }}
-                orderData={paymentOrderData}
-                onSuccess={handlePaymentSuccess}
-                onFailure={handlePaymentFailure}
-                onClose={() => {
-                  setIsRazorpayPaymentOpen(false);
-                  setPaymentOrderData(null);
-                }}
-                autoTrigger={true}
-                onReadyToOpen={handleRazorpayReady}
-              />
-            </>
-          )}
+          {/* Payment component removed - implement manually */}
         </div>
       </div>
     </div>

@@ -104,9 +104,9 @@ declare global {
         Row: {
           id: string;
           order_id: string;
-          razorpay_order_id: string;
-          razorpay_payment_id: string | null;
-          razorpay_refund_id: string | null;
+          external_order_id: string;
+          external_payment_id: string | null;
+          external_refund_id: string | null;
           amount: number;
           currency: string;
           payment_status: "pending" | "captured" | "failed" | "refunded";
