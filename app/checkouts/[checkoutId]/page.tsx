@@ -78,6 +78,7 @@ import { optimizeCheckoutFlow } from "@/lib/performance-utils";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
 import CheckoutSkeleton from "@/components/checkout-skeleton";
+import CheckoutExpiryScreen from "@/components/checkout-expiry-screen";
 import React from "react";
 
 export default function CheckoutClient() {
@@ -104,6 +105,7 @@ export default function CheckoutClient() {
   const [checkoutData, setCheckoutData] = useState<any>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(true);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   // Fetch checkout session data
   useEffect(() => {
@@ -120,7 +122,34 @@ export default function CheckoutClient() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch checkout data");
+          // Check if the error is due to session expiry
+          if (data.error === "Checkout session not found or expired") {
+            setIsSessionExpired(true);
+            setCheckoutError(data.error);
+          } else {
+            throw new Error(data.error || "Failed to fetch checkout data");
+          }
+          return;
+        }
+
+        // Handle different session statuses for better UX
+        if (data.status === "expired") {
+          setIsSessionExpired(true);
+          setCheckoutError(
+            "Checkout session has expired. Please start a new checkout."
+          );
+          return;
+        } else if (data.status === "completed") {
+          // Redirect to confirmation page if order is already completed
+          if (data.checkout.databaseOrderId) {
+            router.push(
+              `/confirmation?orderId=${data.checkout.databaseOrderId}`
+            );
+            return;
+          }
+        } else if (data.status === "failed") {
+          setCheckoutError("Previous payment failed. Please try again.");
+          return;
         }
 
         setCheckoutData(data.checkout);
@@ -815,6 +844,40 @@ export default function CheckoutClient() {
 
   // Dummy payment success handler
   const handleDummyPaymentSuccess = async () => {
+    // Check if payment is already in progress or completed
+    if (checkoutData?.paymentStatus === "processing") {
+      toast({
+        title: "Payment in Progress",
+        description: "Please wait, your payment is being processed.",
+        variant: "default",
+      });
+      return;
+    }
+
+    if (checkoutData?.paymentStatus === "paid") {
+      toast({
+        title: "Payment Already Completed",
+        description: "This order has already been paid for.",
+        variant: "default",
+      });
+      return;
+    }
+
+    // Update payment status to processing
+    try {
+      await fetch(`/api/checkout/${checkoutId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentStatus: "processing",
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update payment status:", error);
+    }
+
     setIsDummyPaymentDialogOpen(false);
     setIsPaymentInProgress(false);
 
@@ -830,6 +893,9 @@ export default function CheckoutClient() {
 
       // Create a real order in the database
       const orderData = {
+        // Checkout session
+        checkoutId: checkoutId,
+
         // Financial information
         itemTotal: checkoutData ? checkoutData.subtotal : getSubtotal(),
         subtotalAmount: checkoutData ? checkoutData.subtotal : getSubtotal(),
@@ -924,11 +990,33 @@ export default function CheckoutClient() {
       const result = await response.json();
       console.log("Order created successfully:", result);
 
+      // Note: Checkout session is now automatically invalidated by the API
+      // No need to manually update payment status as the session is deleted
+
       // Use the real order ID from the database
       setSuccessOrderId(result.orderId);
       setShowSuccessOverlay(true);
     } catch (error) {
       console.error("Error creating order:", error);
+
+      // Update payment status to failed
+      try {
+        await fetch(`/api/checkout/${checkoutId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentStatus: "failed",
+          }),
+        });
+      } catch (statusError) {
+        console.error(
+          "Failed to update payment status to failed:",
+          statusError
+        );
+      }
+
       toast({
         title: "Error",
         description: "Failed to create order. Please try again.",
@@ -938,7 +1026,22 @@ export default function CheckoutClient() {
   };
 
   // Dummy payment failure handler
-  const handleDummyPaymentFailure = () => {
+  const handleDummyPaymentFailure = async () => {
+    // Update payment status to failed
+    try {
+      await fetch(`/api/checkout/${checkoutId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentStatus: "failed",
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update payment status to failed:", error);
+    }
+
     setIsDummyPaymentDialogOpen(false);
     setIsPaymentInProgress(false);
     setShowFailureOverlay(true);
@@ -955,8 +1058,9 @@ export default function CheckoutClient() {
 
     // Redirect to confirmation page with order ID
     if (successOrderId) {
-      // Redirect to confirmation page with real order ID from database
-      router.push(`/confirmation?orderId=${successOrderId}`);
+      // Use redirectUrl from API response if available, otherwise construct it
+      const redirectUrl = `/confirmation?orderId=${successOrderId}`;
+      router.push(redirectUrl);
     }
   }, [
     showSuccessOverlay,
@@ -1033,7 +1137,12 @@ export default function CheckoutClient() {
     return <CheckoutSkeleton />;
   }
 
-  // Show error if checkout failed to load
+  // Show expiry screen if session is expired
+  if (isSessionExpired) {
+    return <CheckoutExpiryScreen checkoutId={checkoutId} />;
+  }
+
+  // Show error if checkout failed to load (non-expiry errors)
   if (checkoutError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F6FB]">
@@ -2667,15 +2776,25 @@ export default function CheckoutClient() {
                 <Button
                   variant="outline"
                   onClick={handleDummyPaymentFailure}
+                  disabled={
+                    checkoutData?.paymentStatus === "processing" ||
+                    checkoutData?.paymentStatus === "paid"
+                  }
                   className="flex-1 rounded-[18px] h-[48px] text-[16px] font-medium"
                 >
                   Payment Failed
                 </Button>
                 <Button
                   onClick={handleDummyPaymentSuccess}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[18px] h-[48px] text-[16px] font-medium"
+                  disabled={
+                    checkoutData?.paymentStatus === "processing" ||
+                    checkoutData?.paymentStatus === "paid"
+                  }
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[18px] h-[48px] text-[16px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Payment Successful
+                  {checkoutData?.paymentStatus === "processing"
+                    ? "Processing..."
+                    : "Payment Successful"}
                 </Button>
               </DialogFooter>
             </DialogContent>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface OrderItem {
   id: number;
@@ -37,39 +37,74 @@ interface Order {
   items: OrderItem[];
 }
 
+/**
+ * Order Confirmation Client Component
+ *
+ * This component ALWAYS fetches order data from the database via the API,
+ * never from in-memory session data. This ensures robustness even when
+ * sessions expire or are cleared.
+ */
 export default function ConfirmationClient() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
+  // Fetch order data from database - always from DB, never from session
+  const fetchOrder = useCallback(async () => {
     if (!orderId) {
       setError("No order ID provided");
       setLoading(false);
       return;
     }
 
-    // Fetch order data from database
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
 
-    const fetchOrder = async () => {
-      try {
-        const response = await fetch(`/api/orders/${orderId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch order");
-        }
-        const data = await response.json();
-        setOrder(data.order);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load order");
-      } finally {
+      if (response.status === 401) {
+        setError("Please log in to view your order details");
         setLoading(false);
+        return;
       }
-    };
 
+      if (response.status === 404) {
+        setError(
+          "Order not found. This order may have expired or you may not have permission to view it."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        // Retry logic for server errors (5xx)
+        if (response.status >= 500 && retryCount < 2) {
+          setRetryCount((prev) => prev + 1);
+          setTimeout(() => {
+            fetchOrder();
+          }, 1000 * (retryCount + 1)); // Exponential backoff
+          return;
+        }
+
+        throw new Error(errorData.error || "Failed to fetch order");
+      }
+
+      const data = await response.json();
+      setOrder(data.order);
+    } catch (err) {
+      console.error("Error fetching order:", err);
+      setError(err instanceof Error ? err.message : "Failed to load order");
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId, retryCount]);
+
+  useEffect(() => {
     fetchOrder();
-  }, [orderId]);
+  }, [fetchOrder]);
 
   if (loading) {
     return (
@@ -183,18 +218,58 @@ export default function ConfirmationClient() {
   if (error || !order) {
     return (
       <div className="bg-white min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Order Not Found
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {error || "Unable to load order details"}
-          </p>
-          <Link href="/products">
-            <Button className="bg-primary hover:bg-primary/90">
-              Continue Shopping
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Order Not Found
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {error || "Unable to load order details"}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                setRetryCount(0);
+                fetchOrder();
+              }}
+              className="w-full bg-primary hover:bg-primary/90"
+            >
+              Try Again
             </Button>
-          </Link>
+            <Link href="/orders">
+              <Button variant="outline" className="w-full">
+                View All Orders
+              </Button>
+            </Link>
+            <Link href="/products">
+              <Button variant="outline" className="w-full">
+                Continue Shopping
+              </Button>
+            </Link>
+          </div>
+
+          <p className="text-sm text-gray-500 mt-6">
+            If you believe this is an error, please contact our support team.
+          </p>
         </div>
       </div>
     );

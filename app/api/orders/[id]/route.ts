@@ -28,11 +28,12 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Fetch order - allow admin to view any order, user to view their own orders
+    // Fetch order with proper authorization - user can only view their own orders
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*")
       .eq("id", orderId as any)
+      .eq("user_id", user.id) // Ensure user can only access their own orders
       .single();
 
     if (orderError || !order) {

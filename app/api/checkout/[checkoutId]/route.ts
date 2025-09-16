@@ -25,9 +25,24 @@ export async function GET(
       );
     }
 
+    // Determine session status for better UX handling
+    let status: "active" | "expired" | "completed" | "failed" = "active";
+
+    if (new Date() > new Date(session.expiresAt)) {
+      status = "expired";
+    } else if (session.paymentStatus === "paid" && session.databaseOrderId) {
+      status = "completed";
+    } else if (
+      session.paymentStatus === "failed" ||
+      session.paymentStatus === "cancelled"
+    ) {
+      status = "failed";
+    }
+
     // Return session data (excluding sensitive information)
     return NextResponse.json({
       success: true,
+      status,
       checkout: {
         checkoutId: session.checkoutId,
         items: session.items,
@@ -99,8 +114,26 @@ export async function PATCH(
       );
     }
 
+    // Determine session status for better UX handling
+    let status: "active" | "expired" | "completed" | "failed" = "active";
+
+    if (new Date() > new Date(updatedSession.expiresAt)) {
+      status = "expired";
+    } else if (
+      updatedSession.paymentStatus === "paid" &&
+      updatedSession.databaseOrderId
+    ) {
+      status = "completed";
+    } else if (
+      updatedSession.paymentStatus === "failed" ||
+      updatedSession.paymentStatus === "cancelled"
+    ) {
+      status = "failed";
+    }
+
     return NextResponse.json({
       success: true,
+      status,
       checkout: {
         checkoutId: updatedSession.checkoutId,
         items: updatedSession.items,

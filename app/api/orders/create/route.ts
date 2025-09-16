@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 import { getAreaFromPincode } from "@/lib/pincode-areas";
+import { CheckoutStore } from "@/lib/checkout-store";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("Request body:", body);
     const {
+      // Checkout session
+      checkoutId,
+
       // Financial information
       itemTotal,
       subtotalAmount, // fallback
@@ -73,6 +77,31 @@ export async function POST(request: NextRequest) {
       isSameDayDelivery,
       coordinates,
     } = body || {};
+
+    // Check payment status if checkoutId is provided
+    if (checkoutId) {
+      const checkoutSession = CheckoutStore.getSession(checkoutId);
+      if (!checkoutSession) {
+        return NextResponse.json(
+          { error: "Checkout session not found or expired" },
+          { status: 404 }
+        );
+      }
+
+      if (checkoutSession.paymentStatus === "paid") {
+        return NextResponse.json(
+          { error: "Order already created for this payment" },
+          { status: 409 }
+        );
+      }
+
+      if (checkoutSession.paymentStatus !== "processing") {
+        return NextResponse.json(
+          { error: "Payment not in processing state" },
+          { status: 400 }
+        );
+      }
+    }
 
     console.log("Extracted enhanced order data:", {
       subtotalAmount,
@@ -407,10 +436,35 @@ export async function POST(request: NextRequest) {
       // Don't fail the order creation if cart clearing fails
     }
 
+    // Invalidate checkout session after successful order creation
+    if (checkoutId) {
+      const checkoutSession = CheckoutStore.getSession(checkoutId);
+      if (checkoutSession) {
+        // Update session to mark as completed and set database order ID
+        CheckoutStore.updateSession(checkoutId, {
+          paymentStatus: "paid",
+          databaseOrderId: order.id,
+        });
+
+        // Delete the session to prevent reuse
+        CheckoutStore.deleteSession(checkoutId);
+        console.log(
+          `Checkout session ${checkoutId} invalidated after order creation`
+        );
+      }
+    }
+
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}`;
+
+    // Create redirect URL for confirmation page
+    const redirectUrl = `/confirmation?orderId=${order.id}`;
+
     return NextResponse.json({
       success: true,
       orderId: order.id,
-      orderNumber: `ORD-${Date.now()}`,
+      orderNumber,
+      redirectUrl,
       message: "Order created successfully",
     });
   } catch (error) {
