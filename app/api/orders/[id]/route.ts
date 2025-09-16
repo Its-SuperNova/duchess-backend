@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 
+/**
+ * GET /api/orders/[id]
+ * 
+ * Fetches order details from the database.
+ * This endpoint is completely independent of checkout sessions and will work
+ * even after sessions expire (30 minutes). It only requires:
+ * 1. Valid authentication
+ * 2. Valid order ID
+ * 3. User ownership of the order
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

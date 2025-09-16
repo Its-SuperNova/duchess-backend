@@ -53,9 +53,17 @@ export default function ConfirmationClient() {
   const [retryCount, setRetryCount] = useState(0);
 
   // Fetch order data from database - always from DB, never from session
+  // This ensures robustness even when checkout sessions expire (30 minutes)
   const fetchOrder = useCallback(async () => {
     if (!orderId) {
       setError("No order ID provided");
+      setLoading(false);
+      return;
+    }
+
+    // Validate order ID format (should be a valid UUID or numeric ID)
+    if (!/^[a-zA-Z0-9-_]+$/.test(orderId)) {
+      setError("Invalid order ID format");
       setLoading(false);
       return;
     }
