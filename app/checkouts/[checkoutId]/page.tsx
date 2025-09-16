@@ -73,6 +73,7 @@ import { calculateDeliveryFee } from "@/lib/distance";
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
+import paymentFailedAnimation from "@/public/Lottie/Payment-Failed.json";
 import { optimizeCheckoutFlow } from "@/lib/performance-utils";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
@@ -262,6 +263,8 @@ export default function CheckoutClient() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [showFailureOverlay, setShowFailureOverlay] = useState(false);
+  const [failureCountdown, setFailureCountdown] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
 
   // Dummy payment gateway dialog state
@@ -924,12 +927,6 @@ export default function CheckoutClient() {
       // Use the real order ID from the database
       setSuccessOrderId(result.orderId);
       setShowSuccessOverlay(true);
-
-      toast({
-        title: "Payment Successful!",
-        description: "Your order has been placed successfully.",
-        variant: "default",
-      });
     } catch (error) {
       console.error("Error creating order:", error);
       toast({
@@ -944,12 +941,7 @@ export default function CheckoutClient() {
   const handleDummyPaymentFailure = () => {
     setIsDummyPaymentDialogOpen(false);
     setIsPaymentInProgress(false);
-
-    toast({
-      title: "Payment Failed",
-      description: "Payment was not successful. Please try again.",
-      variant: "destructive",
-    });
+    setShowFailureOverlay(true);
   };
 
   // Handle animation completion
@@ -977,6 +969,25 @@ export default function CheckoutClient() {
     contactInfo,
     router,
   ]);
+
+  // Handle failure animation completion
+  const handleFailureAnimationComplete = useCallback(() => {
+    console.log("=== FAILURE ANIMATION COMPLETION CALLBACK TRIGGERED ===");
+    console.log("Failure animation completed, starting 5-second countdown");
+
+    // Start 5-second countdown before returning to checkout page
+    setFailureCountdown(5);
+    const countdownInterval = setInterval(() => {
+      setFailureCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          setShowFailureOverlay(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
 
   // Persist lightweight checkout context for payment step
   useEffect(() => {
@@ -1055,10 +1066,11 @@ export default function CheckoutClient() {
   }
 
   // Redirect to home if cart is empty (only after loading is complete)
-  // BUT don't redirect if we're showing the success overlay
+  // BUT don't redirect if we're showing the success or failure overlay
   if (
     (checkoutData ? checkoutData.items.length === 0 : cart.length === 0) &&
-    !showSuccessOverlay
+    !showSuccessOverlay &&
+    !showFailureOverlay
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F6FB]">
@@ -1102,8 +1114,46 @@ export default function CheckoutClient() {
         />
       )}
 
-      {/* Main checkout content - hidden when showing success overlay */}
-      <div style={{ display: showSuccessOverlay ? "none" : "block" }}>
+      {/* Show failure overlay if payment failed */}
+      {showFailureOverlay && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-[400px] h-[300px] mx-auto mb-6">
+              <Lottie
+                animationData={paymentFailedAnimation}
+                loop={false}
+                autoplay={true}
+                onComplete={handleFailureAnimationComplete}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Payment Failed
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your payment could not be processed. Please try again.
+            </p>
+            {failureCountdown > 0 && (
+              <p className="text-sm text-gray-500 mb-6">
+                Redirecting to checkout page in {failureCountdown} seconds...
+              </p>
+            )}
+            <Button
+              onClick={() => setShowFailureOverlay(false)}
+              className="bg-[#523435] hover:bg-[#4a2a2a] text-white px-8 py-3 rounded-lg"
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Main checkout content - hidden when showing success or failure overlay */}
+      <div
+        style={{
+          display: showSuccessOverlay || showFailureOverlay ? "none" : "block",
+        }}
+      >
         {/* Header */}
         <div className="bg-[#F5F6FB]">
           <div className="max-w-[1200px] mx-auto px-4 py-4">
