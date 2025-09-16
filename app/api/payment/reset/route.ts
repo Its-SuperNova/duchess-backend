@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get checkout session
-    const checkoutSession = CheckoutStore.getSession(checkoutId);
+    const checkoutSession = await CheckoutStore.getSession(checkoutId);
     if (!checkoutSession) {
       return NextResponse.json(
         { error: "Checkout session not found or expired" },
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Reset payment status to pending
-    CheckoutStore.updateSession(checkoutId, {
+    await CheckoutStore.updateSession(checkoutId, {
       paymentStatus: "pending",
       razorpayOrderId: undefined,
       razorpayPaymentId: undefined,

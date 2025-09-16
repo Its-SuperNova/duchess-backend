@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create checkout session
-    const checkoutSession = CheckoutStore.createSession({
+    const checkoutSession = await CheckoutStore.createSession({
       userId: body.userId || null,
       userEmail: body.userEmail || null,
       items: body.items,

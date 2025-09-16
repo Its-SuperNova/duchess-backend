@@ -24,7 +24,7 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
   } = data;
 
   // Get checkout session
-  const checkoutSession = CheckoutStore.getSession(checkoutId);
+  const checkoutSession = await CheckoutStore.getSession(checkoutId);
   if (!checkoutSession) {
     throw new Error("Checkout session not found or expired");
   }
@@ -202,10 +202,10 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
   }
 
   // Update checkout session with database order ID
-  CheckoutStore.updateDatabaseOrderId(checkoutId, order.id);
+  await CheckoutStore.updateDatabaseOrderId(checkoutId, order.id);
 
   // Mark checkout session as completed
-  CheckoutStore.updateSession(checkoutId, {
+  await CheckoutStore.updateSession(checkoutId, {
     paymentStatus: "paid",
     databaseOrderId: order.id,
   });

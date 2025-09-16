@@ -45,8 +45,9 @@ export async function POST(request: NextRequest) {
       const orderId = payment.order_id;
 
       // Find checkout session by Razorpay order ID
-      const checkoutSession =
-        CheckoutStore.getSessionByRazorpayOrderId(orderId);
+      const checkoutSession = await CheckoutStore.getSessionByRazorpayOrderId(
+        orderId
+      );
 
       if (!checkoutSession) {
         console.error("Checkout session not found for order ID:", orderId);
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Update payment status to paid
-      CheckoutStore.updatePaymentStatus(
+      await CheckoutStore.updatePaymentStatus(
         checkoutSession.checkoutId,
         "paid",
         orderId,
@@ -109,10 +110,14 @@ export async function POST(request: NextRequest) {
       const payment = event.payload.payment.entity;
       const orderId = payment.order_id;
 
-      const checkoutSession =
-        CheckoutStore.getSessionByRazorpayOrderId(orderId);
+      const checkoutSession = await CheckoutStore.getSessionByRazorpayOrderId(
+        orderId
+      );
       if (checkoutSession) {
-        CheckoutStore.updatePaymentStatus(checkoutSession.checkoutId, "failed");
+        await CheckoutStore.updatePaymentStatus(
+          checkoutSession.checkoutId,
+          "failed"
+        );
         console.log("Payment failed for checkout:", checkoutSession.checkoutId);
       }
     }

@@ -62,17 +62,13 @@ export function preloadAPIEndpoints(endpoints: string[]): void {
 export function optimizeCheckoutFlow(): void {
   if (typeof window === "undefined") return;
 
-  // Preload critical API endpoints
-  preloadAPIEndpoints([
-    "/api/orders/create",
-    "/api/cart/sync",
-    // Add other critical endpoints here
-  ]);
+  // Note: Most API endpoints require authentication or specific parameters
+  // and cannot be safely prefetched. Instead, we focus on other optimizations.
 
   // DNS prefetch for external domains
   const dnsPrefetch = document.createElement("link");
   dnsPrefetch.rel = "dns-prefetch";
-  dnsPrefetch.href = "https://external-payment-provider.com";
+  dnsPrefetch.href = "https://api.razorpay.com";
   document.head.appendChild(dnsPrefetch);
 }
 

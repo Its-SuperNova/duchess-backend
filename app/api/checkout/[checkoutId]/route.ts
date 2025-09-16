@@ -16,7 +16,7 @@ export async function GET(
     }
 
     // Get checkout session
-    const session = CheckoutStore.getSession(checkoutId);
+    const session = await CheckoutStore.getSession(checkoutId);
 
     if (!session) {
       return NextResponse.json(
@@ -105,7 +105,10 @@ export async function PATCH(
     });
 
     // Update checkout session
-    const updatedSession = CheckoutStore.updateSession(checkoutId, updates);
+    const updatedSession = await CheckoutStore.updateSession(
+      checkoutId,
+      updates
+    );
 
     if (!updatedSession) {
       return NextResponse.json(
@@ -188,7 +191,7 @@ export async function DELETE(
     }
 
     // Delete checkout session
-    const deleted = CheckoutStore.deleteSession(checkoutId);
+    const deleted = await CheckoutStore.deleteSession(checkoutId);
 
     if (!deleted) {
       return NextResponse.json(

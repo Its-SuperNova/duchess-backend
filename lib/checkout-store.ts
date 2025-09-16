@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { CheckoutStoreDB } from "./checkout-store-db";
 
 export interface CheckoutItem {
   product_id: string;
@@ -81,7 +82,7 @@ if (!globalThis.__checkoutSessions) {
 const SESSION_EXPIRY_MINUTES = 30;
 
 export class CheckoutStore {
-  static createSession(
+  static async createSession(
     data: Omit<
       CheckoutSession,
       | "checkoutId"
@@ -90,31 +91,53 @@ export class CheckoutStore {
       | "paymentStatus"
       | "paymentAttempts"
     >
-  ): CheckoutSession {
-    const checkoutId = uuidv4();
-    const now = new Date();
-    const expiresAt = new Date(
-      now.getTime() + SESSION_EXPIRY_MINUTES * 60 * 1000
-    );
+  ): Promise<CheckoutSession> {
+    try {
+      // Try database storage first
+      return await CheckoutStoreDB.createSession(data);
+    } catch (error) {
+      console.error(
+        "Database storage failed, falling back to in-memory:",
+        error
+      );
 
-    const session: CheckoutSession = {
-      ...data,
-      checkoutId,
-      paymentStatus: "pending",
-      paymentAttempts: 0,
-      createdAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-    };
+      // Fallback to in-memory storage
+      const checkoutId = uuidv4();
+      const now = new Date();
+      const expiresAt = new Date(
+        now.getTime() + SESSION_EXPIRY_MINUTES * 60 * 1000
+      );
 
-    checkoutSessions.set(checkoutId, session);
+      const session: CheckoutSession = {
+        ...data,
+        checkoutId,
+        paymentStatus: "pending",
+        paymentAttempts: 0,
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+      };
 
-    // Clean up expired sessions
-    this.cleanupExpiredSessions();
+      checkoutSessions.set(checkoutId, session);
 
-    return session;
+      // Clean up expired sessions
+      this.cleanupExpiredSessions();
+
+      return session;
+    }
   }
 
-  static getSession(checkoutId: string): CheckoutSession | null {
+  static async getSession(checkoutId: string): Promise<CheckoutSession | null> {
+    // Try database storage first
+    try {
+      const dbSession = await CheckoutStoreDB.getSession(checkoutId);
+      if (dbSession) {
+        return dbSession;
+      }
+    } catch (error) {
+      console.error("Database getSession failed, trying in-memory:", error);
+    }
+
+    // Fallback to in-memory storage
     const session = checkoutSessions.get(checkoutId);
 
     if (!session) {
@@ -130,11 +153,22 @@ export class CheckoutStore {
     return session;
   }
 
-  static updateSession(
+  static async updateSession(
     checkoutId: string,
     updates: Partial<CheckoutSession>
-  ): CheckoutSession | null {
-    const session = this.getSession(checkoutId);
+  ): Promise<CheckoutSession | null> {
+    try {
+      // Try database storage first
+      const dbResult = await CheckoutStoreDB.updateSession(checkoutId, updates);
+      if (dbResult) {
+        return dbResult;
+      }
+    } catch (error) {
+      console.error("Database updateSession failed, trying in-memory:", error);
+    }
+
+    // Fallback to in-memory storage
+    const session = await this.getSession(checkoutId);
 
     if (!session) {
       return null;
@@ -146,7 +180,18 @@ export class CheckoutStore {
     return updatedSession;
   }
 
-  static deleteSession(checkoutId: string): boolean {
+  static async deleteSession(checkoutId: string): Promise<boolean> {
+    try {
+      // Try database storage first
+      const dbResult = await CheckoutStoreDB.deleteSession(checkoutId);
+      if (dbResult) {
+        return true;
+      }
+    } catch (error) {
+      console.error("Database deleteSession failed, trying in-memory:", error);
+    }
+
+    // Fallback to in-memory storage
     return checkoutSessions.delete(checkoutId);
   }
 
@@ -169,14 +214,34 @@ export class CheckoutStore {
   }
 
   // Payment specific methods
-  static updatePaymentStatus(
+  static async updatePaymentStatus(
     checkoutId: string,
     status: CheckoutSession["paymentStatus"],
     razorpayOrderId?: string,
     razorpayPaymentId?: string,
     razorpaySignature?: string
-  ): CheckoutSession | null {
-    const session = this.getSession(checkoutId);
+  ): Promise<CheckoutSession | null> {
+    try {
+      // Try database storage first
+      const dbResult = await CheckoutStoreDB.updatePaymentStatus(
+        checkoutId,
+        status,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature
+      );
+      if (dbResult) {
+        return dbResult;
+      }
+    } catch (error) {
+      console.error(
+        "Database updatePaymentStatus failed, trying in-memory:",
+        error
+      );
+    }
+
+    // Fallback to in-memory storage
+    const session = await this.getSession(checkoutId);
 
     if (!session) {
       return null;
@@ -202,9 +267,25 @@ export class CheckoutStore {
     return this.updateSession(checkoutId, updates);
   }
 
-  static getSessionByRazorpayOrderId(
+  static async getSessionByRazorpayOrderId(
     razorpayOrderId: string
-  ): CheckoutSession | null {
+  ): Promise<CheckoutSession | null> {
+    try {
+      // Try database storage first
+      const dbResult = await CheckoutStoreDB.getSessionByRazorpayOrderId(
+        razorpayOrderId
+      );
+      if (dbResult) {
+        return dbResult;
+      }
+    } catch (error) {
+      console.error(
+        "Database getSessionByRazorpayOrderId failed, trying in-memory:",
+        error
+      );
+    }
+
+    // Fallback to in-memory storage
     for (const session of checkoutSessions.values()) {
       if (session.razorpayOrderId === razorpayOrderId) {
         return session;
@@ -213,11 +294,28 @@ export class CheckoutStore {
     return null;
   }
 
-  static updateDatabaseOrderId(
+  static async updateDatabaseOrderId(
     checkoutId: string,
     databaseOrderId: string
-  ): CheckoutSession | null {
-    const session = this.getSession(checkoutId);
+  ): Promise<CheckoutSession | null> {
+    try {
+      // Try database storage first
+      const dbResult = await CheckoutStoreDB.updateDatabaseOrderId(
+        checkoutId,
+        databaseOrderId
+      );
+      if (dbResult) {
+        return dbResult;
+      }
+    } catch (error) {
+      console.error(
+        "Database updateDatabaseOrderId failed, trying in-memory:",
+        error
+      );
+    }
+
+    // Fallback to in-memory storage
+    const session = await this.getSession(checkoutId);
     if (!session) {
       return null;
     }
