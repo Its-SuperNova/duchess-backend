@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     // Check payment status if checkoutId is provided
     if (checkoutId) {
-      const checkoutSession = CheckoutStore.getSession(checkoutId);
+      const checkoutSession = await CheckoutStore.getSession(checkoutId);
       if (!checkoutSession) {
         return NextResponse.json(
           { error: "Checkout session not found or expired" },
@@ -444,16 +444,16 @@ export async function POST(request: NextRequest) {
 
     // Invalidate checkout session after successful order creation
     if (checkoutId) {
-      const checkoutSession = CheckoutStore.getSession(checkoutId);
+      const checkoutSession = await CheckoutStore.getSession(checkoutId);
       if (checkoutSession) {
         // Update session to mark as completed and set database order ID
-        CheckoutStore.updateSession(checkoutId, {
+        await CheckoutStore.updateSession(checkoutId, {
           paymentStatus: "paid",
           databaseOrderId: order.id,
         });
 
         // Delete the session to prevent reuse
-        CheckoutStore.deleteSession(checkoutId);
+        await CheckoutStore.deleteSession(checkoutId);
         console.log(
           `Checkout session ${checkoutId} invalidated after order creation`
         );

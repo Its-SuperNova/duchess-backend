@@ -148,7 +148,7 @@ export class CheckoutStoreDB {
     // Update in database
     const updateData: any = {};
 
-    if (updates.note !== undefined) updateData.notes = updates.note;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
     if (updates.addressText !== undefined)
       updateData.address_text = updates.addressText;
     if (updates.selectedAddressId !== undefined)
