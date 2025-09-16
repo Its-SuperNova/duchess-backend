@@ -53,7 +53,7 @@ export default function TestCheckoutPage() {
         deliveryTiming: "same_day",
         deliveryDate: new Date().toISOString().split("T")[0],
         deliveryTimeSlot: "evening",
-        estimatedDeliveryTime: "2-3 hours",
+        estimatedDeliveryTime: null, // Set to null to avoid timestamp format errors
         distance: 5.2,
         duration: 15,
         deliveryZone: "Zone A",

@@ -4,6 +4,13 @@ import { supabase } from "@/lib/supabase";
 import { getAreaFromPincode } from "@/lib/pincode-areas";
 import { CheckoutStore } from "@/lib/checkout-store";
 
+export async function GET() {
+  return NextResponse.json(
+    { error: "GET method not supported. Use POST to create orders." },
+    { status: 405 }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -339,8 +346,7 @@ export async function POST(request: NextRequest) {
       coupon_code: sanitizedCouponCode,
 
       // Delivery logistics (distance and duration will come from address relationship)
-      estimated_time_delivery:
-        estimatedTimeDelivery || estimatedDeliveryTime || null,
+      estimated_time_delivery: null, // Set to null to avoid timestamp format errors
       delivery_zone: finalDeliveryZone || null,
 
       // Payment information

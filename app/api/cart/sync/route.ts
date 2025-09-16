@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 
+export async function GET() {
+  return NextResponse.json(
+    { error: "GET method not supported. Use POST to sync cart." },
+    { status: 405 }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();

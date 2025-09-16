@@ -15,7 +15,8 @@
     "cleanup:payments:date": "node scripts/cleanup-payments.js --date-range 2025-08-31",
     "cleanup:payments:pending": "node scripts/cleanup-payments.js --status pending",
     "update:delivery-fees": "node scripts/update-delivery-fees.js",
-    "update:delivery-fees:confirm": "node scripts/update-delivery-fees.js --confirm"
+    "update:delivery-fees:confirm": "node scripts/update-delivery-fees.js --confirm",
+    "test:razorpay": "node scripts/test-razorpay.js"
   },
   "dependencies": {
     "@hookform/resolvers": "latest",
@@ -68,6 +69,7 @@
     "next-auth": "^5.0.0-beta.28",
     "next-themes": "latest",
     "nodemailer": "^6.10.1",
+    "razorpay": "^2.9.6",
     "react": "^19.1.1",
     "react-day-picker": "^9.9.0",
     "react-dom": "^19.1.1",

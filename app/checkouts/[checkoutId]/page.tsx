@@ -79,6 +79,7 @@ import PerformanceMonitor from "@/components/PerformanceMonitor";
 import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
 import CheckoutSkeleton from "@/components/checkout-skeleton";
 import CheckoutExpiryScreen from "@/components/checkout-expiry-screen";
+import RazorpayCheckout from "@/components/razorpay-checkout";
 import React from "react";
 
 export default function CheckoutClient() {
@@ -296,9 +297,9 @@ export default function CheckoutClient() {
   const [failureCountdown, setFailureCountdown] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
 
-  // Dummy payment gateway dialog state
-  const [isDummyPaymentDialogOpen, setIsDummyPaymentDialogOpen] =
-    useState(false);
+  // Razorpay payment state
+  const [isRazorpayPaymentOpen, setIsRazorpayPaymentOpen] = useState(false);
+  const [razorpayPaymentData, setRazorpayPaymentData] = useState<any>(null);
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -789,7 +790,7 @@ export default function CheckoutClient() {
         deliveryTiming: "same_day",
         deliveryDate: new Date().toISOString().split("T")[0],
         deliveryTimeSlot: "evening",
-        estimatedDeliveryTime: "2-3 hours",
+        estimatedDeliveryTime: null, // Set to null to avoid timestamp format errors
         distance: selectedAddressObj.distance,
         duration: selectedAddressObj.duration,
         deliveryZone: "Zone A", // Default zone, can be customized based on address
@@ -808,9 +809,9 @@ export default function CheckoutClient() {
         throw new Error("Failed to update checkout session");
       }
 
-      // Close the order confirmation dialog and show dummy payment gateway
+      // Close the order confirmation dialog and start Razorpay payment
       setIsPaymentDialogOpen(false);
-      setIsDummyPaymentDialogOpen(true);
+      setIsRazorpayPaymentOpen(true);
 
       console.log("Checkout session updated:", updateData);
     } catch (err) {
@@ -825,21 +826,79 @@ export default function CheckoutClient() {
     }
   };
 
-  // Payment success handler - Placeholder for manual implementation
-  const handlePaymentSuccess = async (paymentData: any) => {
-    console.log("Payment success handler - needs manual implementation");
-    // TODO: Implement your custom payment success handling
+  // Razorpay payment success handler
+  const handleRazorpayPaymentSuccess = async (paymentData: any) => {
+    console.log("Razorpay payment success:", paymentData);
+
+    try {
+      // Close Razorpay payment dialog
+      setIsRazorpayPaymentOpen(false);
+      setIsPaymentInProgress(false);
+
+      // Set success order ID and show success overlay
+      setSuccessOrderId(paymentData.orderId);
+      setShowSuccessOverlay(true);
+
+      // Clear cart after successful payment
+      clearCart();
+
+      toast({
+        title: "Payment Successful!",
+        description: "Your order has been placed successfully.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error handling payment success:", error);
+      handleRazorpayPaymentFailure(error);
+    }
   };
 
-  // Payment failure handler - Placeholder for manual implementation
-  const handlePaymentFailure = (error: any) => {
-    console.error("Payment failed:", error);
+  // Razorpay payment failure handler
+  const handleRazorpayPaymentFailure = async (error: any) => {
+    console.error("Razorpay payment failed:", error);
+
+    // Close Razorpay payment dialog
+    setIsRazorpayPaymentOpen(false);
+    setIsPaymentInProgress(false);
+
+    // Reset payment status on failure
+    try {
+      await fetch("/api/payment/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ checkoutId }),
+      });
+    } catch (resetError) {
+      console.error("Failed to reset payment status:", resetError);
+    }
+
     toast({
       title: "Payment Failed",
       description:
         "Payment failed. Please try again or contact support if the issue persists.",
       variant: "destructive",
     });
+  };
+
+  // Razorpay payment close handler
+  const handleRazorpayPaymentClose = async () => {
+    setIsRazorpayPaymentOpen(false);
+    setIsPaymentInProgress(false);
+
+    // Reset payment status when user cancels
+    try {
+      await fetch("/api/payment/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ checkoutId }),
+      });
+    } catch (error) {
+      console.error("Failed to reset payment status:", error);
+    }
   };
 
   // Dummy payment success handler
@@ -878,7 +937,7 @@ export default function CheckoutClient() {
       console.error("Failed to update payment status:", error);
     }
 
-    setIsDummyPaymentDialogOpen(false);
+    // Dummy payment dialog removed - using Razorpay now
     setIsPaymentInProgress(false);
 
     try {
@@ -1042,7 +1101,7 @@ export default function CheckoutClient() {
       console.error("Failed to update payment status to failed:", error);
     }
 
-    setIsDummyPaymentDialogOpen(false);
+    // Dummy payment dialog removed - using Razorpay now
     setIsPaymentInProgress(false);
     setShowFailureOverlay(true);
   };
@@ -2721,84 +2780,22 @@ export default function CheckoutClient() {
             </DialogContent>
           </Dialog>
 
-          {/* Dummy Payment Gateway Dialog */}
-          <Dialog
-            open={isDummyPaymentDialogOpen}
-            onOpenChange={setIsDummyPaymentDialogOpen}
-          >
-            <DialogContent className="w-[calc(100%-40px)] max-w-md rounded-[22px]">
-              <DialogHeader>
-                <DialogTitle className="text-center">
-                  Payment Gateway
-                </DialogTitle>
-                <DialogDescription className="text-center">
-                  Dummy payment gateway for testing
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="py-6">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                      />
-                    </svg>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Complete Your Payment
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Amount: ₹{total.toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      This is a dummy payment gateway for testing purposes. In
-                      production, this will be replaced with Razorpay.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter className="gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleDummyPaymentFailure}
-                  disabled={
-                    checkoutData?.paymentStatus === "processing" ||
-                    checkoutData?.paymentStatus === "paid"
-                  }
-                  className="flex-1 rounded-[18px] h-[48px] text-[16px] font-medium"
-                >
-                  Payment Failed
-                </Button>
-                <Button
-                  onClick={handleDummyPaymentSuccess}
-                  disabled={
-                    checkoutData?.paymentStatus === "processing" ||
-                    checkoutData?.paymentStatus === "paid"
-                  }
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[18px] h-[48px] text-[16px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {checkoutData?.paymentStatus === "processing"
-                    ? "Processing..."
-                    : "Payment Successful"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {/* Razorpay Payment Integration */}
+          {isRazorpayPaymentOpen && (
+            <RazorpayCheckout
+              amount={total}
+              currency="INR"
+              checkoutId={checkoutId}
+              userDetails={{
+                name: contactInfo.name,
+                email: session?.user?.email || "guest@example.com",
+                phone: contactInfo.phone,
+              }}
+              onSuccess={handleRazorpayPaymentSuccess}
+              onFailure={handleRazorpayPaymentFailure}
+              onClose={handleRazorpayPaymentClose}
+            />
+          )}
 
           {/* Payment component removed - implement manually */}
         </div>

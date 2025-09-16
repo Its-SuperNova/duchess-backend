@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       // Delivery timing
       delivery_timing: deliveryTiming || "same-day",
       scheduled_delivery: scheduledDelivery || null,
-      estimated_delivery_time: estimatedDeliveryTime || null,
+      estimated_time_delivery: null, // Set to null to avoid timestamp format errors
       is_same_day_delivery: isSameDayDelivery ?? true,
       // Distance and location data
       distance: distance || null,
