@@ -286,11 +286,11 @@ export async function POST(request: NextRequest) {
       // Address and delivery
       delivery_address_id: deliveryAddressId || null,
 
-      // Contact information (use from address if available, fallback to provided)
-      contact_name: addressData?.address_name || finalContactName,
+      // Contact information (prioritize provided contact info over address data)
+      contact_name: finalContactName || addressData?.address_name,
       contact_number: finalContactNumber,
       contact_alternate_number:
-        addressData?.alternate_phone || finalContactAlternateNumber,
+        finalContactAlternateNumber || addressData?.alternate_phone,
 
       // Customer notes and special requests
       notes: notes || note || null,

@@ -20,6 +20,8 @@ const Lottie = dynamic(() => import("lottie-react"), {
 });
 import { useCart } from "@/context/cart-context";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useToast } from "@/hooks/use-toast";
 // Removed direct import of large Lottie JSON to reduce bundle size
 // Dynamically import Icon to reduce initial bundle size
 const Icon = dynamic(
@@ -40,7 +42,10 @@ export default function CartPage() {
     isLoading: cartLoading,
   } = useCart();
   const router = useRouter();
+  const { data: session } = useSession();
+  const { toast } = useToast();
   const [zeroPurchaseAnimation, setZeroPurchaseAnimation] = useState(null);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
 
   // Load Lottie animation data dynamically to reduce bundle size
   useEffect(() => {
@@ -222,6 +227,77 @@ export default function CartPage() {
     router.back();
   };
 
+  const handleCreateCheckout = async () => {
+    if (cart.length === 0) return;
+
+    setIsCreatingCheckout(true);
+
+    try {
+      // Prepare checkout data
+      const checkoutData = {
+        items: cart.map((item) => ({
+          product_id: item.id.toString(),
+          product_name: item.name,
+          product_image: item.image,
+          product_description: "", // CartItem doesn't have description
+          category: item.category || "",
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity,
+          variant: item.variant || "",
+          customization_options: {}, // CartItem doesn't have customizationOptions
+          cake_text: item.cakeText || null,
+          cake_flavor: null, // CartItem doesn't have cakeFlavor
+          cake_size: null, // CartItem doesn't have cakeSize
+          cake_weight: null, // CartItem doesn't have cakeWeight
+          item_has_knife: item.addKnife || false,
+          item_has_candle: item.addCandles || false,
+          item_has_message_card: item.addMessageCard || false,
+          item_message_card_text: item.giftCardText || null,
+        })),
+        subtotal: cart.reduce(
+          (total, item) => total + item.price * item.quantity,
+          0
+        ),
+        discount: 0, // TODO: Calculate discount if applicable
+        deliveryFee: 0, // TODO: Calculate delivery fee
+        totalAmount: cart.reduce(
+          (total, item) => total + item.price * item.quantity,
+          0
+        ),
+        userId: session?.user?.id || null,
+        userEmail: session?.user?.email || null,
+      };
+
+      // Create checkout session
+      const response = await fetch("/api/create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(checkoutData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create checkout session");
+      }
+
+      const { checkoutId } = await response.json();
+
+      // Redirect to checkout page
+      router.push(`/checkouts/${checkoutId}`);
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create checkout session. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingCheckout(false);
+    }
+  };
+
   // Checkout section component
   const CheckoutSection = ({ isMobile = false }: { isMobile?: boolean }) => {
     if (cart.length === 0) return null;
@@ -270,11 +346,13 @@ export default function CartPage() {
           </p>
 
           {/* Checkout Button */}
-          <Link href="/checkout" className="w-full">
-            <Button className="w-full h-[48px] bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-[18px] font-medium">
-              Check out
-            </Button>
-          </Link>
+          <Button
+            onClick={handleCreateCheckout}
+            disabled={isCreatingCheckout}
+            className="w-full h-[48px] bg-[#523435] hover:bg-[#402627] text-white py-4 rounded-[18px] font-medium"
+          >
+            {isCreatingCheckout ? "Creating Checkout..." : "Check out"}
+          </Button>
         </div>
       </div>
     );

@@ -50,6 +50,18 @@ export async function GET(
           item_status,
           preparation_notes
         ),
+        addresses!orders_delivery_address_id_fkey (
+          id,
+          address_name,
+          full_address,
+          city,
+          state,
+          zip_code,
+          alternate_phone,
+          additional_details,
+          distance,
+          duration
+        ),
         coupons!orders_coupon_id_fkey (
           id,
           code,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, X, ShoppingCart } from "lucide-react";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 // removed Trash2, using Solar icon via Iconify
 import { TiDocumentText } from "react-icons/ti";
@@ -27,7 +27,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 
@@ -80,7 +80,11 @@ import CheckoutSkeleton from "@/components/checkout-skeleton";
 import React from "react";
 
 export default function CheckoutClient() {
-  // Get cart items and functions from cart context
+  // Get checkoutId from URL params
+  const params = useParams();
+  const checkoutId = params.checkoutId as string;
+
+  // Get cart items and functions from cart context (for fallback/editing)
   const {
     cart,
     getSubtotal,
@@ -94,6 +98,57 @@ export default function CheckoutClient() {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
+
+  // Checkout session data
+  const [checkoutData, setCheckoutData] = useState<any>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(true);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  // Fetch checkout session data
+  useEffect(() => {
+    if (!checkoutId) {
+      setCheckoutError("Invalid checkout session");
+      setCheckoutLoading(false);
+      return;
+    }
+
+    const fetchCheckoutData = async () => {
+      try {
+        setCheckoutLoading(true);
+        const response = await fetch(`/api/checkout/${checkoutId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch checkout data");
+        }
+
+        setCheckoutData(data.checkout);
+
+        // Populate form fields from checkout data
+        if (data.checkout.note) setNote(data.checkout.note);
+        if (data.checkout.couponCode)
+          setSelectedCoupon(data.checkout.couponCode);
+        if (data.checkout.cakeText) setCakeText(data.checkout.cakeText);
+        if (data.checkout.messageCardText)
+          setMessageCardText(data.checkout.messageCardText);
+        if (data.checkout.contactInfo)
+          setContactInfo(data.checkout.contactInfo);
+        if (data.checkout.addressText)
+          setAddressText(data.checkout.addressText);
+        if (data.checkout.customizationOptions)
+          setCustomizationOptions(data.checkout.customizationOptions);
+      } catch (err) {
+        console.error("Error fetching checkout data:", err);
+        setCheckoutError(
+          err instanceof Error ? err.message : "Failed to load checkout data"
+        );
+      } finally {
+        setCheckoutLoading(false);
+      }
+    };
+
+    fetchCheckoutData();
+  }, [checkoutId]);
 
   // Load applied coupon code to show update/view UI
   useEffect(() => {
@@ -208,6 +263,10 @@ export default function CheckoutClient() {
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+
+  // Dummy payment gateway dialog state
+  const [isDummyPaymentDialogOpen, setIsDummyPaymentDialogOpen] =
+    useState(false);
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -576,8 +635,8 @@ export default function CheckoutClient() {
     };
   }, [session]);
 
-  // Calculate checkout totals
-  const subtotal = getSubtotal();
+  // Calculate checkout totals - use checkout data if available, otherwise fall back to cart
+  const subtotal = checkoutData ? checkoutData.subtotal : getSubtotal();
   // GST & Taxes removed from calculation per request
   const gstAndTaxes = 0;
   // Load applied coupon (if any) from localStorage and compute discount strictly from coupon
@@ -625,12 +684,18 @@ export default function CheckoutClient() {
     return calculateDeliveryFee(distanceInKm);
   };
 
-  const deliveryFee = 0; // Set delivery fee to 0 for all orders
+  const deliveryFee = checkoutData ? checkoutData.deliveryFee : 0; // Use checkout data if available
   // Calculate taxes (CGST 9% + SGST 9% = 18% total)
   const taxableAmount = subtotal - discount;
-  const cgstAmount = taxableAmount * 0.09;
-  const sgstAmount = taxableAmount * 0.09;
-  const total = subtotal - discount + deliveryFee + cgstAmount + sgstAmount;
+  const cgstAmount = checkoutData
+    ? checkoutData.cgstAmount || 0
+    : taxableAmount * 0.09;
+  const sgstAmount = checkoutData
+    ? checkoutData.sgstAmount || 0
+    : taxableAmount * 0.09;
+  const total = checkoutData
+    ? checkoutData.totalAmount
+    : subtotal - discount + deliveryFee + cgstAmount + sgstAmount;
 
   // Helper function to get delivery fee breakdown information
   const getDeliveryFeeBreakdown = () => {
@@ -658,7 +723,7 @@ export default function CheckoutClient() {
     // or use them for optimization insights
   };
 
-  // Payment processing function - Placeholder for manual implementation
+  // Payment processing function - Updated to work with checkout session
   const handlePaymentConfirm = async () => {
     if (isPaymentInProgress) return; // Prevent multiple payment attempts
 
@@ -679,14 +744,43 @@ export default function CheckoutClient() {
         return;
       }
 
-      // TODO: Implement your custom payment flow here
-      console.log("Payment flow needs to be implemented manually");
+      // Update checkout session with current form data
+      const updateData = {
+        note,
+        addressText,
+        selectedAddressId: selectedAddressObj.id,
+        couponCode: selectedCoupon,
+        customizationOptions,
+        cakeText,
+        messageCardText,
+        contactInfo,
+        deliveryTiming: "same_day",
+        deliveryDate: new Date().toISOString().split("T")[0],
+        deliveryTimeSlot: "evening",
+        estimatedDeliveryTime: "2-3 hours",
+        distance: selectedAddressObj.distance,
+        duration: selectedAddressObj.duration,
+        deliveryZone: "Zone A", // Default zone, can be customized based on address
+      };
 
-      toast({
-        title: "Payment Flow",
-        description: "Payment integration needs to be implemented manually.",
-        variant: "default",
+      // Update the checkout session
+      const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
       });
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update checkout session");
+      }
+
+      // Close the order confirmation dialog and show dummy payment gateway
+      setIsPaymentDialogOpen(false);
+      setIsDummyPaymentDialogOpen(true);
+
+      console.log("Checkout session updated:", updateData);
     } catch (err) {
       console.error("Error in payment flow:", err);
       toast({
@@ -716,19 +810,173 @@ export default function CheckoutClient() {
     });
   };
 
+  // Dummy payment success handler
+  const handleDummyPaymentSuccess = async () => {
+    setIsDummyPaymentDialogOpen(false);
+    setIsPaymentInProgress(false);
+
+    try {
+      // Find the selected address to get the address ID
+      const selectedAddressObj = addresses.find(
+        (addr) => addr.full_address === addressText
+      );
+
+      if (!selectedAddressObj) {
+        throw new Error("No valid address selected");
+      }
+
+      // Create a real order in the database
+      const orderData = {
+        // Financial information
+        itemTotal: checkoutData ? checkoutData.subtotal : getSubtotal(),
+        subtotalAmount: checkoutData ? checkoutData.subtotal : getSubtotal(),
+        discountAmount: checkoutData ? checkoutData.discount : 0,
+        deliveryFee: checkoutData ? checkoutData.deliveryFee : 0,
+        deliveryCharge: checkoutData ? checkoutData.deliveryFee : 0,
+        totalAmount: checkoutData ? checkoutData.totalAmount : total,
+        cgstAmount: checkoutData ? checkoutData.cgstAmount : 0,
+        sgstAmount: checkoutData ? checkoutData.sgstAmount : 0,
+
+        // Contact and delivery
+        contactName: contactInfo.name,
+        contactNumber: contactInfo.phone,
+        contactAlternateNumber: contactInfo.alternatePhone || "", // Use empty string to prevent address fallback
+        deliveryAddressId: selectedAddressObj.id, // Required field
+        addressText: addressText,
+
+        // Override address data to use our contact info instead of address defaults
+        contactInfo: {
+          name: contactInfo.name,
+          phone: contactInfo.phone,
+          alternatePhone: contactInfo.alternatePhone || "",
+        },
+
+        // Special requests
+        notes: note,
+        note: note, // fallback
+        isKnife: customizationOptions.addKnife,
+        isCandle: customizationOptions.addCandles,
+        isTextOnCard: customizationOptions.addMessageCard,
+        textOnCard: messageCardText,
+
+        // Delivery timing
+        deliveryTiming: "same_day",
+        deliveryDate: new Date().toISOString().split("T")[0],
+        deliveryTimeSlot: "evening",
+        estimatedDeliveryTime: null, // Don't send string to avoid timestamp error
+        estimatedTimeDelivery: null, // Don't send string, let API handle it
+        distance: selectedAddressObj.distance || 0,
+        duration: selectedAddressObj.duration || 0,
+        deliveryZone: "Zone A",
+
+        // Payment information
+        paymentMethod: "online",
+        paymentStatus: "paid",
+        paymentTransactionId: `TXN-${Date.now()}`,
+
+        // Order status
+        orderStatus: "confirmed",
+        status: "confirmed",
+
+        // Items
+        items: checkoutData
+          ? checkoutData.items
+          : cart.map((item) => ({
+              product_id: item.id.toString(),
+              product_name: item.name,
+              unit_price: item.price,
+              quantity: item.quantity,
+              product_image: item.image,
+              variant: item.variant || item.category || "",
+              customization_options: {},
+              cake_text: item.cakeText || null,
+              cake_flavor: null,
+              cake_size: null,
+              cake_weight: null,
+              item_has_knife: item.addKnife || false,
+              item_has_candle: item.addCandles || false,
+              item_has_message_card: item.addMessageCard || false,
+              item_message_card_text: item.giftCardText || null,
+            })),
+
+        // Coupon
+        couponCode: selectedCoupon,
+        isCoupon: !!selectedCoupon,
+      };
+
+      console.log("Creating order with data:", orderData);
+
+      const response = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create order");
+      }
+
+      const result = await response.json();
+      console.log("Order created successfully:", result);
+
+      // Use the real order ID from the database
+      setSuccessOrderId(result.orderId);
+      setShowSuccessOverlay(true);
+
+      toast({
+        title: "Payment Successful!",
+        description: "Your order has been placed successfully.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Dummy payment failure handler
+  const handleDummyPaymentFailure = () => {
+    setIsDummyPaymentDialogOpen(false);
+    setIsPaymentInProgress(false);
+
+    toast({
+      title: "Payment Failed",
+      description: "Payment was not successful. Please try again.",
+      variant: "destructive",
+    });
+  };
+
   // Handle animation completion
   const handleAnimationComplete = useCallback(() => {
     console.log("=== ANIMATION COMPLETION CALLBACK TRIGGERED ===");
-    console.log("Animation completed, overlay will handle navigation");
+    console.log("Animation completed, redirecting to confirmation page");
     console.log("Success overlay state:", {
       showSuccessOverlay,
       successOrderId,
     });
 
-    // The overlay will handle navigation to the confirmation page
-    // We don't need to clear the success state here as the user will be redirected
-    // The cleanup will happen naturally when the component unmounts
-  }, [showSuccessOverlay, successOrderId]);
+    // Redirect to confirmation page with order ID
+    if (successOrderId) {
+      // Redirect to confirmation page with real order ID from database
+      router.push(`/confirmation?orderId=${successOrderId}`);
+    }
+  }, [
+    showSuccessOverlay,
+    successOrderId,
+    checkoutId,
+    checkoutData,
+    total,
+    cart,
+    addressText,
+    contactInfo,
+    router,
+  ]);
 
   // Persist lightweight checkout context for payment step
   useEffect(() => {
@@ -769,14 +1017,49 @@ export default function CheckoutClient() {
     contactInfo,
   ]);
 
-  // Show skeleton loader while cart is loading
-  if (cartLoading) {
+  // Show skeleton loader while cart or checkout is loading
+  if (cartLoading || checkoutLoading) {
     return <CheckoutSkeleton />;
+  }
+
+  // Show error if checkout failed to load
+  if (checkoutError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F6FB]">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="mb-6">
+            <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            Checkout Session Not Found
+          </h2>
+          <p className="text-gray-600 mb-6">{checkoutError}</p>
+          <div className="space-y-3">
+            <Button
+              onClick={() => router.push("/cart")}
+              className="w-full bg-[#523435] hover:bg-[#402627]"
+            >
+              Back to Cart
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/products")}
+              className="w-full"
+            >
+              Continue Shopping
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Redirect to home if cart is empty (only after loading is complete)
   // BUT don't redirect if we're showing the success overlay
-  if (cart.length === 0 && !showSuccessOverlay) {
+  if (
+    (checkoutData ? checkoutData.items.length === 0 : cart.length === 0) &&
+    !showSuccessOverlay
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F6FB]">
         <div className="text-center">
@@ -839,6 +1122,11 @@ export default function CheckoutClient() {
               <h1 className="text-xl font-semibold absolute left-1/2 transform -translate-x-1/2 md:relative md:left-auto md:transform-none">
                 Checkout
               </h1>
+              {checkoutId && (
+                <p className="text-xs text-gray-500 absolute right-4 top-1/2 transform -translate-y-1/2 md:relative md:right-auto md:top-auto md:transform-none md:ml-4">
+                  ID: {checkoutId.slice(0, 8)}...
+                </p>
+              )}
               <div className="w-9 md:hidden"></div>
             </div>
           </div>
@@ -1835,93 +2123,129 @@ export default function CheckoutClient() {
               <div className="space-y-4">
                 <div className="bg-white mx-4 p-3 rounded-[22px] border border-gray-200 dark:border-gray-600 sticky top-4 overflow-hidden">
                   <div className="space-y-4">
-                    {cart.map((item) => {
-                      const uid = (item.uniqueId ||
-                        `${item.id}-${item.variant}`) as string;
-                      const qty = item.quantity || 1;
-                      return (
-                        <div
-                          key={uid}
-                          className="flex items-start justify-between"
-                        >
-                          <div className="flex w-full min-w-0">
-                            {/* product image */}
-                            <div className="relative h-[88px] w-[88px] rounded-[20px] overflow-hidden mr-3 shrink-0">
-                              <Image
-                                src={
-                                  item.image ||
-                                  "/placeholder.svg?height=88&width=88&query=food%20thumbnail"
-                                }
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-
-                            {/* product details */}
-                            <div className="flex flex-col justify-between flex-1 min-w-0">
-                              {/* top row */}
-                              <div className="flex items-start justify-between w-full gap-2 max-w-full min-w-0">
-                                {/* name and category */}
-                                <div className="flex-1 w-full min-w-0">
-                                  {/* Single-line name with ellipsis */}
-                                  <h3
-                                    className="block truncate text-[15px] leading-tight font-medium text-black dark:text-gray-200"
-                                    title={item.name}
-                                  >
-                                    {item.name}
-                                  </h3>
-                                  <p className="text-[14px] text-gray-500 dark:text-gray-400 truncate max-w-full">
-                                    {item.category ?? item.variant}
-                                  </p>
-                                </div>
-
-                                {/* remove button */}
-                                <button
-                                  aria-label="Remove item"
-                                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 self-start"
-                                  onClick={() => removeFromCart(uid)}
-                                >
-                                  <TrashBinTrash className="h-5 w-5 text-red-600" />
-                                </button>
+                    {(checkoutData ? checkoutData.items : cart).map(
+                      (item: any, index: number) => {
+                        const uid = checkoutData
+                          ? `${item.product_id}-${index}`
+                          : ((item.uniqueId ||
+                              `${item.id}-${item.variant}`) as string);
+                        const qty = item.quantity || 1;
+                        return (
+                          <div
+                            key={uid}
+                            className="flex items-start justify-between"
+                          >
+                            <div className="flex w-full min-w-0">
+                              {/* product image */}
+                              <div className="relative h-[88px] w-[88px] rounded-[20px] overflow-hidden mr-3 shrink-0">
+                                <Image
+                                  src={
+                                    (checkoutData
+                                      ? item.product_image
+                                      : item.image) ||
+                                    "/placeholder.svg?height=88&width=88&query=food%20thumbnail"
+                                  }
+                                  alt={
+                                    checkoutData ? item.product_name : item.name
+                                  }
+                                  fill
+                                  className="object-cover"
+                                />
                               </div>
 
-                              {/* bottom row */}
-                              <div className="flex items-center justify-between w-full">
-                                {/* price */}
-                                <p className="text-[16px] font-semibold text-black dark:text-gray-100">
-                                  {"₹"}
-                                  {item.price.toFixed(2)}
-                                </p>
+                              {/* product details */}
+                              <div className="flex flex-col justify-between flex-1 min-w-0">
+                                {/* top row */}
+                                <div className="flex items-start justify-between w-full gap-2 max-w-full min-w-0">
+                                  {/* name and category */}
+                                  <div className="flex-1 w-full min-w-0">
+                                    {/* Single-line name with ellipsis */}
+                                    <h3
+                                      className="block truncate text-[15px] leading-tight font-medium text-black dark:text-gray-200"
+                                      title={
+                                        checkoutData
+                                          ? item.product_name
+                                          : item.name
+                                      }
+                                    >
+                                      {checkoutData
+                                        ? item.product_name
+                                        : item.name}
+                                    </h3>
+                                    <p className="text-[14px] text-gray-500 dark:text-gray-400 truncate max-w-full">
+                                      {checkoutData
+                                        ? item.category || item.variant
+                                        : item.category ?? item.variant}
+                                    </p>
+                                  </div>
 
-                                {/* quantity controls */}
-                                <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
-                                  <button
-                                    aria-label="Decrease quantity"
-                                    className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
-                                    onClick={() =>
-                                      updateQuantity(uid, Math.max(1, qty - 1))
-                                    }
-                                  >
-                                    <Minus className="h-3 w-3 text-gray-600" />
-                                  </button>
-                                  <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
-                                    {String(qty).padStart(2, "0")}
-                                  </span>
-                                  <button
-                                    aria-label="Increase quantity"
-                                    className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
-                                    onClick={() => updateQuantity(uid, qty + 1)}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </button>
+                                  {/* remove button - only show for cart items, not checkout data */}
+                                  {!checkoutData && (
+                                    <button
+                                      aria-label="Remove item"
+                                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 self-start"
+                                      onClick={() => removeFromCart(uid)}
+                                    >
+                                      <TrashBinTrash className="h-5 w-5 text-red-600" />
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* bottom row */}
+                                <div className="flex items-center justify-between w-full">
+                                  {/* price */}
+                                  <p className="text-[16px] font-semibold text-black dark:text-gray-100">
+                                    {"₹"}
+                                    {(checkoutData
+                                      ? item.unit_price
+                                      : item.price
+                                    ).toFixed(2)}
+                                  </p>
+
+                                  {/* quantity controls - only show for cart items, not checkout data */}
+                                  {!checkoutData && (
+                                    <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
+                                      <button
+                                        aria-label="Decrease quantity"
+                                        className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
+                                        onClick={() =>
+                                          updateQuantity(
+                                            uid,
+                                            Math.max(1, qty - 1)
+                                          )
+                                        }
+                                      >
+                                        <Minus className="h-3 w-3 text-gray-600" />
+                                      </button>
+                                      <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
+                                        {String(qty).padStart(2, "0")}
+                                      </span>
+                                      <button
+                                        aria-label="Increase quantity"
+                                        className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                                        onClick={() =>
+                                          updateQuantity(uid, qty + 1)
+                                        }
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {/* Show quantity for checkout data without controls */}
+                                  {checkoutData && (
+                                    <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
+                                      <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
+                                        {String(qty).padStart(2, "0")}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+                    )}
                   </div>
 
                   {/* Place Order Button moved to fixed bottom bar */}
@@ -2233,6 +2557,75 @@ export default function CheckoutClient() {
                   className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
                 >
                   {isPaymentInProgress ? "Processing..." : "Proceed to Payment"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dummy Payment Gateway Dialog */}
+          <Dialog
+            open={isDummyPaymentDialogOpen}
+            onOpenChange={setIsDummyPaymentDialogOpen}
+          >
+            <DialogContent className="w-[calc(100%-40px)] max-w-md rounded-[22px]">
+              <DialogHeader>
+                <DialogTitle className="text-center">
+                  Payment Gateway
+                </DialogTitle>
+                <DialogDescription className="text-center">
+                  Dummy payment gateway for testing
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-6">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                      />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Complete Your Payment
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Amount: ₹{total.toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      This is a dummy payment gateway for testing purposes. In
+                      production, this will be replaced with Razorpay.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleDummyPaymentFailure}
+                  className="flex-1 rounded-[18px] h-[48px] text-[16px] font-medium"
+                >
+                  Payment Failed
+                </Button>
+                <Button
+                  onClick={handleDummyPaymentSuccess}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-[18px] h-[48px] text-[16px] font-medium"
+                >
+                  Payment Successful
                 </Button>
               </DialogFooter>
             </DialogContent>

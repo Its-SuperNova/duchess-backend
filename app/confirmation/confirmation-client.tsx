@@ -51,6 +51,8 @@ export default function ConfirmationClient() {
       return;
     }
 
+    // Fetch order data from database
+
     const fetchOrder = async () => {
       try {
         const response = await fetch(`/api/orders/${orderId}`);
@@ -206,6 +208,14 @@ export default function ConfirmationClient() {
     });
   };
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return "₹0.00";
@@ -267,8 +277,8 @@ export default function ConfirmationClient() {
               <p className="font-medium">{formatDate(order.created_at)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Status</p>
-              <p className="font-medium capitalize">{order.status}</p>
+              <p className="text-sm text-gray-500">Order Time</p>
+              <p className="font-medium">{formatTime(order.created_at)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Payment Status</p>
