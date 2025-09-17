@@ -70,21 +70,38 @@ export default function RazorpayCheckout({
       }
     };
 
-    // Start polling every 3 seconds
-    const interval = setInterval(pollPaymentStatus, 3000);
-    setPollingInterval(interval);
+    // Start with aggressive polling (every 1 second) for first 30 seconds, then every 3 seconds
+    let pollCount = 0;
+    const maxAggressivePolls = 30; // 30 seconds of aggressive polling
+
+    const pollWithInterval = () => {
+      pollPaymentStatus();
+      pollCount++;
+
+      if (pollCount < maxAggressivePolls) {
+        // Aggressive polling: every 1 second for first 30 seconds
+        setTimeout(pollWithInterval, 1000);
+      } else {
+        // Regular polling: every 3 seconds after that
+        const interval = setInterval(pollPaymentStatus, 3000);
+        setPollingInterval(interval);
+      }
+    };
+
+    // Start polling
+    pollWithInterval();
 
     // Stop polling after 2 minutes and show failure if no payment detected
     setTimeout(() => {
-      if (interval) {
-        clearInterval(interval);
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
         setPollingInterval(null);
-        console.log("Payment polling timeout - no payment detected");
-        // Call failure handler if no payment was detected
-        onFailure(new Error("Payment not completed. Please try again."));
-        if (onClose) {
-          onClose();
-        }
+      }
+      console.log("Payment polling timeout - no payment detected");
+      // Call failure handler if no payment was detected
+      onFailure(new Error("Payment not completed. Please try again."));
+      if (onClose) {
+        onClose();
       }
     }, 120000); // 2 minutes
   };
@@ -277,8 +294,9 @@ export default function RazorpayCheckout({
                 "Razorpay modal dismissed - user returned from external app"
               );
 
-              // Start payment polling to check if payment was completed
-              if (orderData && orderData.id) {
+              // If polling is not already active, start it
+              if (orderData && orderData.id && !pollingInterval) {
+                console.log("Starting polling on modal dismiss");
                 startPaymentPolling(orderData.id);
               }
 
@@ -295,6 +313,14 @@ export default function RazorpayCheckout({
         // Call onOpen callback to update parent component status
         if (onOpen) {
           onOpen();
+        }
+
+        // Start polling immediately for external app payments (like Google Pay)
+        if (orderData && orderData.id) {
+          // Start polling after a short delay to allow Razorpay to initialize
+          setTimeout(() => {
+            startPaymentPolling(orderData.id);
+          }, 2000); // 2 second delay
         }
       } catch (error) {
         console.error("Razorpay initialization error:", error);

@@ -2906,10 +2906,12 @@ export default function CheckoutClient() {
                         "Complete your payment in the Razorpay window or external app..."}
                     </p>
                     {paymentStatus === "waiting_confirmation" && (
-                      <p className="text-xs text-blue-600 mt-2">
-                        💡 If you paid via Google Pay, we'll detect it
-                        automatically when you return
-                      </p>
+                      <div className="text-xs text-blue-600 mt-2 space-y-1">
+                        <p>💡 If you paid via Google Pay:</p>
+                        <p>• Complete payment in the external app</p>
+                        <p>• Return to browser (ignore any error messages)</p>
+                        <p>• We'll detect your payment automatically</p>
+                      </div>
                     )}
                   </div>
                 </div>
