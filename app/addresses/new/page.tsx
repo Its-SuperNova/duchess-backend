@@ -159,7 +159,15 @@ export default function NewAddressPage() {
     } else {
       // Check referrer to determine where user came from
       const referrer = document.referrer;
-      if (referrer.includes("/checkout")) {
+      if (referrer.includes("/checkouts/")) {
+        // Extract checkout ID from referrer URL
+        const checkoutMatch = referrer.match(/\/checkouts\/([^\/\?]+)/);
+        if (checkoutMatch) {
+          setReturnTo(`/checkouts/${checkoutMatch[1]}`);
+        } else {
+          setReturnTo("/checkout");
+        }
+      } else if (referrer.includes("/checkout")) {
         setReturnTo("/checkout");
       } else if (referrer.includes("/profile")) {
         setReturnTo("/profile");

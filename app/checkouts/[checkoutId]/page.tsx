@@ -1517,7 +1517,7 @@ export default function CheckoutClient() {
                       </div>
                       <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
                         <Link
-                          href="/addresses/new?returnTo=/checkout"
+                          href={`/addresses/new?returnTo=/checkouts/${checkoutId}`}
                           className="w-full block"
                         >
                           <button className="w-full flex items-center justify-between bg-white rounded-[14px] px-4 py-3 shadow-sm hover:bg-gray-50 transition-colors">
@@ -1611,7 +1611,9 @@ export default function CheckoutClient() {
                               No addresses found. Add an address to proceed with
                               checkout.
                             </p>
-                            <Link href="/addresses/new?returnTo=/checkout">
+                            <Link
+                              href={`/addresses/new?returnTo=/checkouts/${checkoutId}`}
+                            >
                               <Button className="bg-[#570000] hover:bg-[#450000] text-white">
                                 Add New Address
                               </Button>
@@ -2261,7 +2263,9 @@ export default function CheckoutClient() {
                           <p className="text-gray-500 dark:text-gray-400 text-sm">
                             Add address to proceed with checkout
                           </p>
-                          <Link href="/addresses/new?returnTo=/checkout">
+                          <Link
+                            href={`/addresses/new?returnTo=/checkouts/${checkoutId}`}
+                          >
                             <button
                               className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors px-3 py-1 rounded-full hover:bg-blue-50 text-sm font-medium"
                               aria-label="Add delivery address"
