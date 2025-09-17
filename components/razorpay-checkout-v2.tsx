@@ -50,7 +50,7 @@ export default function RazorpayCheckoutV2({
   };
 
   // Show custom confirming screen instead of Razorpay's error modal
-  const showConfirmingScreen = () => {
+  const displayConfirmingScreen = () => {
     log("Showing custom confirming screen");
     setShowConfirmingScreen(true);
 
@@ -65,12 +65,16 @@ export default function RazorpayCheckoutV2({
 
     // Auto-hide confirming screen after 2 minutes if no payment detected
     setTimeout(() => {
-      if (showConfirmingScreen) {
-        log("Confirming screen timeout - hiding screen");
-        setShowConfirmingScreen(false);
-        onFailure(new Error("Payment confirmation timeout. Please try again."));
-        if (onClose) onClose();
-      }
+      setShowConfirmingScreen((current) => {
+        if (current) {
+          log("Confirming screen timeout - hiding screen");
+          onFailure(
+            new Error("Payment confirmation timeout. Please try again.")
+          );
+          if (onClose) onClose();
+        }
+        return false;
+      });
     }, 120000); // 2 minutes
   };
 
@@ -385,7 +389,7 @@ export default function RazorpayCheckoutV2({
           log("Razorpay payment.failed event intercepted", response);
 
           // Show our custom confirming screen instead of Razorpay's error
-          showConfirmingScreen();
+          displayConfirmingScreen();
 
           // Start aggressive polling to check if payment actually succeeded
           if (orderIdRef.current && !pollingRef.current) {
@@ -397,7 +401,7 @@ export default function RazorpayCheckoutV2({
           log("Razorpay checkout.error event intercepted", error);
 
           // Show our custom confirming screen instead of Razorpay's error
-          showConfirmingScreen();
+          displayConfirmingScreen();
 
           // Start aggressive polling to check if payment actually succeeded
           if (orderIdRef.current && !pollingRef.current) {
