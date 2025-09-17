@@ -33,7 +33,7 @@ export default function SimpleOrderSuccessNotification({
   }, [isVisible, autoHideDuration]);
 
   const handleViewOrder = () => {
-    router.push(`/checkout/confirmation?orderId=${orderId}`);
+    router.push(`/confirmation?orderId=${orderId}`);
     onClose();
   };
 
@@ -151,7 +151,7 @@ export function CompactOrderSuccessNotification({
   }, [isVisible, autoHideDuration]);
 
   const handleViewOrder = () => {
-    router.push(`/checkout/confirmation?orderId=${orderId}`);
+    router.push(`/confirmation?orderId=${orderId}`);
     onClose();
   };
 

@@ -49,6 +49,60 @@ export async function POST(request: NextRequest) {
       deliveryZone: body.deliveryZone || null,
     });
 
+    // Pre-create Razorpay order for instant payment modal
+    let razorpayOrderId = null;
+    try {
+      console.log(
+        "Pre-creating Razorpay order for checkout:",
+        checkoutSession.checkoutId
+      );
+
+      const razorpayOrderData = {
+        amount: Math.round(body.totalAmount * 100), // Convert to paise
+        currency: "INR",
+        receipt: `rcpt_${checkoutSession.checkoutId.substring(
+          0,
+          8
+        )}_${Date.now().toString().slice(-8)}`,
+        notes: {
+          checkoutId: checkoutSession.checkoutId,
+          userEmail: body.userEmail || "unknown@example.com",
+        },
+      };
+
+      const razorpayResponse = await fetch(
+        "https://api.razorpay.com/v1/orders",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${Buffer.from(
+              `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+            ).toString("base64")}`,
+          },
+          body: JSON.stringify(razorpayOrderData),
+        }
+      );
+
+      if (razorpayResponse.ok) {
+        const orderData = await razorpayResponse.json();
+        razorpayOrderId = orderData.id;
+        console.log("Razorpay order pre-created:", orderData.id);
+
+        // Store Razorpay order ID in checkout session
+        await CheckoutStore.updateSession(checkoutSession.checkoutId, {
+          razorpayOrderId: razorpayOrderId,
+        });
+      } else {
+        console.warn(
+          "Failed to pre-create Razorpay order, will create on demand"
+        );
+      }
+    } catch (error) {
+      console.warn("Error pre-creating Razorpay order:", error);
+      // Don't fail checkout creation if Razorpay order creation fails
+    }
+
     console.log("Checkout session created:", {
       checkoutId: checkoutSession.checkoutId,
       totalAmount: checkoutSession.totalAmount,

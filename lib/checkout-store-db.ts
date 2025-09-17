@@ -64,6 +64,7 @@ export class CheckoutStoreDB {
       delivery_zone: data.deliveryZone,
       payment_status: "pending",
       payment_attempts: 0,
+      razorpay_order_id: null, // Will be updated when Razorpay order is created
       expires_at: expiresAt.toISOString(),
     });
 

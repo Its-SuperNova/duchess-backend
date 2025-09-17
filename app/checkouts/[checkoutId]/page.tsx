@@ -292,6 +292,14 @@ export default function CheckoutClient() {
   // Payment dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<
+    | "idle"
+    | "processing"
+    | "opening_razorpay"
+    | "waiting_confirmation"
+    | "success"
+    | "failed"
+  >("idle");
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [showFailureOverlay, setShowFailureOverlay] = useState(false);
   const [failureCountdown, setFailureCountdown] = useState(0);
@@ -762,6 +770,7 @@ export default function CheckoutClient() {
 
     try {
       setIsPaymentInProgress(true);
+      setPaymentStatus("processing");
 
       // Find the complete address object based on the selected address text
       const selectedAddressObj = addresses.find(
@@ -809,8 +818,8 @@ export default function CheckoutClient() {
         throw new Error("Failed to update checkout session");
       }
 
-      // Close the order confirmation dialog and start Razorpay payment
-      setIsPaymentDialogOpen(false);
+      // Keep dialog open and start Razorpay payment
+      setPaymentStatus("opening_razorpay");
       setIsRazorpayPaymentOpen(true);
 
       console.log("Checkout session updated:", updateData);
@@ -821,6 +830,7 @@ export default function CheckoutClient() {
         description: "Payment preparation failed. Please try again.",
         variant: "destructive",
       });
+      setPaymentStatus("failed");
     } finally {
       setIsPaymentInProgress(false);
     }
@@ -833,7 +843,7 @@ export default function CheckoutClient() {
     try {
       // Close Razorpay payment dialog
       setIsRazorpayPaymentOpen(false);
-      setIsPaymentInProgress(false);
+      setPaymentStatus("success");
 
       // Set success order ID and show success overlay
       setSuccessOrderId(paymentData.orderId);
@@ -847,6 +857,13 @@ export default function CheckoutClient() {
         description: "Your order has been placed successfully.",
         variant: "default",
       });
+
+      // Close the payment dialog after a delay to show success message
+      setTimeout(() => {
+        setIsPaymentDialogOpen(false);
+        setPaymentStatus("idle");
+        setIsPaymentInProgress(false);
+      }, 2000);
     } catch (error) {
       console.error("Error handling payment success:", error);
       handleRazorpayPaymentFailure(error);
@@ -859,7 +876,7 @@ export default function CheckoutClient() {
 
     // Close Razorpay payment dialog
     setIsRazorpayPaymentOpen(false);
-    setIsPaymentInProgress(false);
+    setPaymentStatus("failed");
 
     // Reset payment status on failure
     try {
@@ -2685,10 +2702,24 @@ export default function CheckoutClient() {
 
           {/* Payment Confirmation Dialog */}
           <Dialog
-            open={isPaymentDialogOpen}
-            onOpenChange={setIsPaymentDialogOpen}
+            open={isPaymentDialogOpen && !isRazorpayPaymentOpen}
+            onOpenChange={(open) => {
+              // Only allow closing if payment is not in progress
+              if (
+                !open &&
+                paymentStatus !== "idle" &&
+                paymentStatus !== "failed"
+              ) {
+                return; // Prevent closing during payment process
+              }
+              setIsPaymentDialogOpen(open);
+              if (!open) {
+                setPaymentStatus("idle");
+                setIsPaymentInProgress(false);
+              }
+            }}
           >
-            <DialogContent className="w-[calc(100%-40px)] rounded-[22px] ">
+            <DialogContent className="w-[calc(100%-40px)] rounded-[22px]">
               <DialogHeader>
                 <DialogTitle>Confirm Payment</DialogTitle>
                 <DialogDescription>
@@ -2696,15 +2727,64 @@ export default function CheckoutClient() {
                 </DialogDescription>
               </DialogHeader>
 
-              {isPaymentInProgress ? (
+              {paymentStatus !== "idle" ? (
                 <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  {paymentStatus === "success" ? (
+                    <div className="rounded-full h-12 w-12 border-2 border-green-500 bg-green-100 flex items-center justify-center">
+                      <svg
+                        className="h-6 w-6 text-green-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                  ) : paymentStatus === "failed" ? (
+                    <div className="rounded-full h-12 w-12 border-2 border-red-500 bg-red-100 flex items-center justify-center">
+                      <svg
+                        className="h-6 w-6 text-red-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  )}
                   <div className="text-center">
                     <h3 className="text-lg font-medium text-gray-900">
-                      Processing...
+                      {paymentStatus === "processing" && "Processing..."}
+                      {paymentStatus === "opening_razorpay" &&
+                        "Opening Razorpay..."}
+                      {paymentStatus === "waiting_confirmation" &&
+                        "Waiting for payment confirmation..."}
+                      {paymentStatus === "success" && "Payment successful!"}
+                      {paymentStatus === "failed" && "Payment failed"}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      Please wait while we process your request...
+                      {paymentStatus === "processing" &&
+                        "Please wait while we process your request..."}
+                      {paymentStatus === "opening_razorpay" &&
+                        "Preparing payment gateway..."}
+                      {paymentStatus === "waiting_confirmation" &&
+                        "Complete your payment in the Razorpay window..."}
+                      {paymentStatus === "success" &&
+                        "Your order has been placed successfully!"}
+                      {paymentStatus === "failed" &&
+                        "There was an issue with your payment. Please try again."}
                     </p>
                   </div>
                 </div>
@@ -2769,16 +2849,67 @@ export default function CheckoutClient() {
               )}
 
               <DialogFooter className="gap-2">
-                <Button
-                  onClick={handlePaymentConfirm}
-                  disabled={isPaymentInProgress}
-                  className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
-                >
-                  {isPaymentInProgress ? "Processing..." : "Proceed to Payment"}
-                </Button>
+                {paymentStatus === "idle" && (
+                  <Button
+                    onClick={handlePaymentConfirm}
+                    disabled={isPaymentInProgress}
+                    className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
+                  >
+                    Proceed to Payment
+                  </Button>
+                )}
+                {paymentStatus === "failed" && (
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setPaymentStatus("idle");
+                        setIsPaymentInProgress(false);
+                      }}
+                      className="flex-1 rounded-[18px] h-[48px] text-[16px] font-medium"
+                    >
+                      Try Again
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsPaymentDialogOpen(false);
+                        setPaymentStatus("idle");
+                        setIsPaymentInProgress(false);
+                      }}
+                      className="flex-1 bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Payment Status Overlay - Shows when Razorpay is open */}
+          {isRazorpayPaymentOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 pointer-events-none">
+              <div className="bg-white rounded-[22px] p-8 max-w-sm mx-4 text-center">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">
+                      {paymentStatus === "opening_razorpay" &&
+                        "Opening Razorpay..."}
+                      {paymentStatus === "waiting_confirmation" &&
+                        "Waiting for payment confirmation..."}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {paymentStatus === "opening_razorpay" &&
+                        "Preparing payment gateway..."}
+                      {paymentStatus === "waiting_confirmation" &&
+                        "Complete your payment in the Razorpay window..."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Razorpay Payment Integration */}
           {isRazorpayPaymentOpen && (
@@ -2794,6 +2925,7 @@ export default function CheckoutClient() {
               onSuccess={handleRazorpayPaymentSuccess}
               onFailure={handleRazorpayPaymentFailure}
               onClose={handleRazorpayPaymentClose}
+              onOpen={() => setPaymentStatus("waiting_confirmation")}
             />
           )}
 

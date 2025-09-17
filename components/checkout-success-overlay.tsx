@@ -51,16 +51,13 @@ export default function CheckoutSuccessOverlay({
 
       setTimeout(() => {
         console.log("🚀 4 seconds elapsed - navigating now!");
-        console.log(
-          "Navigating to:",
-          `/checkout/confirmation?orderId=${orderId}`
-        );
+        console.log("Navigating to:", `/confirmation?orderId=${orderId}`);
 
         // Call completion callback
         onAnimationComplete();
 
         // Navigate immediately
-        window.location.href = `/checkout/confirmation?orderId=${orderId}`;
+        window.location.href = `/confirmation?orderId=${orderId}`;
       }, 4000);
     }
   }, [isVisible, animationStarted, orderId, router, onAnimationComplete]);

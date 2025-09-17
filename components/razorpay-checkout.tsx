@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface RazorpayCheckoutProps {
@@ -15,6 +15,7 @@ interface RazorpayCheckoutProps {
   onSuccess: (paymentData: any) => void;
   onFailure: (error: any) => void;
   onClose?: () => void;
+  onOpen?: () => void;
 }
 
 declare global {
@@ -31,11 +32,13 @@ export default function RazorpayCheckout({
   onSuccess,
   onFailure,
   onClose,
+  onOpen,
 }: RazorpayCheckoutProps) {
   const { toast } = useToast();
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    let isInitialized = false;
+    if (isInitialized) return;
 
     const loadRazorpayScript = () => {
       return new Promise((resolve) => {
@@ -49,7 +52,7 @@ export default function RazorpayCheckout({
 
     const initializePayment = async () => {
       if (isInitialized) return;
-      isInitialized = true;
+      setIsInitialized(true);
 
       try {
         // Load Razorpay script
@@ -58,134 +61,95 @@ export default function RazorpayCheckout({
           throw new Error("Failed to load Razorpay script");
         }
 
-        // Create Razorpay order
-        const orderResponse = await fetch("/api/payment/order", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: Math.round(amount * 100), // Convert to paise
+        // Get checkout session to check for pre-created Razorpay order
+        const checkoutResponse = await fetch(`/api/checkout/${checkoutId}`);
+        if (!checkoutResponse.ok) {
+          throw new Error("Failed to get checkout session");
+        }
+
+        const checkoutResponseData = await checkoutResponse.json();
+        const checkoutSession = checkoutResponseData.checkout;
+        let orderData;
+
+        if (checkoutSession.razorpayOrderId) {
+          // Use pre-created Razorpay order for instant modal
+          console.log(
+            "Using pre-created Razorpay order:",
+            checkoutSession.razorpayOrderId
+          );
+          orderData = {
+            id: checkoutSession.razorpayOrderId,
+            amount: Math.round(amount * 100),
             currency,
-            checkoutId,
-          }),
-        });
+            receipt: `rcpt_${checkoutId.substring(0, 8)}_precreated`,
+            status: "created",
+          };
+        } else {
+          // Fallback: Create Razorpay order on demand (old behavior)
+          console.log("No pre-created order found, creating on demand");
+          const orderResponse = await fetch("/api/payment/order", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amount: Math.round(amount * 100), // Convert to paise
+              currency,
+              checkoutId,
+            }),
+          });
 
-        if (!orderResponse.ok) {
-          const errorData = await orderResponse.json();
+          if (!orderResponse.ok) {
+            const errorData = await orderResponse.json();
 
-          // If payment is already in progress, reset it and try again
-          if (
-            orderResponse.status === 409 &&
-            errorData.error === "Payment already in progress"
-          ) {
-            console.log("Payment already in progress, resetting...");
+            // If payment is already in progress, reset it and try again
+            if (
+              orderResponse.status === 409 &&
+              errorData.error === "Payment already in progress"
+            ) {
+              console.log("Payment already in progress, resetting...");
 
-            // Reset payment status
-            const resetResponse = await fetch("/api/payment/reset", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ checkoutId }),
-            });
-
-            if (resetResponse.ok) {
-              // Try creating order again
-              const retryOrderResponse = await fetch("/api/payment/order", {
+              // Reset payment status
+              const resetResponse = await fetch("/api/payment/reset", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                  amount: Math.round(amount * 100),
-                  currency,
-                  checkoutId,
-                }),
+                body: JSON.stringify({ checkoutId }),
               });
 
-              if (retryOrderResponse.ok) {
-                const retryOrderData = await retryOrderResponse.json();
-                // Continue with the retry order data
-                const orderData = retryOrderData;
-
-                // Configure Razorpay options with retry data
-                const options = {
-                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                  amount: orderData.amount,
-                  currency: orderData.currency,
-                  name: "Duchess Pastries",
-                  description: "Order Payment",
-                  order_id: orderData.id,
-                  prefill: {
-                    name: userDetails.name,
-                    email: userDetails.email,
-                    contact: userDetails.phone,
+              if (resetResponse.ok) {
+                // Try creating order again
+                const retryOrderResponse = await fetch("/api/payment/order", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
                   },
-                  theme: {
-                    color: "#2664eb",
-                  },
-                  handler: async function (response: any) {
-                    try {
-                      // Verify payment
-                      const verifyResponse = await fetch(
-                        "/api/payment/verify",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            checkoutId,
-                          }),
-                        }
-                      );
+                  body: JSON.stringify({
+                    amount: Math.round(amount * 100),
+                    currency,
+                    checkoutId,
+                  }),
+                });
 
-                      const verifyData = await verifyResponse.json();
-
-                      if (verifyData.success) {
-                        onSuccess({
-                          orderId: verifyData.orderId,
-                          paymentId: verifyData.paymentId,
-                          razorpay_order_id: response.razorpay_order_id,
-                          razorpay_payment_id: response.razorpay_payment_id,
-                        });
-                      } else {
-                        onFailure(
-                          new Error(
-                            verifyData.error || "Payment verification failed"
-                          )
-                        );
-                      }
-                    } catch (error) {
-                      console.error("Payment verification error:", error);
-                      onFailure(error);
-                    }
-                  },
-                  modal: {
-                    ondismiss: function () {
-                      if (onClose) {
-                        onClose();
-                      }
-                    },
-                  },
-                };
-
-                // Open Razorpay checkout
-                const razorpay = new window.Razorpay(options);
-                razorpay.open();
-                return; // Exit early since we handled the retry
+                if (retryOrderResponse.ok) {
+                  const retryOrderData = await retryOrderResponse.json();
+                  orderData = retryOrderData;
+                } else {
+                  throw new Error("Failed to create payment order after retry");
+                }
+              } else {
+                throw new Error("Failed to reset payment status");
               }
+            } else {
+              throw new Error(
+                errorData.error || "Failed to create payment order"
+              );
             }
+          } else {
+            orderData = await orderResponse.json();
           }
-
-          throw new Error(errorData.error || "Failed to create payment order");
         }
-
-        const orderData = await orderResponse.json();
 
         // Configure Razorpay options
         const options = {
@@ -252,6 +216,11 @@ export default function RazorpayCheckout({
         // Open Razorpay checkout
         const razorpay = new window.Razorpay(options);
         razorpay.open();
+
+        // Call onOpen callback to update parent component status
+        if (onOpen) {
+          onOpen();
+        }
       } catch (error) {
         console.error("Razorpay initialization error:", error);
         onFailure(error);
@@ -263,7 +232,7 @@ export default function RazorpayCheckout({
 
     // Cleanup function
     return () => {
-      isInitialized = false;
+      setIsInitialized(false);
     };
   }, [
     amount,
