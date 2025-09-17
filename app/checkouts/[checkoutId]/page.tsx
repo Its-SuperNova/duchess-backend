@@ -80,6 +80,7 @@ import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
 import CheckoutSkeleton from "@/components/checkout-skeleton";
 import CheckoutExpiryScreen from "@/components/checkout-expiry-screen";
 import RazorpayCheckout from "@/components/razorpay-checkout";
+import RazorpayCheckoutV2 from "@/components/razorpay-checkout-v2";
 import React from "react";
 
 export default function CheckoutClient() {
@@ -2919,9 +2920,9 @@ export default function CheckoutClient() {
             </div>
           )}
 
-          {/* Razorpay Payment Integration */}
+          {/* Razorpay Payment Integration - V2 (Bulletproof) */}
           {isRazorpayPaymentOpen && (
-            <RazorpayCheckout
+            <RazorpayCheckoutV2
               amount={total}
               currency="INR"
               checkoutId={checkoutId}
