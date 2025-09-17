@@ -81,6 +81,8 @@ import CheckoutSkeleton from "@/components/checkout-skeleton";
 import CheckoutExpiryScreen from "@/components/checkout-expiry-screen";
 import RazorpayCheckout from "@/components/razorpay-checkout";
 import RazorpayCheckoutV2 from "@/components/razorpay-checkout-v2";
+import CustomPaymentFlow from "@/components/custom-payment-flow";
+import RazorpayTimeoutFix from "@/components/razorpay-timeout-fix";
 import React from "react";
 
 export default function CheckoutClient() {
@@ -2920,9 +2922,9 @@ export default function CheckoutClient() {
             </div>
           )}
 
-          {/* Razorpay Payment Integration - V2 (Bulletproof) */}
+          {/* Razorpay Timeout Fix - Intercepts SDK Errors */}
           {isRazorpayPaymentOpen && (
-            <RazorpayCheckoutV2
+            <RazorpayTimeoutFix
               amount={total}
               currency="INR"
               checkoutId={checkoutId}

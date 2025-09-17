@@ -57,6 +57,7 @@ export class PaymentMonitor {
       polling_timeout: "⏰",
       webhook_received: "🔔",
       confirming_screen_shown: "⏳",
+      pending_screen_shown: "🔄",
     };
     return emojiMap[event] || "📊";
   }
