@@ -36,6 +36,67 @@ export default function RazorpayCheckout({
 }: RazorpayCheckoutProps) {
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(
+    null
+  );
+
+  // Payment polling function to check payment status
+  const startPaymentPolling = (orderId: string) => {
+    console.log("Starting payment polling for order:", orderId);
+
+    const pollPaymentStatus = async () => {
+      try {
+        const response = await fetch(
+          `/api/payment/status?orderId=${orderId}&checkoutId=${checkoutId}`
+        );
+        const data = await response.json();
+
+        if (response.ok && data.status === "paid") {
+          console.log("Payment detected via polling:", data);
+          // Clear polling interval
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
+          // Call success handler
+          onSuccess(data);
+          // Call onClose to close the modal
+          if (onClose) {
+            onClose();
+          }
+        }
+      } catch (error) {
+        console.error("Payment polling error:", error);
+      }
+    };
+
+    // Start polling every 3 seconds
+    const interval = setInterval(pollPaymentStatus, 3000);
+    setPollingInterval(interval);
+
+    // Stop polling after 2 minutes and show failure if no payment detected
+    setTimeout(() => {
+      if (interval) {
+        clearInterval(interval);
+        setPollingInterval(null);
+        console.log("Payment polling timeout - no payment detected");
+        // Call failure handler if no payment was detected
+        onFailure(new Error("Payment not completed. Please try again."));
+        if (onClose) {
+          onClose();
+        }
+      }
+    }, 120000); // 2 minutes
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   useEffect(() => {
     if (isInitialized) return;
@@ -171,6 +232,12 @@ export default function RazorpayCheckout({
             try {
               console.log("Razorpay response received:", response);
 
+              // Stop polling since we have direct payment confirmation
+              if (pollingInterval) {
+                clearInterval(pollingInterval);
+                setPollingInterval(null);
+              }
+
               // Verify payment
               const verifyResponse = await fetch("/api/payment/verify", {
                 method: "POST",
@@ -206,9 +273,17 @@ export default function RazorpayCheckout({
           },
           modal: {
             ondismiss: function () {
-              if (onClose) {
-                onClose();
+              console.log(
+                "Razorpay modal dismissed - user returned from external app"
+              );
+
+              // Start payment polling to check if payment was completed
+              if (orderData && orderData.id) {
+                startPaymentPolling(orderData.id);
               }
+
+              // Don't call onClose immediately - wait for polling result
+              // onClose will be called by polling success/failure
             },
           },
         };
