@@ -282,7 +282,7 @@ export default function RazorpayCheckoutV2({
               paymentMonitor.logEvent({
                 event: "modal_dismissed",
                 checkoutId,
-                orderId: orderIdRef.current,
+                orderId: orderIdRef.current || undefined,
                 amount,
                 metadata: { reason: "user_returned_from_external_app" },
               });
@@ -321,7 +321,7 @@ export default function RazorpayCheckoutV2({
         paymentMonitor.logEvent({
           event: "razorpay_opened",
           checkoutId,
-          orderId: orderIdRef.current,
+          orderId: orderIdRef.current || undefined,
           amount,
           metadata: { orderData },
         });
