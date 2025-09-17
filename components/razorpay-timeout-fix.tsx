@@ -39,9 +39,11 @@ export default function RazorpayTimeoutFix({
   const [isInitialized, setIsInitialized] = useState(false);
   const [showPendingScreen, setShowPendingScreen] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [modalOpened, setModalOpened] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const razorpayInstanceRef = useRef<any>(null);
+  const modalReloadPrevented = useRef(false);
 
   const log = (message: string, data?: any) => {
     console.log(`[RazorpayTimeoutFix] ${message}`, data || "");
@@ -155,7 +157,7 @@ export default function RazorpayTimeoutFix({
 
   // Initialize Razorpay with event interception
   useEffect(() => {
-    if (isInitialized) return;
+    if (isInitialized || modalReloadPrevented.current) return;
 
     const loadRazorpayScript = () => {
       return new Promise((resolve) => {
@@ -288,11 +290,12 @@ export default function RazorpayTimeoutFix({
           },
           modal: {
             ondismiss: function () {
-              log("Razorpay modal dismissed");
+              log("Razorpay modal dismissed - user returned from external app");
 
-              // Start polling when user returns from external app
+              // Prevent modal from reloading by not calling onClose immediately
+              // Instead, show our custom pending screen and start polling
               if (orderData.id && !pollingRef.current) {
-                startPaymentPolling(orderData.id);
+                showCustomPendingScreen(orderData.id);
               }
             },
           },
@@ -318,6 +321,8 @@ export default function RazorpayTimeoutFix({
 
         // Open Razorpay
         razorpayInstanceRef.current.open();
+        setModalOpened(true);
+        modalReloadPrevented.current = true; // Prevent modal reload
         log("Razorpay modal opened with timeout fix");
 
         // Log Razorpay opened
@@ -356,6 +361,36 @@ export default function RazorpayTimeoutFix({
     onOpen,
     onClose,
   ]);
+
+  // Listen for page visibility changes (when user returns from external app)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        modalOpened &&
+        orderId &&
+        !pollingRef.current
+      ) {
+        log("User returned to browser - starting payment polling");
+        showCustomPendingScreen(orderId);
+      }
+    };
+
+    const handleWindowFocus = () => {
+      if (modalOpened && orderId && !pollingRef.current) {
+        log("Window focused - starting payment polling");
+        showCustomPendingScreen(orderId);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [modalOpened, orderId]);
 
   // Custom pending screen to replace Razorpay's error modal
   if (showPendingScreen) {
