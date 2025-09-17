@@ -38,6 +38,7 @@ export default function RazorpayCheckoutV2({
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
+  const [showConfirmingScreen, setShowConfirmingScreen] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const razorpayInstanceRef = useRef<any>(null);
@@ -46,6 +47,31 @@ export default function RazorpayCheckoutV2({
   // Comprehensive logging for debugging
   const log = (message: string, data?: any) => {
     console.log(`[RazorpayV2] ${message}`, data || "");
+  };
+
+  // Show custom confirming screen instead of Razorpay's error modal
+  const showConfirmingScreen = () => {
+    log("Showing custom confirming screen");
+    setShowConfirmingScreen(true);
+
+    // Log the event
+    paymentMonitor.logEvent({
+      event: "confirming_screen_shown",
+      checkoutId,
+      orderId: orderIdRef.current || undefined,
+      amount,
+      metadata: { reason: "razorpay_error_intercepted" },
+    });
+
+    // Auto-hide confirming screen after 2 minutes if no payment detected
+    setTimeout(() => {
+      if (showConfirmingScreen) {
+        log("Confirming screen timeout - hiding screen");
+        setShowConfirmingScreen(false);
+        onFailure(new Error("Payment confirmation timeout. Please try again."));
+        if (onClose) onClose();
+      }
+    }, 120000); // 2 minutes
   };
 
   // Cleanup function
@@ -106,6 +132,9 @@ export default function RazorpayCheckoutV2({
             metadata: { source: data.source, pollCount },
           });
 
+          // Hide confirming screen
+          setShowConfirmingScreen(false);
+
           cleanup();
           onSuccess(data);
           if (onClose) onClose();
@@ -115,6 +144,7 @@ export default function RazorpayCheckoutV2({
         // Stop polling after max attempts
         if (pollCount >= maxPolls) {
           log("Polling timeout - no payment detected");
+          setShowConfirmingScreen(false);
           cleanup();
           onFailure(new Error("Payment not completed. Please try again."));
           if (onClose) onClose();
@@ -124,11 +154,14 @@ export default function RazorpayCheckoutV2({
       }
     };
 
-    // Start with aggressive polling (every 500ms for first 30 seconds, then every 2 seconds)
+    // Start with ultra-aggressive polling (every 200ms for first 10 seconds, then 500ms for 20 seconds, then 2 seconds)
     const startAggressive = () => {
       pollPayment();
-      if (pollCount < 30) {
-        // First 30 attempts: every 500ms
+      if (pollCount < 50) {
+        // First 50 attempts: every 200ms (ultra-aggressive)
+        pollingRef.current = setTimeout(startAggressive, 200);
+      } else if (pollCount < 100) {
+        // Next 50 attempts: every 500ms
         pollingRef.current = setTimeout(startAggressive, 500);
       } else {
         // Remaining attempts: every 2 seconds
@@ -292,6 +325,49 @@ export default function RazorpayCheckoutV2({
                 startAggressivePolling(orderIdRef.current);
               }
 
+              // Override Razorpay's error modal by checking payment status immediately
+              setTimeout(async () => {
+                if (orderIdRef.current) {
+                  try {
+                    const response = await fetch(
+                      `/api/payment/status?orderId=${orderIdRef.current}&checkoutId=${checkoutId}`
+                    );
+                    const data = await response.json();
+
+                    if (data.status === "paid") {
+                      log(
+                        "Payment confirmed on modal dismiss - overriding error"
+                      );
+                      paymentMonitor.logEvent({
+                        event: "payment_detected",
+                        checkoutId,
+                        orderId: orderIdRef.current,
+                        amount,
+                        metadata: { source: "immediate_check", override: true },
+                      });
+
+                      // Hide any Razorpay error modals
+                      const errorModals = document.querySelectorAll(
+                        '[data-razorpay-error], .razorpay-error, [class*="error"]'
+                      );
+                      errorModals.forEach((modal) => {
+                        if (modal instanceof HTMLElement) {
+                          modal.style.display = "none";
+                          modal.remove();
+                        }
+                      });
+
+                      cleanup();
+                      onSuccess(data);
+                      if (onClose) onClose();
+                      return;
+                    }
+                  } catch (error) {
+                    log("Immediate payment check failed", error);
+                  }
+                }
+              }, 500); // Check after 500ms
+
               // Don't call onClose immediately - let polling handle it
             },
           },
@@ -304,14 +380,39 @@ export default function RazorpayCheckoutV2({
         // Create and open Razorpay instance
         razorpayInstanceRef.current = new window.Razorpay(options);
 
+        // Intercept Razorpay's error events to prevent error modal
+        razorpayInstanceRef.current.on("payment.failed", (response: any) => {
+          log("Razorpay payment.failed event intercepted", response);
+
+          // Show our custom confirming screen instead of Razorpay's error
+          showConfirmingScreen();
+
+          // Start aggressive polling to check if payment actually succeeded
+          if (orderIdRef.current && !pollingRef.current) {
+            startAggressivePolling(orderIdRef.current);
+          }
+        });
+
+        razorpayInstanceRef.current.on("checkout.error", (error: any) => {
+          log("Razorpay checkout.error event intercepted", error);
+
+          // Show our custom confirming screen instead of Razorpay's error
+          showConfirmingScreen();
+
+          // Start aggressive polling to check if payment actually succeeded
+          if (orderIdRef.current && !pollingRef.current) {
+            startAggressivePolling(orderIdRef.current);
+          }
+        });
+
         // Start pre-emptive polling (in case user goes to external app immediately)
         if (orderIdRef.current) {
-          // Start polling after 3 seconds (give Razorpay time to initialize)
+          // Start polling after 1 second (immediate detection)
           timeoutRef.current = setTimeout(() => {
             if (!pollingRef.current) {
               startAggressivePolling(orderIdRef.current!);
             }
-          }, 3000);
+          }, 1000);
         }
 
         razorpayInstanceRef.current.open();
@@ -325,6 +426,43 @@ export default function RazorpayCheckoutV2({
           amount,
           metadata: { orderData },
         });
+
+        // Set up error modal watcher
+        const errorModalWatcher = setInterval(() => {
+          if (orderIdRef.current) {
+            // Check for Razorpay error modals
+            const errorModals = document.querySelectorAll(
+              '[data-razorpay-error], .razorpay-error, [class*="error"]'
+            );
+            if (errorModals.length > 0) {
+              // Check if payment is actually successful
+              fetch(
+                `/api/payment/status?orderId=${orderIdRef.current}&checkoutId=${checkoutId}`
+              )
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.status === "paid") {
+                    log(
+                      "Error modal detected but payment is successful - removing error modal"
+                    );
+                    errorModals.forEach((modal) => {
+                      if (modal instanceof HTMLElement) {
+                        modal.style.display = "none";
+                        modal.remove();
+                      }
+                    });
+                    clearInterval(errorModalWatcher);
+                  }
+                })
+                .catch((error) => log("Error checking payment status", error));
+            }
+          }
+        }, 100); // Check every 100ms
+
+        // Clean up error modal watcher after 2 minutes
+        setTimeout(() => {
+          clearInterval(errorModalWatcher);
+        }, 120000);
 
         // Call onOpen callback
         if (onOpen) {
@@ -353,6 +491,33 @@ export default function RazorpayCheckoutV2({
     onOpen,
     onClose,
   ]);
+
+  // Custom confirming screen to replace Razorpay's error modal
+  if (showConfirmingScreen) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-[22px] p-8 max-w-sm mx-4 text-center">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500"></div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                ✅ Payment Initiated
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Confirming with bank... Please wait.
+              </p>
+              <div className="text-xs text-blue-600 space-y-1">
+                <p>💡 Your payment is being processed</p>
+                <p>• This may take up to 2 minutes</p>
+                <p>• Please don't close this window</p>
+                <p>• We'll redirect you automatically</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // This component doesn't render anything - it's just for payment logic
   return null;
