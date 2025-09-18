@@ -2473,28 +2473,18 @@ export default function CheckoutClient() {
           {/* Fixed bottom Place Order bar (mobile only) */}
           <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
             <div className="mx-auto px-4 py-3 w-full max-w-[1200px]">
-              <RazorpayButton
-                amount={total}
-                currency="INR"
-                checkoutId={checkoutId}
-                userDetails={{
-                  name: contactInfo.name,
-                  email: session?.user?.email || "guest@example.com",
-                  phone: contactInfo.phone,
-                }}
-                onSuccess={handleRazorpayPaymentSuccess}
-                onFailure={handleRazorpayPaymentFailure}
-                onClose={handleRazorpayPaymentClose}
-                onModalOpening={handleRazorpayModalOpening}
-                onPaymentVerifying={handleRazorpayPaymentVerifying}
+              <Button
+                onClick={() => setIsPaymentDialogOpen(true)}
                 disabled={
                   !addressText ||
                   addressText === "2nd street, Barathipuram, Kannampalayam" ||
                   !contactInfo.name ||
                   !contactInfo.phone
                 }
-                className="w-full"
-              />
+                className="w-full bg-primary hover:bg-primary/90 text-white rounded-[18px] h-[48px] text-[16px] font-medium"
+              >
+                Proceed to Payment
+              </Button>
             </div>
           </div>
 
