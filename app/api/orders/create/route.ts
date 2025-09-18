@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       // Legacy fields for backward compatibility
       contactInfo,
       customizationOptions,
+      items,
       deliveryAddress,
       scheduledDelivery,
       specialInstructions,
@@ -386,7 +387,7 @@ export async function POST(request: NextRequest) {
     console.log("Attempting to insert order items...");
 
     // Enhanced order items with new schema
-    const orderItemsPayload = cartItems.map((item) => ({
+    const orderItemsPayload = cartItems.map((item: any) => ({
       order_id: order.id,
       product_id: item.product_id,
 
