@@ -16,7 +16,6 @@
     "cleanup:payments:pending": "node scripts/cleanup-payments.js --status pending",
     "update:delivery-fees": "node scripts/update-delivery-fees.js",
     "update:delivery-fees:confirm": "node scripts/update-delivery-fees.js --confirm",
-    "test:razorpay": "node scripts/test-razorpay.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

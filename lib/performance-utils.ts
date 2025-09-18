@@ -66,10 +66,6 @@ export function optimizeCheckoutFlow(): void {
   // and cannot be safely prefetched. Instead, we focus on other optimizations.
 
   // DNS prefetch for external domains
-  const dnsPrefetch = document.createElement("link");
-  dnsPrefetch.rel = "dns-prefetch";
-  dnsPrefetch.href = "https://api.razorpay.com";
-  document.head.appendChild(dnsPrefetch);
 }
 
 // Performance monitoring utilities

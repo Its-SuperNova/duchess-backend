@@ -79,10 +79,7 @@ import PerformanceMonitor from "@/components/PerformanceMonitor";
 import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
 import CheckoutSkeleton from "@/components/checkout-skeleton";
 import CheckoutExpiryScreen from "@/components/checkout-expiry-screen";
-import RazorpayCheckout from "@/components/razorpay-checkout";
-import RazorpayCheckoutV2 from "@/components/razorpay-checkout-v2";
-import CustomPaymentFlow from "@/components/custom-payment-flow";
-import RazorpayTimeoutFix from "@/components/razorpay-timeout-fix";
+import RazorpayButton from "@/components/RazorpayButton";
 import React from "react";
 
 export default function CheckoutClient() {
@@ -296,21 +293,12 @@ export default function CheckoutClient() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<
-    | "idle"
-    | "processing"
-    | "opening_razorpay"
-    | "waiting_confirmation"
-    | "success"
-    | "failed"
+    "idle" | "processing" | "opening" | "verifying" | "success" | "failed"
   >("idle");
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [showFailureOverlay, setShowFailureOverlay] = useState(false);
   const [failureCountdown, setFailureCountdown] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
-
-  // Razorpay payment state
-  const [isRazorpayPaymentOpen, setIsRazorpayPaymentOpen] = useState(false);
-  const [razorpayPaymentData, setRazorpayPaymentData] = useState<any>(null);
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -821,9 +809,19 @@ export default function CheckoutClient() {
         throw new Error("Failed to update checkout session");
       }
 
-      // Keep dialog open and start Razorpay payment
-      setPaymentStatus("opening_razorpay");
-      setIsRazorpayPaymentOpen(true);
+      // Update payment status to processing
+      await fetch(`/api/checkout/${checkoutId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentStatus: "processing",
+        }),
+      });
+
+      // Keep dialog open for payment
+      setPaymentStatus("processing");
 
       console.log("Checkout session updated:", updateData);
     } catch (err) {
@@ -844,13 +842,13 @@ export default function CheckoutClient() {
     console.log("Razorpay payment success:", paymentData);
 
     try {
-      // Close Razorpay payment dialog
-      setIsRazorpayPaymentOpen(false);
+      // Close main payment dialog, show success immediately
+      setIsPaymentDialogOpen(false);
       setPaymentStatus("success");
-
-      // Set success order ID and show success overlay
-      setSuccessOrderId(paymentData.orderId);
       setShowSuccessOverlay(true);
+
+      // Use the real order ID from the database
+      setSuccessOrderId(paymentData.orderId);
 
       // Clear cart after successful payment
       clearCart();
@@ -861,15 +859,13 @@ export default function CheckoutClient() {
         variant: "default",
       });
 
-      // Close the payment dialog after a delay to show success message
+      // Redirect to confirmation page after delay
       setTimeout(() => {
-        setIsPaymentDialogOpen(false);
-        setPaymentStatus("idle");
-        setIsPaymentInProgress(false);
-      }, 2000);
+        router.push(`/confirmation?orderId=${paymentData.orderId}`);
+      }, 1000);
     } catch (error) {
       console.error("Error handling payment success:", error);
-      handleRazorpayPaymentFailure(error);
+      handleRazorpayPaymentFailure("Payment processing error");
     }
   };
 
@@ -877,22 +873,9 @@ export default function CheckoutClient() {
   const handleRazorpayPaymentFailure = async (error: any) => {
     console.error("Razorpay payment failed:", error);
 
-    // Close Razorpay payment dialog
-    setIsRazorpayPaymentOpen(false);
+    // Close main payment dialog
+    setIsPaymentDialogOpen(false);
     setPaymentStatus("failed");
-
-    // Reset payment status on failure
-    try {
-      await fetch("/api/payment/reset", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ checkoutId }),
-      });
-    } catch (resetError) {
-      console.error("Failed to reset payment status:", resetError);
-    }
 
     toast({
       title: "Payment Failed",
@@ -904,226 +887,23 @@ export default function CheckoutClient() {
 
   // Razorpay payment close handler
   const handleRazorpayPaymentClose = async () => {
-    setIsRazorpayPaymentOpen(false);
+    setIsPaymentDialogOpen(false);
     setIsPaymentInProgress(false);
 
     // Reset payment status when user cancels
-    try {
-      await fetch("/api/payment/reset", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ checkoutId }),
-      });
-    } catch (error) {
-      console.error("Failed to reset payment status:", error);
-    }
+    setPaymentStatus("idle");
   };
 
-  // Dummy payment success handler
-  const handleDummyPaymentSuccess = async () => {
-    // Check if payment is already in progress or completed
-    if (checkoutData?.paymentStatus === "processing") {
-      toast({
-        title: "Payment in Progress",
-        description: "Please wait, your payment is being processed.",
-        variant: "default",
-      });
-      return;
-    }
-
-    if (checkoutData?.paymentStatus === "paid") {
-      toast({
-        title: "Payment Already Completed",
-        description: "This order has already been paid for.",
-        variant: "default",
-      });
-      return;
-    }
-
-    // Update payment status to processing
-    try {
-      await fetch(`/api/checkout/${checkoutId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paymentStatus: "processing",
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to update payment status:", error);
-    }
-
-    // Dummy payment dialog removed - using Razorpay now
-    setIsPaymentInProgress(false);
-
-    try {
-      // Find the selected address to get the address ID
-      const selectedAddressObj = addresses.find(
-        (addr) => addr.full_address === addressText
-      );
-
-      if (!selectedAddressObj) {
-        throw new Error("No valid address selected");
-      }
-
-      // Create a real order in the database
-      const orderData = {
-        // Checkout session
-        checkoutId: checkoutId,
-
-        // Financial information
-        itemTotal: checkoutData ? checkoutData.subtotal : getSubtotal(),
-        subtotalAmount: checkoutData ? checkoutData.subtotal : getSubtotal(),
-        discountAmount: checkoutData ? checkoutData.discount : 0,
-        deliveryFee: checkoutData ? checkoutData.deliveryFee : 0,
-        deliveryCharge: checkoutData ? checkoutData.deliveryFee : 0,
-        totalAmount: checkoutData ? checkoutData.totalAmount : total,
-        cgstAmount: checkoutData ? checkoutData.cgstAmount : 0,
-        sgstAmount: checkoutData ? checkoutData.sgstAmount : 0,
-
-        // Contact and delivery
-        contactName: contactInfo.name,
-        contactNumber: contactInfo.phone,
-        contactAlternateNumber: contactInfo.alternatePhone || "", // Use empty string to prevent address fallback
-        deliveryAddressId: selectedAddressObj.id, // Required field
-        addressText: addressText,
-
-        // Override address data to use our contact info instead of address defaults
-        contactInfo: {
-          name: contactInfo.name,
-          phone: contactInfo.phone,
-          alternatePhone: contactInfo.alternatePhone || "",
-        },
-
-        // Special requests
-        notes: note,
-        note: note, // fallback
-        isKnife: customizationOptions.addKnife,
-        isCandle: customizationOptions.addCandles,
-        isTextOnCard: customizationOptions.addMessageCard,
-        textOnCard: messageCardText,
-
-        // Delivery timing
-        deliveryTiming: "same_day",
-        deliveryDate: new Date().toISOString().split("T")[0],
-        deliveryTimeSlot: "evening",
-        estimatedDeliveryTime: null, // Don't send string to avoid timestamp error
-        estimatedTimeDelivery: null, // Don't send string, let API handle it
-        distance: selectedAddressObj.distance || 0,
-        duration: selectedAddressObj.duration || 0,
-        deliveryZone: "Zone A",
-
-        // Payment information
-        paymentMethod: "online",
-        paymentStatus: "paid",
-        paymentTransactionId: `TXN-${Date.now()}`,
-
-        // Order status
-        orderStatus: "confirmed",
-        status: "confirmed",
-
-        // Items
-        items: checkoutData
-          ? checkoutData.items
-          : cart.map((item) => ({
-              product_id: item.id.toString(),
-              product_name: item.name,
-              unit_price: item.price,
-              quantity: item.quantity,
-              product_image: item.image,
-              variant: item.variant || item.category || "",
-              customization_options: {},
-              cake_text: item.cakeText || null,
-              cake_flavor: null,
-              cake_size: null,
-              cake_weight: null,
-              item_has_knife: item.addKnife || false,
-              item_has_candle: item.addCandles || false,
-              item_has_message_card: item.addMessageCard || false,
-              item_message_card_text: item.giftCardText || null,
-            })),
-
-        // Coupon
-        couponCode: selectedCoupon,
-        isCoupon: !!selectedCoupon,
-      };
-
-      console.log("Creating order with data:", orderData);
-
-      const response = await fetch("/api/orders/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create order");
-      }
-
-      const result = await response.json();
-      console.log("Order created successfully:", result);
-
-      // Note: Checkout session is now automatically invalidated by the API
-      // No need to manually update payment status as the session is deleted
-
-      // Use the real order ID from the database
-      setSuccessOrderId(result.orderId);
-      setShowSuccessOverlay(true);
-    } catch (error) {
-      console.error("Error creating order:", error);
-
-      // Update payment status to failed
-      try {
-        await fetch(`/api/checkout/${checkoutId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            paymentStatus: "failed",
-          }),
-        });
-      } catch (statusError) {
-        console.error(
-          "Failed to update payment status to failed:",
-          statusError
-        );
-      }
-
-      toast({
-        title: "Error",
-        description: "Failed to create order. Please try again.",
-        variant: "destructive",
-      });
-    }
+  // Razorpay modal opening handler
+  const handleRazorpayModalOpening = () => {
+    console.log("Razorpay modal is opening...");
+    setPaymentStatus("opening");
   };
 
-  // Dummy payment failure handler
-  const handleDummyPaymentFailure = async () => {
-    // Update payment status to failed
-    try {
-      await fetch(`/api/checkout/${checkoutId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paymentStatus: "failed",
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to update payment status to failed:", error);
-    }
-
-    // Dummy payment dialog removed - using Razorpay now
-    setIsPaymentInProgress(false);
-    setShowFailureOverlay(true);
+  // Razorpay payment verification handler
+  const handleRazorpayPaymentVerifying = () => {
+    console.log("Verifying Razorpay payment...");
+    setPaymentStatus("verifying");
   };
 
   // Handle animation completion
@@ -2391,6 +2171,7 @@ export default function CheckoutClient() {
                                     checkoutData ? item.product_name : item.name
                                   }
                                   fill
+                                  sizes="88px"
                                   className="object-cover"
                                 />
                               </div>
@@ -2692,24 +2473,34 @@ export default function CheckoutClient() {
           {/* Fixed bottom Place Order bar (mobile only) */}
           <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 lg:hidden">
             <div className="mx-auto px-4 py-3 w-full max-w-[1200px]">
-              <Button
-                className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] mb-2 text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              <RazorpayButton
+                amount={total}
+                currency="INR"
+                checkoutId={checkoutId}
+                userDetails={{
+                  name: contactInfo.name,
+                  email: session?.user?.email || "guest@example.com",
+                  phone: contactInfo.phone,
+                }}
+                onSuccess={handleRazorpayPaymentSuccess}
+                onFailure={handleRazorpayPaymentFailure}
+                onClose={handleRazorpayPaymentClose}
+                onModalOpening={handleRazorpayModalOpening}
+                onPaymentVerifying={handleRazorpayPaymentVerifying}
                 disabled={
                   !addressText ||
                   addressText === "2nd street, Barathipuram, Kannampalayam" ||
                   !contactInfo.name ||
                   !contactInfo.phone
                 }
-                onClick={() => setIsPaymentDialogOpen(true)}
-              >
-                Proceed to Payment
-              </Button>
+                className="w-full"
+              />
             </div>
           </div>
 
           {/* Payment Confirmation Dialog */}
           <Dialog
-            open={isPaymentDialogOpen && !isRazorpayPaymentOpen}
+            open={isPaymentDialogOpen && paymentStatus !== "success"}
             onOpenChange={(open) => {
               // Only allow closing if payment is not in progress
               if (
@@ -2774,20 +2565,19 @@ export default function CheckoutClient() {
                   <div className="text-center">
                     <h3 className="text-lg font-medium text-gray-900">
                       {paymentStatus === "processing" && "Processing..."}
-                      {paymentStatus === "opening_razorpay" &&
-                        "Opening Razorpay..."}
-                      {paymentStatus === "waiting_confirmation" &&
-                        "Waiting for payment confirmation..."}
+                      {paymentStatus === "opening" &&
+                        "Opening Payment Gateway..."}
+                      {paymentStatus === "verifying" && "Verifying Payment..."}
                       {paymentStatus === "success" && "Payment successful!"}
                       {paymentStatus === "failed" && "Payment failed"}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       {paymentStatus === "processing" &&
                         "Please wait while we process your request..."}
-                      {paymentStatus === "opening_razorpay" &&
-                        "Preparing payment gateway..."}
-                      {paymentStatus === "waiting_confirmation" &&
-                        "Complete your payment in the Razorpay window..."}
+                      {paymentStatus === "opening" &&
+                        "Razorpay payment gateway is opening. Please wait..."}
+                      {paymentStatus === "verifying" &&
+                        "Verifying your payment with the bank. This may take a few seconds..."}
                       {paymentStatus === "success" &&
                         "Your order has been placed successfully!"}
                       {paymentStatus === "failed" &&
@@ -2857,13 +2647,23 @@ export default function CheckoutClient() {
 
               <DialogFooter className="gap-2">
                 {paymentStatus === "idle" && (
-                  <Button
-                    onClick={handlePaymentConfirm}
+                  <RazorpayButton
+                    amount={total}
+                    currency="INR"
+                    checkoutId={checkoutId}
+                    userDetails={{
+                      name: contactInfo.name,
+                      email: session?.user?.email || "guest@example.com",
+                      phone: contactInfo.phone,
+                    }}
+                    onSuccess={handleRazorpayPaymentSuccess}
+                    onFailure={handleRazorpayPaymentFailure}
+                    onClose={handleRazorpayPaymentClose}
+                    onModalOpening={handleRazorpayModalOpening}
+                    onPaymentVerifying={handleRazorpayPaymentVerifying}
                     disabled={isPaymentInProgress}
-                    className="bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
-                  >
-                    Proceed to Payment
-                  </Button>
+                    className="w-full"
+                  />
                 )}
                 {paymentStatus === "failed" && (
                   <div className="flex gap-2 w-full">
@@ -2892,57 +2692,6 @@ export default function CheckoutClient() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          {/* Payment Status Overlay - Shows when Razorpay is open */}
-          {isRazorpayPaymentOpen && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 pointer-events-none">
-              <div className="bg-white rounded-[22px] p-8 max-w-sm mx-4 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {paymentStatus === "opening_razorpay" &&
-                        "Opening Razorpay..."}
-                      {paymentStatus === "waiting_confirmation" &&
-                        "Waiting for payment confirmation..."}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {paymentStatus === "opening_razorpay" &&
-                        "Preparing payment gateway..."}
-                      {paymentStatus === "waiting_confirmation" &&
-                        "Complete your payment in the Razorpay window or external app..."}
-                    </p>
-                    {paymentStatus === "waiting_confirmation" && (
-                      <div className="text-xs text-blue-600 mt-2 space-y-1">
-                        <p>💡 If you paid via Google Pay:</p>
-                        <p>• Complete payment in the external app</p>
-                        <p>• Return to browser (ignore any error messages)</p>
-                        <p>• We'll detect your payment automatically</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Razorpay Timeout Fix - Intercepts SDK Errors */}
-          {isRazorpayPaymentOpen && (
-            <RazorpayTimeoutFix
-              amount={total}
-              currency="INR"
-              checkoutId={checkoutId}
-              userDetails={{
-                name: contactInfo.name,
-                email: session?.user?.email || "guest@example.com",
-                phone: contactInfo.phone,
-              }}
-              onSuccess={handleRazorpayPaymentSuccess}
-              onFailure={handleRazorpayPaymentFailure}
-              onClose={handleRazorpayPaymentClose}
-              onOpen={() => setPaymentStatus("waiting_confirmation")}
-            />
-          )}
 
           {/* Payment component removed - implement manually */}
         </div>

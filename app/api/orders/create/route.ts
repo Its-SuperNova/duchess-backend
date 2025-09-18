@@ -180,18 +180,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get cart items
-    const { data: cartItems, error: cartItemsError } = await supabase
-      .from("cart_items")
-      .select("*")
-      .eq("cart_id", cart.id);
+    // Get cart items or use items from request body
+    let cartItems = [];
 
-    if (cartItemsError) {
-      console.error("Failed to get cart items:", cartItemsError);
-      return NextResponse.json(
-        { error: "Failed to get cart items" },
-        { status: 500 }
-      );
+    if (items && items.length > 0) {
+      // Use items from request body (for dummy payment flow)
+      console.log("Using items from request body:", items);
+      cartItems = items;
+    } else {
+      // Fallback to database cart items
+      const { data: dbCartItems, error: cartItemsError } = await supabase
+        .from("cart_items")
+        .select("*")
+        .eq("cart_id", cart.id);
+
+      if (cartItemsError) {
+        console.error("Failed to get cart items:", cartItemsError);
+        return NextResponse.json(
+          { error: "Failed to get cart items" },
+          { status: 500 }
+        );
+      }
+
+      cartItems = dbCartItems || [];
     }
 
     if (!cartItems || cartItems.length === 0) {
@@ -401,7 +412,7 @@ export async function POST(request: NextRequest) {
       cake_size: item.cake_size || null,
       cake_weight: item.cake_weight || null,
 
-      // Additional services for this item
+      // Additional services for this item (handle both database and request body formats)
       item_has_knife: item.add_knife || item.item_has_knife || false,
       item_has_candle: item.add_candles || item.item_has_candle || false,
       item_has_message_card:

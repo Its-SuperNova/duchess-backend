@@ -56,9 +56,6 @@ export interface CheckoutSession {
   deliveryZone?: string;
   // Payment related fields
   paymentStatus?: "pending" | "processing" | "paid" | "failed" | "cancelled";
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
-  razorpaySignature?: string;
   paymentAttempts?: number;
   // Database order ID
   databaseOrderId?: string;
@@ -216,19 +213,13 @@ export class CheckoutStore {
   // Payment specific methods
   static async updatePaymentStatus(
     checkoutId: string,
-    status: CheckoutSession["paymentStatus"],
-    razorpayOrderId?: string,
-    razorpayPaymentId?: string,
-    razorpaySignature?: string
+    status: CheckoutSession["paymentStatus"]
   ): Promise<CheckoutSession | null> {
     try {
       // Try database storage first
       const dbResult = await CheckoutStoreDB.updatePaymentStatus(
         checkoutId,
-        status,
-        razorpayOrderId,
-        razorpayPaymentId,
-        razorpaySignature
+        status
       );
       if (dbResult) {
         return dbResult;
@@ -252,46 +243,7 @@ export class CheckoutStore {
       paymentAttempts: (session.paymentAttempts || 0) + 1,
     };
 
-    if (razorpayOrderId) {
-      updates.razorpayOrderId = razorpayOrderId;
-    }
-
-    if (razorpayPaymentId) {
-      updates.razorpayPaymentId = razorpayPaymentId;
-    }
-
-    if (razorpaySignature) {
-      updates.razorpaySignature = razorpaySignature;
-    }
-
     return this.updateSession(checkoutId, updates);
-  }
-
-  static async getSessionByRazorpayOrderId(
-    razorpayOrderId: string
-  ): Promise<CheckoutSession | null> {
-    try {
-      // Try database storage first
-      const dbResult = await CheckoutStoreDB.getSessionByRazorpayOrderId(
-        razorpayOrderId
-      );
-      if (dbResult) {
-        return dbResult;
-      }
-    } catch (error) {
-      console.error(
-        "Database getSessionByRazorpayOrderId failed, trying in-memory:",
-        error
-      );
-    }
-
-    // Fallback to in-memory storage
-    for (const session of checkoutSessions.values()) {
-      if (session.razorpayOrderId === razorpayOrderId) {
-        return session;
-      }
-    }
-    return null;
   }
 
   static async updateDatabaseOrderId(

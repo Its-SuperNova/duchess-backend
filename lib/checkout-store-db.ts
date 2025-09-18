@@ -64,7 +64,6 @@ export class CheckoutStoreDB {
       delivery_zone: data.deliveryZone,
       payment_status: "pending",
       payment_attempts: 0,
-      razorpay_order_id: null, // Will be updated when Razorpay order is created
       expires_at: expiresAt.toISOString(),
     });
 
@@ -124,9 +123,6 @@ export class CheckoutStoreDB {
       duration: data.duration,
       deliveryZone: data.delivery_zone,
       paymentStatus: data.payment_status,
-      razorpayOrderId: data.razorpay_order_id,
-      razorpayPaymentId: data.razorpay_payment_id,
-      razorpaySignature: data.razorpay_signature,
       paymentAttempts: data.payment_attempts,
       databaseOrderId: data.database_order_id,
       createdAt: data.created_at,
@@ -177,12 +173,6 @@ export class CheckoutStoreDB {
       updateData.delivery_zone = updates.deliveryZone;
     if (updates.paymentStatus !== undefined)
       updateData.payment_status = updates.paymentStatus;
-    if (updates.razorpayOrderId !== undefined)
-      updateData.razorpay_order_id = updates.razorpayOrderId;
-    if (updates.razorpayPaymentId !== undefined)
-      updateData.razorpay_payment_id = updates.razorpayPaymentId;
-    if (updates.razorpaySignature !== undefined)
-      updateData.razorpay_signature = updates.razorpaySignature;
     if (updates.paymentAttempts !== undefined)
       updateData.payment_attempts = updates.paymentAttempts;
     if (updates.databaseOrderId !== undefined)
@@ -229,10 +219,7 @@ export class CheckoutStoreDB {
   // Payment specific methods
   static async updatePaymentStatus(
     checkoutId: string,
-    status: CheckoutSession["paymentStatus"],
-    razorpayOrderId?: string,
-    razorpayPaymentId?: string,
-    razorpaySignature?: string
+    status: CheckoutSession["paymentStatus"]
   ): Promise<CheckoutSession | null> {
     const session = await this.getSession(checkoutId);
 
@@ -245,70 +232,7 @@ export class CheckoutStoreDB {
       paymentAttempts: (session.paymentAttempts || 0) + 1,
     };
 
-    if (razorpayOrderId) {
-      updates.razorpayOrderId = razorpayOrderId;
-    }
-
-    if (razorpayPaymentId) {
-      updates.razorpayPaymentId = razorpayPaymentId;
-    }
-
-    if (razorpaySignature) {
-      updates.razorpaySignature = razorpaySignature;
-    }
-
     return this.updateSession(checkoutId, updates);
-  }
-
-  static async getSessionByRazorpayOrderId(
-    razorpayOrderId: string
-  ): Promise<CheckoutSession | null> {
-    const { data, error } = await supabase
-      .from("checkout_sessions")
-      .select("*")
-      .eq("razorpay_order_id", razorpayOrderId)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    // Convert to CheckoutSession format
-    return {
-      checkoutId: data.checkout_id,
-      userId: data.user_id,
-      userEmail: data.user_email,
-      items: data.items,
-      subtotal: data.subtotal,
-      discount: data.discount,
-      deliveryFee: data.delivery_fee,
-      totalAmount: data.total_amount,
-      cgstAmount: data.cgst_amount,
-      sgstAmount: data.sgst_amount,
-      addressText: data.address_text,
-      selectedAddressId: data.selected_address_id,
-      couponCode: data.coupon_code,
-      customizationOptions: data.customization_options,
-      cakeText: data.cake_text,
-      messageCardText: data.message_card_text,
-      contactInfo: data.contact_info,
-      notes: data.notes,
-      deliveryTiming: data.delivery_timing,
-      deliveryDate: data.delivery_date,
-      deliveryTimeSlot: data.delivery_time_slot,
-      estimatedDeliveryTime: data.estimated_delivery_time,
-      distance: data.distance,
-      duration: data.duration,
-      deliveryZone: data.delivery_zone,
-      paymentStatus: data.payment_status,
-      razorpayOrderId: data.razorpay_order_id,
-      razorpayPaymentId: data.razorpay_payment_id,
-      razorpaySignature: data.razorpay_signature,
-      paymentAttempts: data.payment_attempts,
-      databaseOrderId: data.database_order_id,
-      createdAt: data.created_at,
-      expiresAt: data.expires_at,
-    };
   }
 
   static async updateDatabaseOrderId(

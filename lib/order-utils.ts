@@ -16,7 +16,7 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
   const {
     checkoutId,
     userEmail,
-    paymentMethod = "razorpay",
+    paymentMethod = "online",
     paymentStatus = "paid",
     paymentTransactionId,
     orderStatus = "confirmed",
@@ -150,7 +150,7 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     delivery_zone: checkoutSession.deliveryZone || null,
 
     // Payment information
-    payment_method: paymentMethod || "online", // Use "online" for Razorpay payments
+    payment_method: paymentMethod || "online",
     payment_transaction_id: paymentTransactionId || null,
   };
 
