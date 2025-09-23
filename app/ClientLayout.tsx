@@ -11,7 +11,6 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
-import { LayoutProvider } from "@/context/layout-context";
 import AuthNotification from "@/components/auth/auth-notification";
 import SWRProvider from "@/components/providers/swr-provider";
 import SplashScreen from "@/components/splashscreen";
@@ -190,9 +189,7 @@ export default function ClientLayout({
       <ThemeProvider>
         <FavoritesProvider>
           <CartProvider>
-            <LayoutProvider>
-              <ClientLayoutInner>{children}</ClientLayoutInner>
-            </LayoutProvider>
+            <ClientLayoutInner>{children}</ClientLayoutInner>
           </CartProvider>
         </FavoritesProvider>
       </ThemeProvider>

@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { isUserAdmin } from "@/lib/auth-utils";
 import { useCategories } from "@/hooks/use-categories";
 import { toast } from "sonner";
-import { useLayout } from "@/context/layout-context";
 import DynamicBannerSlider from "@/components/block/dynamic-banner-slider";
 interface Category {
   id: string;
@@ -29,21 +28,67 @@ const Hero = memo(() => {
     refresh: refreshCategories,
   } = useCategories();
 
-  // Try to get layout context, with fallback
-  let getCategoryGridConfig = () => ({
-    columns: 8,
-    maxCategories: 8,
-    gridClasses: "hidden lg:flex flex-nowrap gap-6 justify-start",
-  });
-  try {
-    const layoutContext = useLayout();
-    getCategoryGridConfig = layoutContext.getCategoryGridConfig;
-  } catch (error) {
-    // Layout context not available, use default values
-  }
+  // Dynamic category grid configuration based on screen width
+  const [maxCategories, setMaxCategories] = useState(10);
+  const [columns, setColumns] = useState(10);
+  const [mobileCategories, setMobileCategories] = useState(4);
 
-  // Get category grid configuration
-  const { columns, maxCategories, gridClasses } = getCategoryGridConfig();
+  useEffect(() => {
+    const updateCategoryCount = () => {
+      const width = window.innerWidth;
+      if (width >= 1200) {
+        // Desktop large
+        setMaxCategories(10);
+        setColumns(10);
+      } else if (width >= 1075) {
+        // Desktop medium
+        setMaxCategories(9);
+        setColumns(9);
+      } else if (width >= 1024) {
+        // Desktop small
+        setMaxCategories(8);
+        setColumns(8);
+      } else if (width >= 768) {
+        // Tablet large
+        setMaxCategories(7);
+        setColumns(7);
+      } else if (width >= 640) {
+        // Tablet small
+        setMaxCategories(6);
+        setColumns(6);
+      } else if (width >= 480) {
+        // Mobile large
+        setMaxCategories(5);
+        setColumns(5);
+      } else {
+        // Mobile small
+        setMaxCategories(4);
+        setColumns(4);
+      }
+
+      // Update mobile categories for mobile section
+      if (width >= 600 && width <= 700) {
+        setMobileCategories(7);
+      } else if (width >= 500) {
+        setMobileCategories(6);
+      } else if (width >= 420) {
+        setMobileCategories(5);
+      } else {
+        setMobileCategories(4);
+      }
+    };
+
+    // Set initial value
+    updateCategoryCount();
+
+    // Add resize listener
+    window.addEventListener("resize", updateCategoryCount);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", updateCategoryCount);
+  }, []);
+
+  const gridClasses = "hidden sm:flex flex-nowrap gap-6 justify-start";
 
   // Function to create a URL-friendly slug from category name
   const createCategorySlug = (name: string) => {
@@ -210,15 +255,20 @@ const Hero = memo(() => {
 
   return (
     <div className="w-full">
-      {/* Desktop Banner Slider - Only visible on lg screens and up */}
-      <div className="hidden lg:block w-full mt-6 mb-8 px-4 max-w-full">
+      {/* Desktop/Tablet Banner Slider - Only visible on sm screens and up */}
+      <div className="hidden sm:block w-full mt-6 mb-8 px-4 max-w-full">
         <DynamicBannerSlider deviceType="desktop" />
       </div>
 
-      {/* Desktop Categories - Only visible on lg screens and up */}
-      <div className="hidden lg:block w-full px-4 mb-8">
+      {/* Desktop/Tablet Categories - Only visible on sm screens and up */}
+      <div className="hidden sm:block w-full px-4 mb-8">
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Categories</h2>
+          <Link href="/products">
+            <button className="text-sm text-primary hover:text-primary/80 underline transition-colors duration-200 whitespace-nowrap font-medium">
+              See All
+            </button>
+          </Link>
         </div>
 
         {/* Categories content based on loading/error/empty states */}
@@ -236,37 +286,39 @@ const Hero = memo(() => {
         ) : (
           <>
             {/* Dynamic grid based on available space */}
-            <div className={gridClasses}>
-              {categories.slice(0, maxCategories).map((category) => (
-                <Link
-                  href={`/products/categories/${createCategorySlug(
-                    category.name
-                  )}`}
-                  key={category.id}
-                >
-                  <div className="flex flex-col items-center cursor-pointer flex-shrink-0 w-24 group">
-                    <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
-                      <Image
-                        src={getCategoryImage(category) || "/placeholder.svg"}
-                        alt={category.name}
-                        width={80}
-                        height={80}
-                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
-                      />
+            <div className="flex items-center gap-6">
+              <div className={gridClasses}>
+                {categories.slice(0, maxCategories).map((category) => (
+                  <Link
+                    href={`/products/categories/${createCategorySlug(
+                      category.name
+                    )}`}
+                    key={category.id}
+                  >
+                    <div className="flex flex-col items-center cursor-pointer flex-shrink-0 w-24 group">
+                      <div className="w-20 h-20 relative bg-[#F9F5F0] rounded-[24px] shadow-sm overflow-hidden flex items-center justify-center">
+                        <Image
+                          src={getCategoryImage(category) || "/placeholder.svg"}
+                          alt={category.name}
+                          width={80}
+                          height={80}
+                          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+                        />
+                      </div>
+                      <p className="text-sm font-medium mt-3 text-center">
+                        {category.name}
+                      </p>
                     </div>
-                    <p className="text-sm font-medium mt-3 text-center">
-                      {category.name}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+              </div>
             </div>
           </>
         )}
       </div>
 
-      {/* Mobile/Tablet Content - Hidden on lg screens and up */}
-      <div className="lg:hidden w-full px-3 flex flex-col gap-4 pb-[30px]">
+      {/* Mobile Content - Hidden on sm screens and up */}
+      <div className="sm:hidden w-full px-3 flex flex-col gap-4 pb-[30px]">
         {/* Banner Slider for Mobile */}
         <div className="w-full mb-2">
           <DynamicBannerSlider deviceType="mobile" />
@@ -275,38 +327,53 @@ const Hero = memo(() => {
         {/* Categories */}
         <div className="flex w-full justify-between items-center px-1">
           <h2 className="text-lg md:text-xl font-medium">Categories</h2>
+          <Link href="/products">
+            <button className="text-sm text-primary hover:text-primary/80 underline transition-colors duration-200">
+              See All
+            </button>
+          </Link>
         </div>
 
-        {/* Categories Horizontal Scroll - Show all categories */}
+        {/* Categories Grid - 4 categories on small mobile, 5 on larger mobile */}
         <div className="w-full mt-2">
           {isLoadingCategories ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <CategorySkeleton count={6} />
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: `repeat(${mobileCategories}, 1fr)`,
+              }}
+            >
+              <CategorySkeleton count={mobileCategories} />
             </div>
           ) : categoriesError ? (
             <CategoriesError />
           ) : categories.length === 0 ? (
             <CategoriesEmpty />
           ) : (
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {categories.map((category) => (
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: `repeat(${mobileCategories}, 1fr)`,
+              }}
+            >
+              {categories.slice(0, mobileCategories).map((category) => (
                 <Link
                   href={`/products/categories/${createCategorySlug(
                     category.name
                   )}`}
                   key={category.id}
                 >
-                  <div className="flex flex-col items-center cursor-pointer flex-shrink-0 min-w-[72px] group">
-                    <div className="w-16 h-16 relative bg-[#F9F5F0] rounded-[20px] shadow-sm overflow-hidden flex items-center justify-center">
+                  <div className="flex flex-col items-center cursor-pointer group">
+                    <div className="w-14 h-14 relative bg-[#F9F5F0] rounded-[18px] shadow-sm overflow-hidden flex items-center justify-center">
                       <Image
                         src={getCategoryImage(category) || "/placeholder.svg"}
                         alt={category.name}
-                        width={64}
-                        height={64}
+                        width={56}
+                        height={56}
                         className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
                       />
                     </div>
-                    <p className="text-sm mt-2 text-center line-clamp-2 max-w-[72px]">
+                    <p className="text-xs mt-1 text-center line-clamp-2">
                       {category.name}
                     </p>
                   </div>
