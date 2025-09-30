@@ -103,7 +103,7 @@ export default function NewAddressPage() {
 
     console.log("Initializing Google Map...");
     const map = new google.maps.Map(mapRef.current, {
-      center: { lat: 11.0168, lng: 76.9558 }, // Coimbatore coordinates
+      center: { lat: 11.0168, lng: 76.9558 }, // Default Coimbatore coordinates
       zoom: 15,
       mapTypeControl: false,
       streetViewControl: false,
@@ -320,6 +320,27 @@ export default function NewAddressPage() {
         if (mapInstanceRef.current) {
           mapInstanceRef.current.setCenter({ lat, lng });
           mapInstanceRef.current.setZoom(16);
+
+          // Update the center pin to user's current location
+          const centerPin = new google.maps.Marker({
+            position: { lat, lng },
+            map: mapInstanceRef.current,
+            icon: {
+              url:
+                "data:image/svg+xml;charset=UTF-8," +
+                encodeURIComponent(`
+                <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 12 32 12 32S24 18.6 24 12C24 5.4 18.6 0 12 0Z" fill="#FF0000"/>
+                  <circle cx="12" cy="12" r="4" fill="white"/>
+                  <circle cx="12" cy="12" r="2" fill="#FF0000"/>
+                </svg>
+              `),
+              scaledSize: new google.maps.Size(24, 32),
+              anchor: new google.maps.Point(12, 32),
+            },
+            draggable: false,
+            zIndex: 1000,
+          });
         }
 
         setSelectedLocation({
