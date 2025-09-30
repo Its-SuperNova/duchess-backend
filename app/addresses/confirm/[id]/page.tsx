@@ -99,9 +99,28 @@ export default function ConfirmAddressPage({
   }, [resolvedParams, mounted]);
 
   const loadGoogleMapsScript = () => {
+    // Check if Google Maps is already loaded
+    if (typeof window !== "undefined" && window.google && window.google.maps) {
+      console.log("Google Maps already loaded");
+      setTimeout(() => {
+        initializeMap();
+      }, 100);
+      return;
+    }
+
+    // Check if script is already in DOM
     if (document.querySelector('script[src*="maps.googleapis.com"]')) {
-      console.log("Google Maps script already loaded");
-      initializeMap();
+      console.log("Google Maps script already in DOM, waiting for load...");
+      // Wait for the script to load
+      const checkGoogleMaps = () => {
+        if (window.google && window.google.maps) {
+          console.log("Google Maps loaded from existing script");
+          initializeMap();
+        } else {
+          setTimeout(checkGoogleMaps, 100);
+        }
+      };
+      checkGoogleMaps();
       return;
     }
 
@@ -114,13 +133,18 @@ export default function ConfirmAddressPage({
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,directions`;
-    script.onload = () => {
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,directions&callback=initGoogleMaps`;
+    script.async = true;
+    script.defer = true;
+
+    // Set up global callback
+    (window as any).initGoogleMaps = () => {
       console.log("Google Maps script loaded successfully");
       setTimeout(() => {
         initializeMap();
-      }, 100);
+      }, 200);
     };
+
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
     };
@@ -128,8 +152,20 @@ export default function ConfirmAddressPage({
   };
 
   const initializeMap = () => {
-    if (!mapRef.current || !addressData) {
-      console.error("Map ref or address data not available");
+    console.log("initializeMap called");
+    console.log("mapRef.current:", mapRef.current);
+    console.log("addressData:", addressData);
+
+    if (!mapRef.current) {
+      console.error("Map ref not available, retrying in 500ms...");
+      setTimeout(() => {
+        initializeMap();
+      }, 500);
+      return;
+    }
+
+    if (!addressData) {
+      console.error("Address data not available");
       return;
     }
 
@@ -201,7 +237,14 @@ export default function ConfirmAddressPage({
   };
 
   const calculateRoute = () => {
-    if (!mapInstanceRef.current || !addressData) return;
+    console.log("calculateRoute called");
+    console.log("mapInstanceRef.current:", mapInstanceRef.current);
+    console.log("addressData:", addressData);
+
+    if (!mapInstanceRef.current || !addressData) {
+      console.log("Missing map instance or address data");
+      return;
+    }
 
     // Check if directions library is available
     if (!google.maps.DirectionsService) {
@@ -216,6 +259,8 @@ export default function ConfirmAddressPage({
       });
       return;
     }
+
+    console.log("Directions library available, calculating route...");
 
     try {
       const directionsService = new google.maps.DirectionsService();
@@ -239,19 +284,26 @@ export default function ConfirmAddressPage({
         travelMode: google.maps.TravelMode.DRIVING,
       };
 
+      console.log("Route request:", request);
+
       directionsService.route(request, (result, status) => {
+        console.log("Directions service response:", { status, result });
+
         if (status === "OK" && result) {
           directionsRenderer.setDirections(result);
 
           const route = result.routes[0];
           const leg = route.legs[0];
 
-          setRouteInfo({
+          const routeInfo = {
             distance: leg.distance?.text || "N/A",
             duration: leg.duration?.text || "N/A",
             distanceValue: leg.distance?.value || 0,
             durationValue: leg.duration?.value || 0,
-          });
+          };
+
+          console.log("Route calculated successfully:", routeInfo);
+          setRouteInfo(routeInfo);
         } else {
           console.warn("Directions service failed, using fallback:", status);
           setRouteInfo({
