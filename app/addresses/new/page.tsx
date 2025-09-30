@@ -37,6 +37,7 @@ export default function NewAddressPage() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [showAddressDrawer, setShowAddressDrawer] = useState(false);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -139,24 +140,13 @@ export default function NewAddressPage() {
       zIndex: 1000,
     });
 
-    // Add pulsing circle animation
-    const pulsingCircle = new google.maps.Circle({
-      strokeColor: "#4285F4",
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: "#4285F4",
-      fillOpacity: 0.2,
-      map: map,
-      center: map.getCenter()!,
-      radius: 50,
-    });
+    // No pulsing circle around the delivery pin - only for current location
 
     // Update location when map is dragged
     map.addListener("dragend", () => {
       const center = map.getCenter()!;
       const latLng = { lat: center.lat(), lng: center.lng() };
       centerPin.setPosition(latLng);
-      pulsingCircle.setCenter(latLng);
       reverseGeocode(latLng.lat, latLng.lng);
     });
 
@@ -167,7 +157,6 @@ export default function NewAddressPage() {
         const lng = event.latLng.lng();
         map.setCenter({ lat, lng });
         centerPin.setPosition({ lat, lng });
-        pulsingCircle.setCenter({ lat, lng });
         reverseGeocode(lat, lng);
       }
     });
@@ -330,7 +319,7 @@ export default function NewAddressPage() {
             fillOpacity: 0.3,
             map: mapInstanceRef.current,
             center: { lat, lng },
-            radius: 50,
+            radius: 40,
           });
 
           // Add blue dot marker for current location center
@@ -505,17 +494,21 @@ export default function NewAddressPage() {
           </div>
         </div>
 
-        {/* Current Location Button */}
+        {/* Confirm Location Button */}
         <button
-          onClick={getCurrentLocation}
-          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
+          onClick={() => {
+            if (selectedLocation) {
+              setShowAddressDrawer(true);
+            } else {
+              alert(
+                "Please select a location first by using the search or current location."
+              );
+            }
+          }}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 bg-red-500 text-white hover:bg-red-600 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
         >
-          <MapPointWave weight="Bold" color="red" size={16} />
-          {typeof window !== "undefined" &&
-          (window.location.hostname.includes("192.168") ||
-            window.location.protocol === "http:")
-            ? "Search location"
-            : "Use current location"}
+          <MapPointWave weight="Bold" color="white" size={16} />
+          Confirm location
         </button>
 
         {/* Google Logo */}
@@ -563,6 +556,82 @@ export default function NewAddressPage() {
           className="fixed inset-0 bg-black bg-opacity-20 z-30"
           onClick={() => setShowSearchResults(false)}
         />
+      )}
+
+      {/* Address Details Drawer */}
+      {showAddressDrawer && selectedLocation && (
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowAddressDrawer(false)}
+          />
+
+          {/* Drawer */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-out">
+            <div className="p-6">
+              {/* Handle bar */}
+              <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Confirm Delivery Location
+                </h2>
+                <button
+                  onClick={() => setShowAddressDrawer(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Address Details */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Address
+                  </label>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="text-gray-900">{selectedLocation.address}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {selectedLocation.area}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Additional Details (Optional)
+                  </label>
+                  <textarea
+                    value={addressDetails}
+                    onChange={(e) => setAddressDetails(e.target.value)}
+                    placeholder="Apartment number, building name, landmark, etc."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowAddressDrawer(false)}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveAddress}
+                    className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Save Address
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
