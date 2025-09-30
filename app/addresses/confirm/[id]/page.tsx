@@ -34,7 +34,7 @@ const SHOP_LOCATION = {
   address: "Duchess Pastries, Coimbatore",
 };
 
-export default async function ConfirmAddressPage({
+export default function ConfirmAddressPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -43,12 +43,18 @@ export default async function ConfirmAddressPage({
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(
     null
   );
+
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Resolve the params promise
@@ -58,9 +64,13 @@ export default async function ConfirmAddressPage({
   }, [params]);
 
   useEffect(() => {
-    if (!resolvedParams) return;
-    // Get address data from sessionStorage
-    const storedData = sessionStorage.getItem("pendingAddress");
+    if (!resolvedParams || !mounted) return;
+
+    // Get address data from sessionStorage (only on client side)
+    const storedData =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("pendingAddress")
+        : null;
     if (storedData) {
       const data = JSON.parse(storedData);
       setAddressData(data);
@@ -86,7 +96,7 @@ export default async function ConfirmAddressPage({
       setLoading(false);
       loadGoogleMapsScript();
     }
-  }, [resolvedParams]);
+  }, [resolvedParams, mounted]);
 
   const loadGoogleMapsScript = () => {
     if (document.querySelector('script[src*="maps.googleapis.com"]')) {
@@ -293,10 +303,24 @@ export default async function ConfirmAddressPage({
     console.log("Saving address:", addressData);
     alert("Address saved successfully!");
 
-    // Clear session storage and redirect
-    sessionStorage.removeItem("pendingAddress");
-    window.location.href = "/addresses";
+    // Clear session storage and redirect (only on client side)
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("pendingAddress");
+      window.location.href = "/addresses";
+    }
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
