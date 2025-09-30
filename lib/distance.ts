@@ -32,6 +32,7 @@ interface GoogleMapsDistanceResponse {
  * @param lon2 Destination longitude
  * @returns Object containing distance in km and duration in minutes
  */
+// Server-side function for Google Maps API calls
 export async function getRoadDistanceAndDuration(
   lat1: number,
   lon1: number,
@@ -125,6 +126,54 @@ export async function getRoadDistanceAndDuration(
     throw new Error(
       "Failed to calculate distance and duration: " + (error as Error).message
     );
+  }
+}
+
+// Client-side function that calls server-side API
+export async function getRoadDistanceAndDurationClient(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): Promise<{ distance: number; duration: number }> {
+  try {
+    console.log("🌐 Calling server-side distance API:", {
+      from: { lat: lat1, lon: lon1 },
+      to: { lat: lat2, lon: lon2 },
+    });
+
+    const response = await fetch("/api/calculate-distance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        lat1,
+        lon1,
+        lat2,
+        lon2,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || "Distance calculation failed");
+    }
+
+    console.log("✅ Client-side distance result:", data);
+
+    return {
+      distance: data.distance,
+      duration: data.duration,
+    };
+  } catch (error) {
+    console.error("❌ Client-side distance calculation failed:", error);
+    throw error;
   }
 }
 
@@ -494,8 +543,8 @@ export async function calculateDeliveryDistanceByPincode(
       state
     );
 
-    // Calculate road distance from shop using Google Maps
-    const { distance, duration } = await getRoadDistanceAndDuration(
+    // Calculate road distance from shop using Google Maps (client-side API)
+    const { distance, duration } = await getRoadDistanceAndDurationClient(
       SHOP_LOCATION.coordinates.lat,
       SHOP_LOCATION.coordinates.lon,
       userCoords.lat,
@@ -774,6 +823,18 @@ export async function calculateDistanceForAddress(
 
     const data = await response.json();
 
+    console.log(
+      "📊 Distance calculation result in calculateDistanceForAddress:",
+      {
+        rawData: data,
+        distance: data.distance,
+        duration: data.duration,
+        success: data.success,
+        distanceText: data.distanceText,
+        durationText: data.durationText,
+      }
+    );
+
     return {
       distance: Number(data.distance) || 15, // Ensure it's a number
       duration: Number(data.duration) || 30, // Ensure it's a number
@@ -795,9 +856,10 @@ export async function calculateDistanceForAddress(
  * Calculate delivery fee based on distance using the tiered pricing structure
  * @param distance Distance in kilometers
  * @returns Delivery fee in Indian Rupees
+ * @deprecated Use calculateDeliveryFee from pricing-utils.ts for configurable pricing
  */
 export function calculateDeliveryFee(distance: number): number {
-  // Distance-based delivery fee structure
+  // Distance-based delivery fee structure (hardcoded fallback)
   if (distance <= 5) return 40;
   if (distance <= 10) return 60;
   if (distance <= 15) return 80;

@@ -25,7 +25,6 @@ export interface CreateAddressData {
   is_default?: boolean;
   distance?: number;
   duration?: number;
-  alternate_phone: string;
   additional_details?: string;
 }
 

@@ -520,6 +520,26 @@ export default function EditAddressPage() {
                     className="w-full p-3 bg-gray-50 dark:bg-[#18171C] rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#7a0000] focus:border-transparent"
                     required
                   />
+
+                  {/* Distance display when pincode is validated */}
+                  {validationResult && validationResult.isCoimbatoreArea && (
+                    <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-green-700 dark:text-green-300 text-sm font-medium">
+                          ✓ Address is within our Coimbatore delivery area
+                        </span>
+                      </div>
+
+                      <RouteInfoDisplay
+                        distance={validationResult.distance}
+                        duration={validationResult.duration}
+                        area={formData.area}
+                        pincode={formData.zipCode}
+                        showMapLink={true}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Area */}

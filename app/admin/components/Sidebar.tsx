@@ -24,6 +24,7 @@ import {
   X,
   User,
   Home,
+  DollarSign,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
@@ -111,6 +112,11 @@ export default function Sidebar({
       name: "Categories",
       href: "/admin/categories",
       icon: Tags,
+    },
+    {
+      name: "Pricing",
+      href: "/admin/pricing",
+      icon: DollarSign,
     },
     {
       name: "Users",

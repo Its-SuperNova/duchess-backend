@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getAreaFromPincode } from "@/lib/pincode-areas";
 import { CheckoutStore } from "@/lib/checkout-store";
+import { calculateTaxAmounts } from "@/lib/pricing-utils";
 
 export interface CreateOrderData {
   checkoutId: string;
@@ -209,6 +210,38 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     paymentStatus: "paid",
     databaseOrderId: order.id,
   });
+
+  // Send order confirmation email
+  try {
+    const emailResponse = await fetch(
+      `${
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      }/api/order/confirm`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          orderId: order.id,
+          items: checkoutSession.items,
+        }),
+      }
+    );
+
+    if (emailResponse.ok) {
+      console.log("Order confirmation email sent successfully");
+    } else {
+      console.error(
+        "Failed to send order confirmation email:",
+        await emailResponse.text()
+      );
+    }
+  } catch (emailError) {
+    console.error("Error sending order confirmation email:", emailError);
+    // Don't fail the order creation if email fails
+  }
 
   return {
     orderId: order.id,

@@ -64,6 +64,13 @@ export async function POST(request: NextRequest) {
     // Construct origin and destination
     const origin = `${SHOP_LOCATION.latitude},${SHOP_LOCATION.longitude}`;
 
+    console.log("🏪 Shop location:", {
+      latitude: SHOP_LOCATION.latitude,
+      longitude: SHOP_LOCATION.longitude,
+      name: SHOP_LOCATION.name,
+      address: SHOP_LOCATION.address,
+    });
+
     // Use full address if provided, otherwise construct from parts
     let destination: string;
     if (fullAddress && fullAddress.trim()) {
@@ -92,6 +99,8 @@ export async function POST(request: NextRequest) {
     )}&destinations=${encodeURIComponent(
       destination
     )}&units=metric&mode=driving&traffic_model=best_guess&departure_time=now&key=${apiKey}`;
+
+    console.log("🔗 Google Maps API URL:", url);
 
     const response = await fetch(url);
 
@@ -129,6 +138,14 @@ export async function POST(request: NextRequest) {
     console.log(
       `✅ Google Maps result: ${distanceKm}km (${distanceText}), ${durationMin}min (${durationText})`
     );
+    console.log("🔍 Raw Google Maps data:", {
+      distanceValue,
+      distanceText,
+      durationValue,
+      durationText,
+      distanceKm,
+      durationMin,
+    });
 
     return NextResponse.json({
       distance: distanceKm,
@@ -136,6 +153,8 @@ export async function POST(request: NextRequest) {
       success: true,
       distanceText,
       durationText,
+      rawDistanceValue: distanceValue,
+      rawDurationValue: durationValue,
     });
   } catch (error) {
     console.error("❌ Google Maps distance calculation error:", error);

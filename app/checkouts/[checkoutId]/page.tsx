@@ -164,8 +164,18 @@ export default function CheckoutClient() {
           setMessageCardText(data.checkout.messageCardText);
         if (data.checkout.contactInfo)
           setContactInfo(data.checkout.contactInfo);
-        if (data.checkout.addressText)
+        if (data.checkout.addressText) {
           setAddressText(data.checkout.addressText);
+          // Find the address ID that matches the address text
+          if (data.addresses && data.addresses.length > 0) {
+            const matchingAddress = data.addresses.find(
+              (addr: any) => addr.full_address === data.checkout.addressText
+            );
+            if (matchingAddress) {
+              setSelectedAddressId(matchingAddress.id);
+            }
+          }
+        }
         if (data.checkout.customizationOptions)
           setCustomizationOptions(data.checkout.customizationOptions);
       } catch (err) {
@@ -262,9 +272,13 @@ export default function CheckoutClient() {
   const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
   const [addressText, setAddressText] = useState("");
   const [tempAddress, setTempAddress] = useState("");
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null
+  );
   const { data: session } = useSession();
   const [addresses, setAddresses] = useState<DbAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState<boolean>(false);
+  const [deliveryCharges, setDeliveryCharges] = useState<any[]>([]);
 
   // Customization options state
   const [customizationOptions, setCustomizationOptions] = useState({
@@ -539,6 +553,7 @@ export default function CheckoutClient() {
             if (now - timestamp < 5 * 60 * 1000) {
               // Auto-fill the address with the newly created one
               setAddressText(address.full_address);
+              setSelectedAddressId(address.id);
 
               // Clear the sessionStorage data
               sessionStorage.removeItem("newAddressData");
@@ -578,8 +593,10 @@ export default function CheckoutClient() {
           const def = await getDefaultAddress(user.id);
           if (def?.full_address) {
             setAddressText(def.full_address);
+            setSelectedAddressId(def.id);
           } else if (list?.[0]?.full_address) {
             setAddressText(list[0].full_address);
+            setSelectedAddressId(list[0].id);
           }
         }
       } finally {
@@ -695,36 +712,140 @@ export default function CheckoutClient() {
       }
     }
   } catch {}
-  // Calculate delivery fee based on selected address distance
-  const calculateDeliveryFeeFromAddress = () => {
-    if (!addressText || addresses.length === 0) return 0;
+  // Fetch delivery charges from database
+  const fetchDeliveryCharges = async () => {
+    try {
+      const response = await fetch("/api/delivery-charges");
+      const result = await response.json();
+      if (response.ok) {
+        setDeliveryCharges(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching delivery charges:", error);
+    }
+  };
+
+  // Calculate delivery fee based on selected address distance using database
+  const calculateDeliveryFeeFromAddress = async () => {
+    console.log("Calculating delivery fee...");
+    console.log("Address text:", addressText);
+    console.log("Addresses:", addresses);
+    console.log("Delivery charges:", deliveryCharges);
+    console.log("Subtotal:", subtotal);
+
+    if (!addressText || addresses.length === 0) {
+      console.log("No address or addresses available");
+      return 0;
+    }
+
+    // First check for order value based delivery rules
+    const orderValueCharge = deliveryCharges.find(
+      (charge) =>
+        charge.type === "order_value" &&
+        subtotal >= charge.order_value_threshold
+    );
+
+    if (orderValueCharge) {
+      console.log("Found order value charge:", orderValueCharge);
+      if (orderValueCharge.delivery_type === "free") {
+        console.log("Free delivery applied");
+        return 0; // Free delivery
+      } else if (orderValueCharge.delivery_type === "fixed") {
+        console.log("Fixed price delivery:", orderValueCharge.fixed_price);
+        return orderValueCharge.fixed_price || 0; // Fixed price delivery
+      }
+    }
 
     // Find the current address from the addresses list
     const currentAddress = addresses.find(
       (addr) => addr.full_address === addressText
     );
 
+    console.log("Current address:", currentAddress);
+
     if (!currentAddress?.distance) {
-      // If no distance info, use a default fee (could be based on pincode or area)
+      console.log("No distance info, using default fee");
+      // If no distance info, use a default fee
       return 80; // Default to ₹80 for unknown distances
     }
 
     // Convert stored distance (integer * 10) back to display format
     const distanceInKm = currentAddress.distance / 10;
+    console.log("Distance in km:", distanceInKm);
 
-    // Calculate delivery fee based on distance
+    // Find matching distance-based delivery charge from database
+    const matchingCharge = deliveryCharges.find(
+      (charge) =>
+        charge.type === "distance" &&
+        distanceInKm >= charge.start_km &&
+        distanceInKm <= charge.end_km
+    );
+
+    console.log("Matching charge:", matchingCharge);
+
+    if (matchingCharge) {
+      console.log("Using database price:", matchingCharge.price);
+      return matchingCharge.price;
+    }
+
+    console.log("No matching charge found, using fallback");
+    // Fallback to hardcoded calculation if no database match
     return calculateDeliveryFee(distanceInKm);
   };
 
-  const deliveryFee = checkoutData ? checkoutData.deliveryFee : 0; // Use checkout data if available
-  // Calculate taxes (CGST 9% + SGST 9% = 18% total)
+  // State for dynamic delivery fee calculation
+  const [calculatedDeliveryFee, setCalculatedDeliveryFee] = useState(0);
+
+  // Fetch delivery charges on component mount
+  useEffect(() => {
+    fetchDeliveryCharges();
+  }, []);
+
+  // Calculate delivery fee when address, delivery charges, or subtotal change
+  useEffect(() => {
+    const updateDeliveryFee = async () => {
+      console.log("useEffect triggered - updating delivery fee");
+      console.log("checkoutData:", checkoutData);
+      console.log("addressText:", addressText);
+      console.log("deliveryCharges.length:", deliveryCharges.length);
+
+      // Always recalculate if we have address and delivery charges, regardless of checkout data
+      if (addressText && deliveryCharges.length > 0) {
+        console.log("Calculating new delivery fee...");
+        const fee = await calculateDeliveryFeeFromAddress();
+        console.log("Calculated fee:", fee);
+        setCalculatedDeliveryFee(fee);
+      } else if (checkoutData && !addressText) {
+        console.log(
+          "Using checkout data delivery fee:",
+          checkoutData.deliveryFee
+        );
+        setCalculatedDeliveryFee(checkoutData.deliveryFee);
+      } else {
+        console.log("Conditions not met for delivery fee calculation");
+        console.log("addressText:", addressText);
+        console.log("deliveryCharges.length:", deliveryCharges.length);
+      }
+    };
+    updateDeliveryFee();
+  }, [addressText, deliveryCharges, checkoutData, subtotal]);
+
+  const deliveryFee = calculatedDeliveryFee;
+
+  // Calculate taxes using configurable rates
   const taxableAmount = subtotal - discount;
-  const cgstAmount = checkoutData
-    ? checkoutData.cgstAmount || 0
-    : taxableAmount * 0.09;
-  const sgstAmount = checkoutData
-    ? checkoutData.sgstAmount || 0
-    : taxableAmount * 0.09;
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+
+  if (checkoutData) {
+    cgstAmount = checkoutData.cgstAmount || 0;
+    sgstAmount = checkoutData.sgstAmount || 0;
+  } else {
+    // Use default tax calculation
+    cgstAmount = taxableAmount * 0.09;
+    sgstAmount = taxableAmount * 0.09;
+  }
+
   const total = checkoutData
     ? checkoutData.totalAmount
     : subtotal - discount + deliveryFee + cgstAmount + sgstAmount;
@@ -1326,12 +1447,13 @@ export default function CheckoutClient() {
                               className={`bg-white rounded-[18px] shadow-sm p-4 ${
                                 index > 0 ? "mt-3" : ""
                               } ${
-                                addressText === addr.full_address
+                                selectedAddressId === addr.id
                                   ? "ring-2 ring-[#2664eb] ring-opacity-50 border-[#2664eb]"
                                   : "hover:bg-gray-50 cursor-pointer"
                               }`}
                               onClick={() => {
                                 setAddressText(addr.full_address);
+                                setSelectedAddressId(addr.id);
                                 setIsAddressDrawerOpen(false);
                               }}
                             >
@@ -1346,7 +1468,7 @@ export default function CheckoutClient() {
                                   <span className="font-medium text-gray-800">
                                     {addr.address_name || "Address"}
                                   </span>
-                                  {addressText === addr.full_address && (
+                                  {selectedAddressId === addr.id && (
                                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#2664eb] text-white text-xs">
                                       ✓
                                     </span>
@@ -2016,9 +2138,27 @@ export default function CheckoutClient() {
                 <div className="flex items-start mb-4">
                   <HomeSmileAngle className="h-5 w-5 mr-3 flex-shrink-0 text-black" />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                      Delivery at Home
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-800 dark:text-gray-200">
+                        Delivery at Home
+                      </h3>
+                      {(() => {
+                        const currentAddress = addresses.find(
+                          (addr) => addr.full_address === addressText
+                        );
+                        if (currentAddress?.distance) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
+                              <Routing weight="Broken" className="h-4 w-4" />
+                              {getDisplayDistance(currentAddress.distance) ??
+                                "-"}{" "}
+                              km
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                     <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
                       {addressText &&
                       addressText !==
@@ -2614,6 +2754,24 @@ export default function CheckoutClient() {
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-medium mb-2">Delivery Address</h4>
                     <p className="text-sm text-gray-700">{addressText}</p>
+                    {(() => {
+                      const currentAddress = addresses.find(
+                        (addr) => addr.full_address === addressText
+                      );
+                      if (currentAddress?.distance) {
+                        return (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
+                              <Routing weight="Broken" className="h-4 w-4" />
+                              {getDisplayDistance(currentAddress.distance) ??
+                                "-"}{" "}
+                              km
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     <p className="text-sm text-gray-600 mt-1">
                       Contact: {contactInfo.name}, {contactInfo.phone}
                     </p>

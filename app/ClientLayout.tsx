@@ -29,10 +29,15 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === "/";
   const isOnboardingPage = pathname === "/onboarding";
   const isTrackOrderPage = pathname?.startsWith("/orders/track") ?? false;
+  const isAddAddressPage = pathname === "/addresses/new";
 
   // Hide header and user sidebar on all non-admin pages
   const showHeader =
-    !isAdminRoute && !isAuthRoute && !isOnboardingPage && !isTrackOrderPage;
+    !isAdminRoute &&
+    !isAuthRoute &&
+    !isOnboardingPage &&
+    !isTrackOrderPage &&
+    !isAddAddressPage;
 
   const [showSplash, setShowSplash] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);

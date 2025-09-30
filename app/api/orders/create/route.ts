@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 import { getAreaFromPincode } from "@/lib/pincode-areas";
 import { CheckoutStore } from "@/lib/checkout-store";
+import { calculateTaxAmounts } from "@/lib/pricing-utils";
 
 export async function GET() {
   return NextResponse.json(
@@ -215,11 +216,24 @@ export async function POST(request: NextRequest) {
     const finalDeliveryCharge = deliveryCharge ?? deliveryFee ?? 0;
     const finalDiscountAmount = discountAmount ?? 0;
 
-    // Calculate taxes if not provided
-    const calculatedCgst =
-      cgstAmount ?? (finalItemTotal - finalDiscountAmount) * 0.09;
-    const calculatedSgst =
-      sgstAmount ?? (finalItemTotal - finalDiscountAmount) * 0.09;
+    // Calculate taxes if not provided using configurable rates
+    let calculatedCgst = cgstAmount;
+    let calculatedSgst = sgstAmount;
+
+    if (!calculatedCgst || !calculatedSgst) {
+      try {
+        const taxableAmount = finalItemTotal - finalDiscountAmount;
+        const taxAmounts = await calculateTaxAmounts(taxableAmount);
+        calculatedCgst = calculatedCgst ?? taxAmounts.cgstAmount;
+        calculatedSgst = calculatedSgst ?? taxAmounts.sgstAmount;
+      } catch (error) {
+        console.error("Error calculating configurable tax amounts:", error);
+        // Fallback to hardcoded calculation
+        const taxableAmount = finalItemTotal - finalDiscountAmount;
+        calculatedCgst = calculatedCgst ?? taxableAmount * 0.09;
+        calculatedSgst = calculatedSgst ?? taxableAmount * 0.09;
+      }
+    }
 
     // Extract contact info from legacy or new format
     const finalContactName = contactName || contactInfo?.name || "";

@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
-    const { email, orderId, items } = await req.json();
+    const { email, orderId, items, isTest = false } = await req.json();
 
     // Validate required fields
     if (
@@ -23,19 +23,39 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch order details from database
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("id", orderId)
-      .single();
+    let order = null;
 
-    if (orderError || !order) {
-      console.error("Error fetching order:", orderError);
-      return NextResponse.json(
-        { success: false, error: "Order not found" },
-        { status: 404 }
-      );
+    // For test mode, skip database lookup and create mock order data
+    if (isTest) {
+      console.log("Test mode: Using mock order data");
+      order = {
+        id: orderId,
+        total_amount: items.reduce(
+          (sum: number, item: any) => sum + item.total_price,
+          0
+        ),
+        status: "confirmed",
+        created_at: new Date().toISOString(),
+        delivery_address: "Test Address, Test City, Test State - 123456",
+        delivery_phone: "9876543210",
+        delivery_name: "Test Customer",
+      };
+    } else {
+      // Fetch order details from database
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", orderId)
+        .single();
+
+      if (orderError || !orderData) {
+        console.error("Error fetching order:", orderError);
+        return NextResponse.json(
+          { success: false, error: "Order not found" },
+          { status: 404 }
+        );
+      }
+      order = orderData;
     }
 
     // Validate email format
