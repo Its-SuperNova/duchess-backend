@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { MapPin, Navigation, Search, X, ArrowLeft } from "lucide-react";
-import { MapPointWave } from "@solar-icons/react";
-
+import { Navigation, Search, X, ArrowLeft } from "lucide-react";
+import { MapPointWave, HomeSmile, Buildings } from "@solar-icons/react";
+import { HiMapPin } from "react-icons/hi2";
+import { GrLocation } from "react-icons/gr";
 // Google Maps types are handled by @types/google.maps
 
 interface Location {
@@ -38,6 +39,10 @@ export default function NewAddressPage() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showAddressDrawer, setShowAddressDrawer] = useState(false);
+  const [selectedAddressType, setSelectedAddressType] = useState<
+    "Home" | "Work" | "Other"
+  >("Home");
+  const [otherAddressName, setOtherAddressName] = useState("");
 
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -103,8 +108,21 @@ export default function NewAddressPage() {
     }
 
     console.log("Initializing Google Map...");
+
+    // Set default location based on environment
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.includes("192.168") ||
+        window.location.protocol === "http:");
+
+    const defaultLocation = isLocalhost
+      ? { lat: 11.0168, lng: 76.9558 } // Kannampalayam, Coimbatore coordinates
+      : { lat: 11.0168, lng: 76.9558 }; // Default Coimbatore coordinates
+
     const map = new google.maps.Map(mapRef.current, {
-      center: { lat: 11.0168, lng: 76.9558 }, // Default Coimbatore coordinates
+      center: defaultLocation,
       zoom: 15,
       mapTypeControl: false,
       streetViewControl: false,
@@ -291,9 +309,29 @@ export default function NewAddressPage() {
       window.location.protocol === "http:";
 
     if (isLocalhost) {
-      alert(
-        "Location access is restricted on localhost. Please use the search bar or manual address input instead."
-      );
+      // Use fallback location for localhost
+      const fallbackLat = 11.0168;
+      const fallbackLng = 76.9558;
+
+      console.log("Using fallback location for localhost");
+
+      // Update map center to fallback location
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setCenter({
+          lat: fallbackLat,
+          lng: fallbackLng,
+        });
+        mapInstanceRef.current.setZoom(16);
+      }
+
+      // Set fallback address
+      setSelectedLocation({
+        lat: fallbackLat,
+        lng: fallbackLng,
+        address: "4/62, Kannampalayam, Coimbatore, Tamil Nadu 641016, India",
+        area: "Kannampalayam",
+      });
+
       return;
     }
 
@@ -380,17 +418,27 @@ export default function NewAddressPage() {
   };
 
   const handleSaveAddress = () => {
-    if (!selectedLocation || !addressDetails.trim()) {
-      alert("Please select a location and enter address details.");
+    if (!selectedLocation) {
+      alert("Please select a location first.");
       return;
     }
 
-    console.log("Saving address:", {
+    // Generate a temporary ID for the address
+    const tempAddressId = `temp_${Date.now()}`;
+
+    // Store the address data in sessionStorage for the confirmation page
+    const addressData = {
       location: selectedLocation,
       details: addressDetails,
-    });
+      addressType: selectedAddressType,
+      otherAddressName: otherAddressName,
+      tempId: tempAddressId,
+    };
 
-    alert("Address saved successfully!");
+    sessionStorage.setItem("pendingAddress", JSON.stringify(addressData));
+
+    // Redirect to confirmation page
+    window.location.href = `/addresses/confirm/${tempAddressId}`;
   };
 
   return (
@@ -511,6 +559,21 @@ export default function NewAddressPage() {
           Confirm location
         </button>
 
+        {/* Use Current Location Button (for localhost fallback) */}
+        {typeof window !== "undefined" &&
+          (window.location.hostname === "localhost" ||
+            window.location.hostname === "127.0.0.1" ||
+            window.location.hostname.includes("192.168") ||
+            window.location.protocol === "http:") && (
+            <button
+              onClick={getCurrentLocation}
+              className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-20 bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
+            >
+              <MapPointWave weight="Bold" color="red" size={16} />
+              Use current location
+            </button>
+          )}
+
         {/* Google Logo */}
         <div className="absolute bottom-2 left-2 text-xs text-gray-500">
           Google
@@ -530,7 +593,7 @@ export default function NewAddressPage() {
                   onClick={() => handleLocationSelect(result)}
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0"
                 >
-                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 truncate">
                       {result.description.split(",")[0]}
@@ -573,29 +636,21 @@ export default function NewAddressPage() {
               {/* Handle bar */}
               <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
 
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Confirm Delivery Location
-                </h2>
-                <button
-                  onClick={() => setShowAddressDrawer(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-
               {/* Address Details */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Delivery Address
                   </label>
-                  <div className="p-3 bg-gray-50 rounded-lg border">
-                    <p className="text-gray-900">{selectedLocation.address}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {selectedLocation.area}
+                  <div className="p-3 bg-[#f5f6fa] rounded-xl">
+                    <div className="flex items-center gap-1">
+                      <HiMapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
+                      <p className="text-gray-900 font-medium">
+                        {selectedLocation.area}
+                      </p>
+                    </div>
+                    <p className="text-[12px] text-gray-500 mt-1 ml-6">
+                      {selectedLocation.address}
                     </p>
                   </div>
                 </div>
@@ -607,25 +662,79 @@ export default function NewAddressPage() {
                   <textarea
                     value={addressDetails}
                     onChange={(e) => setAddressDetails(e.target.value)}
-                    placeholder="Apartment number, building name, landmark, etc."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-                    rows={3}
+                    placeholder="Apartment, building, landmark..."
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm placeholder:text-sm"
+                    rows={1}
                   />
+                </div>
+
+                {/* Save Address As Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Save address as
+                  </label>
+                  <div className="flex gap-2">
+                    {/* Home Button */}
+                    <button
+                      onClick={() => setSelectedAddressType("Home")}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
+                        selectedAddressType === "Home"
+                          ? "bg-red-50 border-red-500 text-red-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <HomeSmile className="w-4 h-4" />
+                      Home
+                    </button>
+
+                    {/* Work Button */}
+                    <button
+                      onClick={() => setSelectedAddressType("Work")}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
+                        selectedAddressType === "Work"
+                          ? "bg-red-50 border-red-500 text-red-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Buildings className="w-4 h-4" />
+                      Work
+                    </button>
+
+                    {/* Other Button */}
+                    <button
+                      onClick={() => setSelectedAddressType("Other")}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
+                        selectedAddressType === "Other"
+                          ? "bg-red-50 border-red-500 text-red-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <GrLocation className="w-4 h-4" />
+                      Other
+                    </button>
+                  </div>
+
+                  {/* Other Address Name Input */}
+                  {selectedAddressType === "Other" && (
+                    <div className="mt-3">
+                      <input
+                        type="text"
+                        value={otherAddressName}
+                        onChange={(e) => setOtherAddressName(e.target.value)}
+                        placeholder="Enter address name"
+                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm placeholder:text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
-                    onClick={() => setShowAddressDrawer(false)}
-                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
                     onClick={handleSaveAddress}
-                    className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="flex-1 px-4 py-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                   >
-                    Save Address
+                    Confirm Address
                   </button>
                 </div>
               </div>
