@@ -321,25 +321,36 @@ export default function NewAddressPage() {
           mapInstanceRef.current.setCenter({ lat, lng });
           mapInstanceRef.current.setZoom(16);
 
-          // Update the center pin to user's current location
-          const centerPin = new google.maps.Marker({
+          // Add blue pulsing circle for current location
+          const currentLocationCircle = new google.maps.Circle({
+            strokeColor: "#4285F4",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: "#4285F4",
+            fillOpacity: 0.3,
+            map: mapInstanceRef.current,
+            center: { lat, lng },
+            radius: 50,
+          });
+
+          // Add blue dot marker for current location center
+          const currentLocationMarker = new google.maps.Marker({
             position: { lat, lng },
             map: mapInstanceRef.current,
             icon: {
               url:
                 "data:image/svg+xml;charset=UTF-8," +
                 encodeURIComponent(`
-                <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 12 32 12 32S24 18.6 24 12C24 5.4 18.6 0 12 0Z" fill="#FF0000"/>
-                  <circle cx="12" cy="12" r="4" fill="white"/>
-                  <circle cx="12" cy="12" r="2" fill="#FF0000"/>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="6" cy="6" r="6" fill="#4285F4"/>
+                  <circle cx="6" cy="6" r="3" fill="white"/>
                 </svg>
               `),
-              scaledSize: new google.maps.Size(24, 32),
-              anchor: new google.maps.Point(12, 32),
+              scaledSize: new google.maps.Size(12, 12),
+              anchor: new google.maps.Point(6, 6),
             },
             draggable: false,
-            zIndex: 1000,
+            zIndex: 1001,
           });
         }
 
