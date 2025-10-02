@@ -22,9 +22,9 @@ export default function ShopLocationPage() {
   const [formData, setFormData] = useState({
     name: "Duchess Pastries",
     address:
-      "Door No : 7/68-62-B, Street 1, Vijayalakshmi Nagar, Sivasakthi Gardens, Keeranatham",
-    latitude: "11.106207",
-    longitude: "77.001487",
+      "Door No : 7/68-62-B, Street 1, Vijayalakshmi Nagar, Sivasakthi Gardens, Keeranatham, Coimbatore",
+    latitude: "11.1061944",
+    longitude: "77.0015000",
   });
 
   useEffect(() => {

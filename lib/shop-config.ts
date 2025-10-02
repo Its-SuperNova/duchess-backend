@@ -10,10 +10,11 @@ export interface ShopLocation {
 
 // Exact shop location coordinates
 export const SHOP_LOCATION: ShopLocation = {
-  latitude: 11.1062, // 11°06'22.3"N
+  latitude: 11.1061944, // 11°06'22.3"N
   longitude: 77.0015, // 77°00'05.4"E
   name: "Duchess Pastries",
-  address: "Coimbatore, Tamil Nadu, India",
+  address:
+    "Door No : 7/68-62-B, Street 1, Vijayalakshmi Nagar, Sivasakthi Gardens, Keeranatham, Coimbatore",
 };
 
 // How to get your shop's exact coordinates:

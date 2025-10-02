@@ -29,9 +29,10 @@ interface RouteInfo {
 }
 
 const SHOP_LOCATION = {
-  latitude: 11.0168,
-  longitude: 76.9558,
-  address: "Duchess Pastries, Coimbatore",
+  latitude: 11.1061944,
+  longitude: 77.0015,
+  address:
+    "Door No : 7/68-62-B, Street 1, Vijayalakshmi Nagar, Sivasakthi Gardens, Keeranatham, Coimbatore",
 };
 
 export default function ConfirmAddressPage({
@@ -42,6 +43,7 @@ export default function ConfirmAddressPage({
   const [addressData, setAddressData] = useState<AddressData | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -71,19 +73,49 @@ export default function ConfirmAddressPage({
       typeof window !== "undefined"
         ? sessionStorage.getItem("pendingAddress")
         : null;
+
+    console.log("Stored data from sessionStorage:", storedData);
+
     if (storedData) {
-      const data = JSON.parse(storedData);
-      setAddressData(data);
-      setLoading(false);
-      loadGoogleMapsScript();
+      try {
+        const data = JSON.parse(storedData);
+        console.log("Parsed address data:", data);
+        setAddressData(data);
+        setLoading(false);
+        // Load Google Maps after setting address data
+        setTimeout(() => {
+          loadGoogleMapsScript();
+        }, 100);
+      } catch (error) {
+        console.error("Error parsing stored address data:", error);
+        // Fallback to default data
+        const fallbackData: AddressData = {
+          location: {
+            lat: 11.0045,
+            lng: 76.9615,
+            address: "Barathipuram, Coimbatore, Tamil Nadu 641103, India",
+            area: "Barathipuram",
+          },
+          details: "Test address for localhost",
+          addressType: "Home",
+          otherAddressName: "",
+          tempId: "fallback_123",
+        };
+        setAddressData(fallbackData);
+        setLoading(false);
+        // Load Google Maps after setting address data
+        setTimeout(() => {
+          loadGoogleMapsScript();
+        }, 100);
+      }
     } else {
       // Fallback data for localhost testing
       const fallbackData: AddressData = {
         location: {
-          lat: 11.0168,
-          lng: 76.9558,
-          address: "4/62, Kannampalayam, Coimbatore, Tamil Nadu 641016, India",
-          area: "Kannampalayam",
+          lat: 11.0045,
+          lng: 76.9615,
+          address: "Barathipuram, Coimbatore, Tamil Nadu 641103, India",
+          area: "Barathipuram",
         },
         details: "Test address for localhost",
         addressType: "Home",
@@ -94,17 +126,37 @@ export default function ConfirmAddressPage({
       console.log("Using fallback data for localhost testing");
       setAddressData(fallbackData);
       setLoading(false);
-      loadGoogleMapsScript();
+      // Load Google Maps after setting address data
+      setTimeout(() => {
+        loadGoogleMapsScript();
+      }, 100);
     }
   }, [resolvedParams, mounted]);
 
+  // Initialize map when addressData is available and Google Maps is loaded
+  useEffect(() => {
+    if (
+      addressData &&
+      googleMapsLoaded &&
+      window.google &&
+      window.google.maps &&
+      window.google.maps.DirectionsService
+    ) {
+      console.log("Address data and Google Maps ready, initializing map...");
+      initializeMap();
+    }
+  }, [addressData, googleMapsLoaded]);
+
   const loadGoogleMapsScript = () => {
     // Check if Google Maps is already loaded
-    if (typeof window !== "undefined" && window.google && window.google.maps) {
+    if (
+      typeof window !== "undefined" &&
+      window.google &&
+      window.google.maps &&
+      window.google.maps.DirectionsService
+    ) {
       console.log("Google Maps already loaded");
-      setTimeout(() => {
-        initializeMap();
-      }, 100);
+      setGoogleMapsLoaded(true);
       return;
     }
 
@@ -113,9 +165,13 @@ export default function ConfirmAddressPage({
       console.log("Google Maps script already in DOM, waiting for load...");
       // Wait for the script to load
       const checkGoogleMaps = () => {
-        if (window.google && window.google.maps) {
+        if (
+          window.google &&
+          window.google.maps &&
+          window.google.maps.DirectionsService
+        ) {
           console.log("Google Maps loaded from existing script");
-          initializeMap();
+          setGoogleMapsLoaded(true);
         } else {
           setTimeout(checkGoogleMaps, 100);
         }
@@ -133,16 +189,14 @@ export default function ConfirmAddressPage({
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,directions&callback=initGoogleMaps`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,directions&loading=async&callback=initGoogleMaps`;
     script.async = true;
     script.defer = true;
 
     // Set up global callback
     (window as any).initGoogleMaps = () => {
       console.log("Google Maps script loaded successfully");
-      setTimeout(() => {
-        initializeMap();
-      }, 200);
+      setGoogleMapsLoaded(true);
     };
 
     script.onerror = () => {
@@ -165,7 +219,10 @@ export default function ConfirmAddressPage({
     }
 
     if (!addressData) {
-      console.error("Address data not available");
+      console.error("Address data not available, retrying in 200ms...");
+      setTimeout(() => {
+        initializeMap();
+      }, 200);
       return;
     }
 
@@ -188,7 +245,7 @@ export default function ConfirmAddressPage({
       const shopMarker = new google.maps.Marker({
         position: { lat: SHOP_LOCATION.latitude, lng: SHOP_LOCATION.longitude },
         map: map,
-        title: "Duchess Pastries",
+        title: "Duchess Pastries - Keeranatham",
         icon: {
           url:
             "data:image/svg+xml;charset=UTF-8," +
@@ -282,6 +339,8 @@ export default function ConfirmAddressPage({
           lng: addressData.location.lng,
         },
         travelMode: google.maps.TravelMode.DRIVING,
+        avoidHighways: false,
+        avoidTolls: false,
       };
 
       console.log("Route request:", request);
@@ -289,7 +348,12 @@ export default function ConfirmAddressPage({
       directionsService.route(request, (result, status) => {
         console.log("Directions service response:", { status, result });
 
-        if (status === "OK" && result) {
+        if (
+          status === "OK" &&
+          result &&
+          result.routes &&
+          result.routes.length > 0
+        ) {
           directionsRenderer.setDirections(result);
 
           const route = result.routes[0];
@@ -306,23 +370,58 @@ export default function ConfirmAddressPage({
           setRouteInfo(routeInfo);
         } else {
           console.warn("Directions service failed, using fallback:", status);
+          // Calculate approximate distance as fallback
+          const distance = calculateDistance(
+            SHOP_LOCATION.latitude,
+            SHOP_LOCATION.longitude,
+            addressData.location.lat,
+            addressData.location.lng
+          );
           setRouteInfo({
-            distance: "5.2 km",
-            duration: "12 mins",
-            distanceValue: 5200,
-            durationValue: 720,
+            distance: `${(distance / 1000).toFixed(1)} km`,
+            duration: `${Math.round((distance / 1000) * 2)} mins`,
+            distanceValue: distance,
+            durationValue: Math.round((distance / 1000) * 2 * 60),
           });
         }
       });
     } catch (error) {
       console.error("Error calculating route:", error);
+      // Calculate approximate distance as fallback
+      const distance = calculateDistance(
+        SHOP_LOCATION.latitude,
+        SHOP_LOCATION.longitude,
+        addressData.location.lat,
+        addressData.location.lng
+      );
       setRouteInfo({
-        distance: "5.2 km",
-        duration: "12 mins",
-        distanceValue: 5200,
-        durationValue: 720,
+        distance: `${(distance / 1000).toFixed(1)} km`,
+        duration: `${Math.round((distance / 1000) * 2)} mins`,
+        distanceValue: distance,
+        durationValue: Math.round((distance / 1000) * 2 * 60),
       });
     }
+  };
+
+  // Helper function to calculate distance between two points
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
   };
 
   const getAddressTypeIcon = () => {
@@ -414,11 +513,14 @@ export default function ConfirmAddressPage({
       </div>
 
       {/* Map Container */}
-      <div className="flex-1 relative">
-        <div ref={mapRef} className="w-full h-full" />
+      <div className="flex-1 relative p-4">
+        <div
+          ref={mapRef}
+          className="w-full h-full rounded-2xl overflow-hidden"
+        />
 
         {!mapLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="absolute inset-4 flex items-center justify-center bg-gray-100 rounded-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
               <p className="text-gray-600">Loading map...</p>
@@ -431,7 +533,7 @@ export default function ConfirmAddressPage({
 
         {/* Fallback when map fails to load */}
         {mapLoaded && !mapInstanceRef.current && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="absolute inset-4 flex items-center justify-center bg-gray-100 rounded-2xl">
             <div className="text-center">
               <div className="text-red-500 text-4xl mb-4">⚠️</div>
               <p className="text-gray-600 mb-2">Map failed to load</p>
@@ -448,24 +550,25 @@ export default function ConfirmAddressPage({
         <div className="p-6">
           {/* Route Information */}
           {routeInfo && (
-            <div className="flex items-center justify-between mb-6 p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Navigation className="h-5 w-5 text-red-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  Distance
-                </span>
-                <span className="text-lg font-semibold text-gray-900">
-                  {routeInfo.distance}
-                </span>
+            <div className="flex gap-3 mb-6">
+              {/* Distance Box */}
+              <div className="flex-1 p-4 justify-center items-center bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Navigation className="h-5 w-5 text-red-500" />
+                  <span className="text-lg font-semibold text-gray-700">
+                    {routeInfo.distance}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-red-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  Duration
-                </span>
-                <span className="text-lg font-semibold text-gray-900">
-                  {routeInfo.duration}
-                </span>
+
+              {/* Duration Box */}
+              <div className="flex-1 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-red-500" />
+                  <span className="text-lg font-semibold text-gray-700">
+                    {routeInfo.duration}
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -483,9 +586,6 @@ export default function ConfirmAddressPage({
                     {getAddressTypeName()}
                   </span>
                 </div>
-                <p className="text-gray-900 font-medium ml-6">
-                  {addressData.location.area}
-                </p>
                 <p className="text-[12px] text-gray-500 mt-1 ml-6">
                   {addressData.location.address}
                 </p>

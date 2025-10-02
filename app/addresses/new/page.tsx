@@ -43,15 +43,28 @@ export default function NewAddressPage() {
     "Home" | "Work" | "Other"
   >("Home");
   const [otherAddressName, setOtherAddressName] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Initialize map when component mounts
   useEffect(() => {
+    if (!mounted) return;
+
     const initializeMapWithDelay = () => {
-      if (typeof window !== "undefined" && window.google) {
+      if (
+        typeof window !== "undefined" &&
+        window.google &&
+        window.google.maps &&
+        window.google.maps.Map
+      ) {
         // Add a small delay to ensure DOM is ready
         setTimeout(() => {
           initializeMap(1);
@@ -64,11 +77,24 @@ export default function NewAddressPage() {
     // Use a longer delay to ensure DOM is fully rendered
     setTimeout(() => {
       initializeMapWithDelay();
-    }, 500);
-  }, []);
+    }, 1000);
+  }, [mounted]);
 
   const loadGoogleMapsScript = () => {
-    if (document.querySelector('script[src*="maps.googleapis.com"]')) return;
+    if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+      console.log("Google Maps script already exists, waiting for load...");
+      // Wait for the script to load
+      const checkGoogleMaps = () => {
+        if (window.google && window.google.maps && window.google.maps.Map) {
+          console.log("Google Maps loaded from existing script");
+          initializeMap(1);
+        } else {
+          setTimeout(checkGoogleMaps, 100);
+        }
+      };
+      checkGoogleMaps();
+      return;
+    }
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     console.log("Google Maps API Key:", apiKey ? "Present" : "Missing");
@@ -79,11 +105,18 @@ export default function NewAddressPage() {
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.onload = () => {
-      console.log("Google Maps script loaded");
-      initializeMap(1);
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=initGoogleMaps`;
+    script.async = true;
+    script.defer = true;
+
+    // Set up global callback
+    (window as any).initGoogleMaps = () => {
+      console.log("Google Maps script loaded successfully");
+      setTimeout(() => {
+        initializeMap(1);
+      }, 200);
     };
+
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
     };
@@ -91,6 +124,23 @@ export default function NewAddressPage() {
   };
 
   const initializeMap = (attempt = 1) => {
+    // Check if Google Maps is fully loaded
+    if (!window.google || !window.google.maps || !window.google.maps.Map) {
+      if (attempt < 10) {
+        console.log(
+          `Google Maps not ready, retrying in 200ms... (attempt ${attempt}/10)`
+        );
+        setTimeout(() => {
+          initializeMap(attempt + 1);
+        }, 200);
+        return;
+      } else {
+        console.error("Google Maps failed to load after 10 attempts");
+        setRetryCount(10);
+        return;
+      }
+    }
+
     if (!mapRef.current) {
       if (attempt < 5) {
         console.error(
@@ -109,86 +159,95 @@ export default function NewAddressPage() {
 
     console.log("Initializing Google Map...");
 
-    // Set default location based on environment
-    const isLocalhost =
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1" ||
-        window.location.hostname.includes("192.168") ||
-        window.location.protocol === "http:");
+    // Set default location - Barathipuram, Coimbatore coordinates
+    const defaultLocation = { lat: 11.0045, lng: 76.9615 };
 
-    const defaultLocation = isLocalhost
-      ? { lat: 11.0168, lng: 76.9558 } // Kannampalayam, Coimbatore coordinates
-      : { lat: 11.0168, lng: 76.9558 }; // Default Coimbatore coordinates
+    try {
+      const map = new google.maps.Map(mapRef.current, {
+        center: defaultLocation,
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }],
+          },
+        ],
+      });
 
-    const map = new google.maps.Map(mapRef.current, {
-      center: defaultLocation,
-      zoom: 15,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      zoomControl: true,
-      styles: [
-        {
-          featureType: "poi",
-          elementType: "labels",
-          stylers: [{ visibility: "off" }],
-        },
-      ],
-    });
-
-    // Add fixed center pin
-    const centerPin = new google.maps.Marker({
-      position: map.getCenter()!,
-      map: map,
-      icon: {
-        url:
-          "data:image/svg+xml;charset=UTF-8," +
-          encodeURIComponent(`
+      // Add fixed center pin
+      const centerPin = new google.maps.Marker({
+        position: map.getCenter()!,
+        map: map,
+        icon: {
+          url:
+            "data:image/svg+xml;charset=UTF-8," +
+            encodeURIComponent(`
           <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 12 32 12 32S24 18.6 24 12C24 5.4 18.6 0 12 0Z" fill="#FF0000"/>
             <circle cx="12" cy="12" r="4" fill="white"/>
             <circle cx="12" cy="12" r="2" fill="#FF0000"/>
           </svg>
         `),
-        scaledSize: new google.maps.Size(24, 32),
-        anchor: new google.maps.Point(12, 32),
-      },
-      draggable: false,
-      zIndex: 1000,
-    });
+          scaledSize: new google.maps.Size(24, 32),
+          anchor: new google.maps.Point(12, 32),
+        },
+        draggable: false,
+        zIndex: 1000,
+      });
 
-    // No pulsing circle around the delivery pin - only for current location
+      // No pulsing circle around the delivery pin - only for current location
 
-    // Update location when map is dragged
-    map.addListener("dragend", () => {
-      const center = map.getCenter()!;
-      const latLng = { lat: center.lat(), lng: center.lng() };
-      centerPin.setPosition(latLng);
-      reverseGeocode(latLng.lat, latLng.lng);
-    });
+      // Update location when map is dragged
+      map.addListener("dragend", () => {
+        const center = map.getCenter()!;
+        const latLng = { lat: center.lat(), lng: center.lng() };
+        centerPin.setPosition(latLng);
+        reverseGeocode(latLng.lat, latLng.lng);
+      });
 
-    // Update location when map is clicked
-    map.addListener("click", (event: any) => {
-      if (event.latLng) {
-        const lat = event.latLng.lat();
-        const lng = event.latLng.lng();
-        map.setCenter({ lat, lng });
-        centerPin.setPosition({ lat, lng });
-        reverseGeocode(lat, lng);
+      // Update location when map is clicked
+      map.addListener("click", (event: any) => {
+        if (event.latLng) {
+          const lat = event.latLng.lat();
+          const lng = event.latLng.lng();
+          map.setCenter({ lat, lng });
+          centerPin.setPosition({ lat, lng });
+          reverseGeocode(lat, lng);
+        }
+      });
+
+      // Store map instance for later use
+      mapInstanceRef.current = map;
+
+      setMapLoaded(true);
+      console.log("Map initialized successfully");
+
+      // Automatically get user's current location after map loads (only if not localhost)
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.includes("192.168") ||
+        window.location.protocol === "http:";
+
+      if (!isLocalhost) {
+        setTimeout(() => {
+          getCurrentLocation();
+        }, 1000);
+      } else {
+        // For localhost, set the fallback location immediately
+        setTimeout(() => {
+          getCurrentLocation();
+        }, 500);
       }
-    });
-
-    // Store map instance for later use
-    mapInstanceRef.current = map;
-
-    setMapLoaded(true);
-    console.log("Map initialized successfully");
-
-    // Automatically get user's current location after map loads
-    setTimeout(() => {
-      getCurrentLocation();
-    }, 1000);
+    } catch (error) {
+      console.error("Error initializing map:", error);
+      setRetryCount(5);
+    }
   };
 
   const reverseGeocode = (lat: number, lng: number) => {
@@ -294,13 +353,6 @@ export default function NewAddressPage() {
   };
 
   const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert(
-        "Geolocation is not supported by this browser. Please enter your address manually."
-      );
-      return;
-    }
-
     // Check if we're on localhost/development
     const isLocalhost =
       window.location.hostname === "localhost" ||
@@ -309,9 +361,9 @@ export default function NewAddressPage() {
       window.location.protocol === "http:";
 
     if (isLocalhost) {
-      // Use fallback location for localhost
-      const fallbackLat = 11.0168;
-      const fallbackLng = 76.9558;
+      // Use fallback location for localhost - Barathipuram, Coimbatore
+      const fallbackLat = 11.0045;
+      const fallbackLng = 76.9615;
 
       console.log("Using fallback location for localhost");
 
@@ -328,10 +380,17 @@ export default function NewAddressPage() {
       setSelectedLocation({
         lat: fallbackLat,
         lng: fallbackLng,
-        address: "4/62, Kannampalayam, Coimbatore, Tamil Nadu 641016, India",
-        area: "Kannampalayam",
+        address: "Barathipuram, Coimbatore, Tamil Nadu 641103, India",
+        area: "Barathipuram",
       });
 
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert(
+        "Geolocation is not supported by this browser. Please enter your address manually."
+      );
       return;
     }
 
@@ -440,6 +499,18 @@ export default function NewAddressPage() {
     // Redirect to confirmation page
     window.location.href = `/addresses/confirm/${tempAddressId}`;
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-white overflow-hidden flex flex-col">
@@ -560,19 +631,15 @@ export default function NewAddressPage() {
         </button>
 
         {/* Use Current Location Button (for localhost fallback) */}
-        {typeof window !== "undefined" &&
-          (window.location.hostname === "localhost" ||
-            window.location.hostname === "127.0.0.1" ||
-            window.location.hostname.includes("192.168") ||
-            window.location.protocol === "http:") && (
-            <button
-              onClick={getCurrentLocation}
-              className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-20 bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
-            >
-              <MapPointWave weight="Bold" color="red" size={16} />
-              Use current location
-            </button>
-          )}
+        {mounted && (
+          <button
+            onClick={getCurrentLocation}
+            className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-20 bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
+          >
+            <MapPointWave weight="Bold" color="red" size={16} />
+            Use current location
+          </button>
+        )}
 
         {/* Google Logo */}
         <div className="absolute bottom-2 left-2 text-xs text-gray-500">
