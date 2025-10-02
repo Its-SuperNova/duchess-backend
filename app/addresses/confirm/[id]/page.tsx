@@ -511,8 +511,6 @@ export default function ConfirmAddressPage({
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert("Address saved successfully!");
-
         // Clear session storage and redirect
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("pendingAddress");
