@@ -51,6 +51,11 @@ export interface Address {
   duration: number | null;
   alternate_phone: string;
   additional_details?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  area?: string | null;
+  address_type?: "Home" | "Work" | "Other";
+  other_address_name?: string | null;
 }
 
 export interface Category {

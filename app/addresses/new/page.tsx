@@ -4,8 +4,15 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Navigation, Search, X, ArrowLeft } from "lucide-react";
 import { MapPointWave, HomeSmile, Buildings } from "@solar-icons/react";
-import { HiMapPin } from "react-icons/hi2";
+import { HiMapPin, HiMiniMapPin } from "react-icons/hi2";
 import { GrLocation } from "react-icons/gr";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 // Google Maps types are handled by @types/google.maps
 
 interface Location {
@@ -52,6 +59,26 @@ export default function NewAddressPage() {
   // Ensure component is mounted on client side
   useEffect(() => {
     setMounted(true);
+
+    // Prevent body scrolling
+    document.body.style.overflow = "hidden";
+
+    // Fix for iOS Safari/Chrome viewport height issues
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+
+    setVH();
+    window.addEventListener("resize", setVH);
+    window.addEventListener("orientationchange", setVH);
+
+    // Cleanup: restore scrolling when component unmounts
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("resize", setVH);
+      window.removeEventListener("orientationchange", setVH);
+    };
   }, []);
 
   // Initialize map when component mounts
@@ -179,34 +206,10 @@ export default function NewAddressPage() {
         ],
       });
 
-      // Add fixed center pin
-      const centerPin = new google.maps.Marker({
-        position: map.getCenter()!,
-        map: map,
-        icon: {
-          url:
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(`
-          <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 12 32 12 32S24 18.6 24 12C24 5.4 18.6 0 12 0Z" fill="#FF0000"/>
-            <circle cx="12" cy="12" r="4" fill="white"/>
-            <circle cx="12" cy="12" r="2" fill="#FF0000"/>
-          </svg>
-        `),
-          scaledSize: new google.maps.Size(24, 32),
-          anchor: new google.maps.Point(12, 32),
-        },
-        draggable: false,
-        zIndex: 1000,
-      });
-
-      // No pulsing circle around the delivery pin - only for current location
-
       // Update location when map is dragged
       map.addListener("dragend", () => {
         const center = map.getCenter()!;
         const latLng = { lat: center.lat(), lng: center.lng() };
-        centerPin.setPosition(latLng);
         reverseGeocode(latLng.lat, latLng.lng);
       });
 
@@ -216,7 +219,6 @@ export default function NewAddressPage() {
           const lat = event.latLng.lat();
           const lng = event.latLng.lng();
           map.setCenter({ lat, lng });
-          centerPin.setPosition({ lat, lng });
           reverseGeocode(lat, lng);
         }
       });
@@ -513,212 +515,246 @@ export default function NewAddressPage() {
   }
 
   return (
-    <div className="h-screen bg-white overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 z-50 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between p-4">
-          <Link href="/addresses" className="flex items-center">
-            <ArrowLeft className="h-6 w-6 text-gray-700" />
-          </Link>
-          <h1 className="text-lg font-semibold text-gray-900">
-            Select delivery location
-          </h1>
-          <div className="w-6" />
+    <div
+      className="bg-white overflow-hidden"
+      style={{ height: "calc(var(--vh, 1vh) * 100)" }}
+    >
+      <div className="max-w-[1200px] mx-auto w-full h-full flex flex-col">
+        {/* Header */}
+        <div className="flex-shrink-0 z-50 bg-white">
+          <div className="flex items-center justify-between p-4">
+            <Link href="/addresses" className="flex items-center">
+              <ArrowLeft className="h-6 w-6 text-gray-700" />
+            </Link>
+            <h1 className="text-lg font-semibold text-gray-900">
+              Select delivery location
+            </h1>
+            <div className="w-6" />
+          </div>
         </div>
-      </div>
 
-      {/* Search Bar */}
-      <div className="flex-shrink-0 px-4 py-3 bg-white border-b border-gray-200">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              handleSearch(e.target.value);
-            }}
-            className="w-full pl-10 pr-10 py-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setSearchResults([]);
-                setShowSearchResults(false);
-              }}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2"
-            >
-              <X className="h-5 w-5 text-gray-400" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Map Container */}
-      <div className="relative flex-1 bg-gray-100">
-        <div ref={mapRef} className="w-full h-full min-h-[400px]" />
-
-        {/* Fallback when map is not loaded */}
-        {!mapLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <div className="text-center">
-              {retryCount < 5 ? (
-                <>
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading map...</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-red-500 text-4xl mb-4">⚠️</div>
-                  <p className="text-gray-600 mb-2">Map failed to load</p>
-                  <button
-                    onClick={() => {
-                      setRetryCount(0);
-                      setMapLoaded(false);
-                      initializeMap(1);
-                    }}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    Retry
-                  </button>
-                </>
+        {/* Search Bar */}
+        <div className="flex-shrink-0 px-4 pb-3 bg-white">
+          <div className="flex gap-3 items-center">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                style={{ color: "#7a0000" }}
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                >
+                  <X className="h-5 w-5 text-gray-400" />
+                </button>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Manual Location Input */}
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={() => {
-              const address = prompt("Enter your address manually:");
-              if (address) {
-                handleSearch(address);
-              }
-            }}
-            className="bg-white text-gray-700 px-3 py-2 rounded-lg shadow-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-          >
-            📍 Enter Address
-          </button>
-        </div>
-
-        {/* Fixed Center Pin Instruction */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="bg-black text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
-            Move pin to your exact delivery location
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black"></div>
-          </div>
-        </div>
-
-        {/* Confirm Location Button */}
-        <button
-          onClick={() => {
-            if (selectedLocation) {
-              setShowAddressDrawer(true);
-            } else {
-              alert(
-                "Please select a location first by using the search or current location."
-              );
-            }
-          }}
-          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 bg-red-500 text-white hover:bg-red-600 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
-        >
-          <MapPointWave weight="Bold" color="white" size={16} />
-          Confirm location
-        </button>
-
-        {/* Use Current Location Button (for localhost fallback) */}
-        {mounted && (
-          <button
-            onClick={getCurrentLocation}
-            className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-20 bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
-          >
-            <MapPointWave weight="Bold" color="red" size={16} />
-            Use current location
-          </button>
-        )}
-
-        {/* Google Logo */}
-        <div className="absolute bottom-2 left-2 text-xs text-gray-500">
-          Google
-        </div>
-      </div>
-
-      {/* Search Results Overlay */}
-      {showSearchResults && (
-        <div className="absolute top-32 left-4 right-4 z-40 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
-          {isSearching ? (
-            <div className="p-4 text-center text-gray-500">Searching...</div>
-          ) : searchResults.length > 0 ? (
-            <div className="py-2">
-              {searchResults.map((result, index) => (
+            {/* Desktop Buttons */}
+            <div className="hidden md:flex gap-2">
+              {/* Use Current Location Button */}
+              {mounted && (
                 <button
-                  key={result.place_id}
-                  onClick={() => handleLocationSelect(result)}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0"
+                  onClick={getCurrentLocation}
+                  className="px-4 py-2.5 bg-white border-2 text-[#7a0000] hover:bg-[#7a0000]/10 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap"
+                  style={{ borderColor: "#7a0000" }}
                 >
-                  <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 truncate">
-                      {result.description.split(",")[0]}
-                    </div>
-                    <div className="text-sm text-gray-500 truncate">
-                      {result.description}
-                    </div>
-                  </div>
+                  <MapPointWave weight="Bold" color="#7a0000" size={16} />
+                  <span className="hidden lg:inline">Use current location</span>
+                  <span className="lg:hidden">Current</span>
                 </button>
-              ))}
+              )}
+
+              {/* Confirm Location Button */}
+              <button
+                onClick={() => {
+                  if (selectedLocation) {
+                    setShowAddressDrawer(true);
+                  } else {
+                    alert(
+                      "Please select a location first by using the search or current location."
+                    );
+                  }
+                }}
+                className="px-4 py-2.5 text-white hover:opacity-90 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap"
+                style={{ backgroundColor: "#7a0000" }}
+              >
+                <MapPointWave weight="Bold" color="white" size={16} />
+                <span className="hidden lg:inline">Confirm location</span>
+                <span className="lg:hidden">Confirm</span>
+              </button>
             </div>
-          ) : (
-            <div className="p-4 text-center text-gray-500">
-              No results found
-            </div>
-          )}
+          </div>
         </div>
-      )}
 
-      {/* Backdrop for search results */}
-      {showSearchResults && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-20 z-30"
-          onClick={() => setShowSearchResults(false)}
-        />
-      )}
-
-      {/* Address Details Drawer */}
-      {showAddressDrawer && selectedLocation && (
-        <div className="fixed inset-0 z-50">
-          {/* Backdrop */}
+        {/* Map Container */}
+        <div className="relative flex-1 h-full md:p-4">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
-            onClick={() => setShowAddressDrawer(false)}
+            ref={mapRef}
+            className="w-full h-full min-h-[400px] md:rounded-2xl md:overflow-hidden"
           />
 
-          {/* Drawer */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-out">
-            <div className="p-6">
-              {/* Handle bar */}
-              <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+          {/* Fixed Center Pin */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+            <HiMiniMapPin
+              className="h-8 w-8 drop-shadow-lg"
+              style={{ color: "#7a0000" }}
+            />
+          </div>
 
-              {/* Address Details */}
-              <div className="space-y-4">
+          {/* Fallback when map is not loaded */}
+          {!mapLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+              <div className="text-center">
+                {retryCount < 5 ? (
+                  <>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading map...</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-red-500 text-4xl mb-4">⚠️</div>
+                    <p className="text-gray-600 mb-2">Map failed to load</p>
+                    <button
+                      onClick={() => {
+                        setRetryCount(0);
+                        setMapLoaded(false);
+                        initializeMap(1);
+                      }}
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Manual Location Input */}
+
+          {/* Fixed Center Pin Instruction */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+            <div className="bg-black text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+              Move pin to your exact delivery location
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black"></div>
+            </div>
+          </div>
+
+          {/* Mobile Floating Buttons */}
+          <div className="md:hidden">
+            {/* Confirm Location Button */}
+            <button
+              onClick={() => {
+                if (selectedLocation) {
+                  setShowAddressDrawer(true);
+                } else {
+                  alert(
+                    "Please select a location first by using the search or current location."
+                  );
+                }
+              }}
+              className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 text-white hover:opacity-90 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
+              style={{ backgroundColor: "#7a0000" }}
+            >
+              <MapPointWave weight="Bold" color="white" size={16} />
+              Confirm location
+            </button>
+
+            {/* Use Current Location Button */}
+            {mounted && (
+              <button
+                onClick={getCurrentLocation}
+                className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-20 bg-white text-[#7a0000] hover:bg-[#7a0000]/10 px-6 py-3 rounded-full flex items-center gap-2 shadow-lg transition-colors whitespace-nowrap"
+              >
+                <MapPointWave weight="Bold" color="#7a0000" size={16} />
+                Use current location
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Results Overlay */}
+        {showSearchResults && (
+          <div className="absolute top-32 left-4 right-4 z-40 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+            {isSearching ? (
+              <div className="p-4 text-center text-gray-500">Searching...</div>
+            ) : searchResults.length > 0 ? (
+              <div className="py-2">
+                {searchResults.map((result, index) => (
+                  <button
+                    key={result.place_id}
+                    onClick={() => handleLocationSelect(result)}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0"
+                  >
+                    <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">
+                        {result.description.split(",")[0]}
+                      </div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {result.description}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-gray-500">
+                No results found
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Backdrop for search results */}
+        {showSearchResults && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-20 z-30"
+            onClick={() => setShowSearchResults(false)}
+          />
+        )}
+
+        {/* Address Details Drawer */}
+        <Drawer open={showAddressDrawer} onOpenChange={setShowAddressDrawer}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Confirm Address</DrawerTitle>
+            </DrawerHeader>
+
+            {selectedLocation && (
+              <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Delivery Address
                   </label>
                   <div className="p-3 bg-[#f5f6fa] rounded-xl">
-                    <div className="flex items-center gap-1">
-                      <HiMapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
-                      <p className="text-gray-900 font-medium">
-                        {selectedLocation.area}
+                    <div className="flex items-start gap-1">
+                      <HiMapPin
+                        className="h-5 w-5 flex-shrink-0 mt-[1px]"
+                        style={{ color: "#7a0000" }}
+                      />
+                      <p className="text-gray-900 text-[14px]">
+                        {selectedLocation.address}
                       </p>
                     </div>
-                    <p className="text-[12px] text-gray-500 mt-1 ml-6">
-                      {selectedLocation.address}
-                    </p>
                   </div>
                 </div>
 
@@ -730,7 +766,10 @@ export default function NewAddressPage() {
                     value={addressDetails}
                     onChange={(e) => setAddressDetails(e.target.value)}
                     placeholder="Apartment, building, landmark..."
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm placeholder:text-sm"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent resize-none text-sm placeholder:text-sm"
+                    style={
+                      { "--tw-ring-color": "#7a0000" } as React.CSSProperties
+                    }
                     rows={1}
                   />
                 </div>
@@ -746,7 +785,7 @@ export default function NewAddressPage() {
                       onClick={() => setSelectedAddressType("Home")}
                       className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
                         selectedAddressType === "Home"
-                          ? "bg-red-50 border-red-500 text-red-500"
+                          ? "bg-[#7a0000]/10 border-[#7a0000] text-[#7a0000]"
                           : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -759,7 +798,7 @@ export default function NewAddressPage() {
                       onClick={() => setSelectedAddressType("Work")}
                       className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
                         selectedAddressType === "Work"
-                          ? "bg-red-50 border-red-500 text-red-500"
+                          ? "bg-[#7a0000]/10 border-[#7a0000] text-[#7a0000]"
                           : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -772,7 +811,7 @@ export default function NewAddressPage() {
                       onClick={() => setSelectedAddressType("Other")}
                       className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
                         selectedAddressType === "Other"
-                          ? "bg-red-50 border-red-500 text-red-500"
+                          ? "bg-[#7a0000]/10 border-[#7a0000] text-[#7a0000]"
                           : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -789,26 +828,31 @@ export default function NewAddressPage() {
                         value={otherAddressName}
                         onChange={(e) => setOtherAddressName(e.target.value)}
                         placeholder="Enter address name"
-                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm placeholder:text-sm"
+                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:border-transparent text-sm placeholder:text-sm"
+                        style={
+                          {
+                            "--tw-ring-color": "#7a0000",
+                          } as React.CSSProperties
+                        }
                       />
                     </div>
                   )}
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleSaveAddress}
-                    className="flex-1 px-4 py-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                  >
-                    Confirm Address
-                  </button>
-                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+
+            <DrawerFooter>
+              <button
+                onClick={handleSaveAddress}
+                className="w-full px-4 py-3 text-white rounded-full hover:opacity-90 transition-colors"
+                style={{ backgroundColor: "#7a0000" }}
+              >
+                Confirm Address
+              </button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
     </div>
   );
 }

@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Clock, Navigation } from "lucide-react";
-import { HomeSmile, Buildings } from "@solar-icons/react";
+import { HomeSmile, Buildings, Shop } from "@solar-icons/react";
 import { GrLocation } from "react-icons/gr";
+import { HiMiniMapPin } from "react-icons/hi2";
 
 // Google Maps types are handled by @types/google.maps
 
@@ -45,6 +46,7 @@ export default function ConfirmAddressPage({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const mapRef = useRef<HTMLDivElement>(null);
@@ -247,16 +249,9 @@ export default function ConfirmAddressPage({
         map: map,
         title: "Duchess Pastries - Keeranatham",
         icon: {
-          url:
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(`
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="16" fill="#FF6B6B"/>
-              <path d="M16 8L20 12H18V20H14V12H12L16 8Z" fill="white"/>
-            </svg>
-          `),
-          scaledSize: new google.maps.Size(32, 32),
-          anchor: new google.maps.Point(16, 16),
+          url: "/svg/icons/shop.svg",
+          scaledSize: new google.maps.Size(72, 72),
+          anchor: new google.maps.Point(37, 69),
         },
       });
 
@@ -269,17 +264,9 @@ export default function ConfirmAddressPage({
         map: map,
         title: "Delivery Location",
         icon: {
-          url:
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(`
-            <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 12 32 12 32S24 18.6 24 12C24 5.4 18.6 0 12 0Z" fill="#FF0000"/>
-              <circle cx="12" cy="12" r="4" fill="white"/>
-              <circle cx="12" cy="12" r="2" fill="#FF0000"/>
-            </svg>
-          `),
-          scaledSize: new google.maps.Size(24, 32),
-          anchor: new google.maps.Point(12, 32),
+          url: "/svg/icons/home.svg",
+          scaledSize: new google.maps.Size(72, 72),
+          anchor: new google.maps.Point(37, 70),
         },
       });
 
@@ -324,7 +311,7 @@ export default function ConfirmAddressPage({
       const directionsRenderer = new google.maps.DirectionsRenderer({
         suppressMarkers: true,
         polylineOptions: {
-          strokeColor: "#FF6B6B",
+          strokeColor: "#0044FF",
           strokeWeight: 4,
           strokeOpacity: 0.8,
         },
@@ -449,15 +436,97 @@ export default function ConfirmAddressPage({
     return addressData.addressType;
   };
 
-  const handleSaveAddress = () => {
-    // Here you would typically save to your database
-    console.log("Saving address:", addressData);
-    alert("Address saved successfully!");
+  const handleSaveAddress = async () => {
+    if (!addressData) {
+      alert("No address data to save");
+      return;
+    }
 
-    // Clear session storage and redirect (only on client side)
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("pendingAddress");
-      window.location.href = "/addresses";
+    setSaving(true);
+    try {
+      // Extract city, state, and zip code from full address
+      const extractAddressComponents = (fullAddress: string) => {
+        const addressParts = fullAddress.split(",").map((part) => part.trim());
+
+        // Default values
+        let city = "Coimbatore";
+        let state = "Tamil Nadu";
+        let zipCode = "641103";
+
+        // Try to extract zip code (6 digits)
+        const zipMatch = fullAddress.match(/\b\d{6}\b/);
+        if (zipMatch) {
+          zipCode = zipMatch[0];
+        }
+
+        // Try to extract state
+        if (addressParts.includes("Tamil Nadu")) {
+          state = "Tamil Nadu";
+        }
+
+        // Try to extract city
+        if (addressParts.includes("Coimbatore")) {
+          city = "Coimbatore";
+        }
+
+        return { city, state, zipCode };
+      };
+
+      const { city, state, zipCode } = extractAddressComponents(
+        addressData.location.address
+      );
+
+      // Prepare address data for API
+      const addressPayload = {
+        address_name:
+          addressData.addressType === "Other" && addressData.otherAddressName
+            ? addressData.otherAddressName
+            : addressData.addressType,
+        full_address: addressData.location.address,
+        area: addressData.location.area,
+        city,
+        state,
+        zip_code: zipCode,
+        latitude: addressData.location.lat,
+        longitude: addressData.location.lng,
+        address_type: addressData.addressType,
+        other_address_name:
+          addressData.addressType === "Other"
+            ? addressData.otherAddressName
+            : null,
+        additional_details: addressData.details,
+        is_default: true, // Set as default for now
+      };
+
+      console.log("Saving address:", addressPayload);
+
+      const response = await fetch("/api/addresses/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(addressPayload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        alert("Address saved successfully!");
+
+        // Clear session storage and redirect
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("pendingAddress");
+          window.location.href = "/addresses";
+        }
+      } else {
+        console.error("Failed to save address:", result.error);
+        alert(`Failed to save address: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error saving address:", error);
+      alert("An error occurred while saving the address");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -466,7 +535,7 @@ export default function ConfirmAddressPage({
     return (
       <div className="h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7a0000] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -477,7 +546,7 @@ export default function ConfirmAddressPage({
     return (
       <div className="h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7a0000] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -489,7 +558,10 @@ export default function ConfirmAddressPage({
       <div className="h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">No address data found</p>
-          <Link href="/addresses/new" className="text-red-500 hover:underline">
+          <Link
+            href="/addresses/new"
+            className="text-[#7a0000] hover:underline"
+          >
             Go back to add address
           </Link>
         </div>
@@ -498,113 +570,142 @@ export default function ConfirmAddressPage({
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 z-50 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between p-4">
-          <Link href="/addresses/new" className="flex items-center">
-            <ArrowLeft className="h-6 w-6 text-gray-700" />
-          </Link>
-          <h1 className="text-lg font-semibold text-gray-900">
-            Confirm Address
-          </h1>
-          <div className="w-6" />
-        </div>
-      </div>
-
-      {/* Map Container */}
-      <div className="flex-1 relative p-4">
-        <div
-          ref={mapRef}
-          className="w-full h-full rounded-2xl overflow-hidden"
-        />
-
-        {!mapLoaded && (
-          <div className="absolute inset-4 flex items-center justify-center bg-gray-100 rounded-2xl">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading map...</p>
-              <p className="text-xs text-gray-500 mt-2">
-                If map doesn't load, check console for errors
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Fallback when map fails to load */}
-        {mapLoaded && !mapInstanceRef.current && (
-          <div className="absolute inset-4 flex items-center justify-center bg-gray-100 rounded-2xl">
-            <div className="text-center">
-              <div className="text-red-500 text-4xl mb-4">⚠️</div>
-              <p className="text-gray-600 mb-2">Map failed to load</p>
-              <p className="text-sm text-gray-500">
-                Check browser console for details
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Sheet */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-200">
-        <div className="p-6">
-          {/* Route Information */}
-          {routeInfo && (
-            <div className="flex gap-3 mb-6">
-              {/* Distance Box */}
-              <div className="flex-1 p-4 justify-center items-center bg-gray-50 rounded-xl">
-                <div className="flex items-center gap-2">
-                  <Navigation className="h-5 w-5 text-red-500" />
-                  <span className="text-lg font-semibold text-gray-700">
-                    {routeInfo.distance}
-                  </span>
-                </div>
+    <div className="h-screen bg-[#f5f6fa]">
+      <div className="max-w-[1200px] mx-auto h-screen flex flex-col">
+        {/* Header */}
+        <div className="flex-shrink-0 z-50 bg-[#f5f6fa]">
+          <div className="flex items-center justify-between p-4">
+            <Link href="/addresses/new" className="flex items-center">
+              <div className="p-3 bg-white rounded-full">
+                <ArrowLeft className="h-6 w-6 text-gray-700" />
               </div>
-
-              {/* Duration Box */}
-              <div className="flex-1 p-4 bg-gray-50 rounded-xl">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-red-500" />
-                  <span className="text-lg font-semibold text-gray-700">
-                    {routeInfo.duration}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Address Details */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Delivery Address
-              </label>
-              <div className="p-3 bg-[#f5f6fa] rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  {getAddressTypeIcon()}
-                  <span className="text-gray-900 font-medium">
-                    {getAddressTypeName()}
-                  </span>
-                </div>
-                <p className="text-[12px] text-gray-500 mt-1 ml-6">
-                  {addressData.location.address}
-                </p>
-                {addressData.details && (
-                  <p className="text-[12px] text-gray-500 mt-1 ml-6">
-                    {addressData.details}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Save Address Button */}
+            </Link>
+            <h1 className="text-lg font-semibold text-gray-900">
+              Confirm Address
+            </h1>
+            {/* Save Address Button - Desktop Only */}
             <button
               onClick={handleSaveAddress}
-              className="w-full px-4 py-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium"
+              disabled={saving}
+              className="hidden md:flex px-4 py-2 bg-[#7a0000] text-white rounded-full hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed items-center gap-2"
             >
-              Save Address
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  Saving...
+                </>
+              ) : (
+                "Save Address"
+              )}
             </button>
           </div>
+        </div>
+
+        {/* Single Column Layout */}
+        <div className="flex-1 flex flex-col pb-20 md:pb-0">
+          {/* Map Container */}
+          <div className="h-64 md:h-96 relative p-4">
+            <div
+              ref={mapRef}
+              className="w-full h-full rounded-2xl overflow-hidden"
+            />
+
+            {!mapLoaded && (
+              <div className="absolute inset-4 flex items-center justify-center bg-gray-100 rounded-2xl">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7a0000] mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading map...</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    If map doesn't load, check console for errors
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Fallback when map fails to load */}
+            {mapLoaded && !mapInstanceRef.current && (
+              <div className="absolute inset-4 flex items-center justify-center bg-gray-100 rounded-2xl">
+                <div className="text-center">
+                  <div className="text-[#7a0000] text-4xl mb-4">⚠️</div>
+                  <p className="text-gray-600 mb-2">Map failed to load</p>
+                  <p className="text-sm text-gray-500">
+                    Check browser console for details
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Content Section */}
+          <div className="flex-1 p-6">
+            {/* Route Information */}
+            {routeInfo && (
+              <div className="flex gap-3 mb-6">
+                {/* Distance Box */}
+                <div className="flex-1 p-4 justify-center items-center bg-white rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Navigation className="h-5 w-5 text-[#7a0000]" />
+                    <span className="text-lg font-semibold text-gray-700">
+                      {routeInfo.distance}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Duration Box */}
+                <div className="flex-1 p-4 bg-white rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-[#7a0000]" />
+                    <span className="text-lg font-semibold text-gray-700">
+                      {routeInfo.duration}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Address Details */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Delivery Address
+                </label>
+                <div className="p-3 bg-white rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    {getAddressTypeIcon()}
+                    <span className="text-gray-900 font-medium">
+                      {getAddressTypeName()}
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-gray-500 mt-1 ml-6">
+                    {addressData.location.address}
+                  </p>
+                  {addressData.details && (
+                    <p className="text-[12px] text-gray-500 mt-1 ml-6">
+                      {addressData.details}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed Save Button - Mobile Only */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+          <button
+            onClick={handleSaveAddress}
+            disabled={saving}
+            className="w-full px-4 py-3 bg-[#7a0000] text-white rounded-full hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Saving...
+              </>
+            ) : (
+              "Save Address"
+            )}
+          </button>
         </div>
       </div>
     </div>

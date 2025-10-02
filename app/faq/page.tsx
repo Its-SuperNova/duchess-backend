@@ -240,7 +240,7 @@ const faqData: FAQItem[] = [
     id: 32,
     question: "How do I update my delivery address?",
     answer:
-      "Go to your profile page and click on 'Addresses' to add, edit, or remove delivery addresses. You can set a default address for quick checkout.",
+      "Go to your profile page and click on 'Addresses' to add or remove delivery addresses. You can set a default address for quick checkout.",
     category: "Account & Profile",
   },
   {
@@ -471,72 +471,47 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f4f7] dark:bg-[#18171C] py-8 px-4 lg:pt-24">
-        <div className="max-w-7xl mx-auto pb-20">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Link href="/profile">
-              <Button variant="ghost" size="sm" className="p-2">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="bg-[#7a0000] dark:bg-[#7a0000] rounded-full p-2">
-                <HelpCircle className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#000000] dark:text-white">
-                  Frequently Asked Questions
-                </h1>
-                <p className="text-[#858585] dark:text-gray-400 text-sm">
-                  Find answers to common questions about Duchess Pastries
-                </p>
-              </div>
+      <div className="max-w-7xl mx-auto pb-20">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/profile">
+            <Button variant="ghost" size="sm" className="p-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div className="flex items-center gap-3">
+            <div className="bg-[#7a0000] dark:bg-[#7a0000] rounded-full p-2">
+              <HelpCircle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[#000000] dark:text-white">
+                Frequently Asked Questions
+              </h1>
+              <p className="text-[#858585] dark:text-gray-400 text-sm">
+                Find answers to common questions about Duchess Pastries
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* Main Content */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Mobile Categories - Horizontal Scrollable Row */}
-            <div className="lg:hidden">
-              <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 border border-gray-200 dark:border-transparent">
-                <h2 className="text-lg font-semibold text-[#000000] dark:text-white mb-4">
-                  Categories
-                </h2>
-                <div className="overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-2 min-w-max">
-                    {categories.map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-4 py-3 rounded-xl transition-colors whitespace-nowrap ${
-                          selectedCategory === category
-                            ? "bg-[#7a0000] dark:bg-[#7a0000] text-white"
-                            : "text-[#000000] dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
-                        }`}
-                      >
-                        <div className="font-medium">{category}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Categories - Left Sidebar */}
-            <div className="hidden lg:block lg:w-80 flex-shrink-0">
-              <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 border border-gray-200 dark:border-transparent">
-                <h2 className="text-lg font-semibold text-[#000000] dark:text-white mb-4">
-                  Categories
-                </h2>
-                <div className="space-y-2">
+        {/* Main Content */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Mobile Categories - Horizontal Scrollable Row */}
+          <div className="lg:hidden">
+            <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 border border-gray-200 dark:border-transparent">
+              <h2 className="text-lg font-semibold text-[#000000] dark:text-white mb-4">
+                Categories
+              </h2>
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex gap-2 min-w-max">
                   {categories.map((category) => (
                     <button
                       key={category}
                       onClick={() => setSelectedCategory(category)}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+                      className={`px-4 py-3 rounded-xl transition-colors whitespace-nowrap ${
                         selectedCategory === category
                           ? "bg-[#7a0000] dark:bg-[#7a0000] text-white"
-                          : "text-[#000000] dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                          : "text-[#000000] dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
                       }`}
                     >
                       <div className="font-medium">{category}</div>
@@ -545,72 +520,97 @@ export default function FAQPage() {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Right Content - FAQ Items */}
-            <div className="flex-1">
-              <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent">
-                <div className="space-y-4">
-                  {filteredFAQs.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden"
-                    >
-                      <button
-                        onClick={() => toggleItem(item.id)}
-                        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <h3 className="text-lg font-semibold text-[#000000] dark:text-white pr-4">
-                          {item.question}
-                        </h3>
-                        {openItems.includes(item.id) ? (
-                          <ChevronUp className="h-5 w-5 text-[#858585] dark:text-gray-400 flex-shrink-0" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-[#858585] dark:text-gray-400 flex-shrink-0" />
-                        )}
-                      </button>
-
-                      {openItems.includes(item.id) && (
-                        <div className="px-6 pb-4">
-                          <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                            <p className="text-[#000000] dark:text-white leading-relaxed">
-                              {item.answer}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+          {/* Desktop Categories - Left Sidebar */}
+          <div className="hidden lg:block lg:w-80 flex-shrink-0">
+            <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-4 border border-gray-200 dark:border-transparent">
+              <h2 className="text-lg font-semibold text-[#000000] dark:text-white mb-4">
+                Categories
+              </h2>
+              <div className="space-y-2">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+                      selectedCategory === category
+                        ? "bg-[#7a0000] dark:bg-[#7a0000] text-white"
+                        : "text-[#000000] dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <div className="font-medium">{category}</div>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Contact Section */}
-          <div className="mt-8 bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent text-center">
-            <h3 className="text-lg font-semibold text-[#000000] dark:text-white mb-2">
-              Still have questions?
-            </h3>
-            <p className="text-[#858585] dark:text-gray-400 mb-4">
-              Can't find what you're looking for? Our customer service team is
-              here to help!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/contact">
-                <Button className="bg-[#7a0000] dark:bg-[#7a0000] hover:bg-[#600000] dark:hover:bg-[#600000]">
-                  Contact Us
-                </Button>
-              </Link>
-              <Link href="tel:+1234567890">
-                <Button
-                  variant="outline"
-                  className="border-[#7a0000] dark:border-[#7a0000] text-[#7a0000] dark:text-[#7a0000]"
-                >
-                  Call Now
-                </Button>
-              </Link>
+          {/* Right Content - FAQ Items */}
+          <div className="flex-1">
+            <div className="bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent">
+              <div className="space-y-4">
+                {filteredFAQs.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden"
+                  >
+                    <button
+                      onClick={() => toggleItem(item.id)}
+                      className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <h3 className="text-lg font-semibold text-[#000000] dark:text-white pr-4">
+                        {item.question}
+                      </h3>
+                      {openItems.includes(item.id) ? (
+                        <ChevronUp className="h-5 w-5 text-[#858585] dark:text-gray-400 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-[#858585] dark:text-gray-400 flex-shrink-0" />
+                      )}
+                    </button>
+
+                    {openItems.includes(item.id) && (
+                      <div className="px-6 pb-4">
+                        <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                          <p className="text-[#000000] dark:text-white leading-relaxed">
+                            {item.answer}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Contact Section */}
+        <div className="mt-8 bg-white dark:bg-[#202028] rounded-2xl shadow-sm p-6 border border-gray-200 dark:border-transparent text-center">
+          <h3 className="text-lg font-semibold text-[#000000] dark:text-white mb-2">
+            Still have questions?
+          </h3>
+          <p className="text-[#858585] dark:text-gray-400 mb-4">
+            Can't find what you're looking for? Our customer service team is
+            here to help!
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/contact">
+              <Button className="bg-[#7a0000] dark:bg-[#7a0000] hover:bg-[#600000] dark:hover:bg-[#600000]">
+                Contact Us
+              </Button>
+            </Link>
+            <Link href="tel:+1234567890">
+              <Button
+                variant="outline"
+                className="border-[#7a0000] dark:border-[#7a0000] text-[#7a0000] dark:text-[#7a0000]"
+              >
+                Call Now
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
+    </div>
   );
 }

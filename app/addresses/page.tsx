@@ -2,14 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  Plus,
-  Trash2,
-  Edit,
-  MapPin,
-  ChevronRight,
-  RefreshCw,
-} from "lucide-react";
+import { Plus, MapPin, ChevronRight } from "lucide-react";
+import { HomeSmile, Buildings, TrashBinTrash } from "@solar-icons/react";
+import { GrLocation } from "react-icons/gr";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -17,8 +12,6 @@ import {
   getUserAddresses,
   setDefaultAddress,
   deleteAddress,
-  recalculateAddressDistance,
-  getDisplayDistance,
 } from "@/lib/address-utils";
 import { getUserByEmail } from "@/lib/auth-utils";
 import type { Address } from "@/lib/supabase";
@@ -46,7 +39,6 @@ export default function ManageAddressPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [recalculating, setRecalculating] = useState<string | null>(null);
 
   // Load addresses from database
   useEffect(() => {
@@ -145,41 +137,31 @@ export default function ManageAddressPage() {
     setAddressToDelete(null);
   };
 
-  const handleRecalculateDistance = async (addressId: string) => {
-    try {
-      setRecalculating(addressId);
-      setError(null);
-
-      const result = await recalculateAddressDistance(addressId);
-
-      if (result.address) {
-        // Update the address in the local state
-        setAddresses((prev) =>
-          prev.map((addr) => (addr.id === addressId ? result.address! : addr))
-        );
-
-        // Show success toast
-        toast({
-          title: "Distance Updated! 🎯",
-          description: `New distance: ${getDisplayDistance(
-            result.address.distance
-          )?.toFixed(1)} km • Time: ${result.address.duration} minutes`,
-          duration: 3000,
-          className: "bg-green-50 border-green-200 text-green-800",
-        });
-      } else {
-        setError(result.error || "Failed to recalculate distance");
-      }
-    } catch (err) {
-      console.error("Error recalculating distance:", err);
-      setError("Failed to recalculate distance. Please try again.");
-    } finally {
-      setRecalculating(null);
-    }
-  };
-
   const formatAddress = (address: Address) => {
     return `${address.full_address}, ${address.city}, ${address.state} ${address.zip_code}`;
+  };
+
+  // Helper function to get address type icon and color
+  const getAddressTypeIcon = (addressType: string) => {
+    switch (addressType) {
+      case "Home":
+        return {
+          icon: HomeSmile,
+          color: "text-primary",
+        };
+      case "Work":
+        return {
+          icon: Buildings,
+          color: "text-primary",
+        };
+      case "Other":
+        return {
+          icon: GrLocation,
+          color: "text-primary",
+        };
+      default:
+        return { icon: MapPin, color: "text-primary" };
+    }
   };
 
   if (loading) {
@@ -297,9 +279,35 @@ export default function ManageAddressPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium text-gray-900">
-                            {address.address_name}
-                          </h3>
+                          {/* Address Type Icon */}
+                          {(() => {
+                            const addressType = address.address_type || "Home";
+                            const { icon: IconComponent, color } =
+                              getAddressTypeIcon(addressType);
+                            return (
+                              <div className={`rounded-full`}>
+                                <IconComponent className={`h-5 w-5 ${color}`} />
+                              </div>
+                            );
+                          })()}
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-gray-900">
+                              {address.address_name}
+                            </h3>
+                            {/* Address Type Label */}
+                            {address.address_type &&
+                              address.address_type !== "Home" && (
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full font-medium ${
+                                    address.address_type === "Work"
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-purple-100 text-purple-700"
+                                  }`}
+                                >
+                                  {address.address_type}
+                                </span>
+                              )}
+                          </div>
                         </div>
                         <p className="text-gray-500 text-sm mb-3">
                           {formatAddress(address)}
@@ -329,44 +337,23 @@ export default function ManageAddressPage() {
                             Set as default
                           </button>
                         )}
-
-                        {/* Default tag */}
-                        {address.is_default && (
-                          <div className="mt-3">
-                            <span className="px-2 py-1 text-xs bg-[#7A0000] text-white rounded-full">
-                              Default
-                            </span>
-                          </div>
-                        )}
                       </div>
 
-                      {/* Action buttons */}
+                      {/* Default tag and Action buttons */}
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleRecalculateDistance(address.id)}
-                          disabled={recalculating === address.id}
-                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
-                          title="Recalculate distance and time"
-                        >
-                          <RefreshCw
-                            className={`h-4 w-4 ${
-                              recalculating === address.id ? "animate-spin" : ""
-                            }`}
-                          />
-                        </button>
-                        <button
-                          onClick={() =>
-                            router.push(`/addresses/edit/${address.id}`)
-                          }
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
+                        {/* Default tag */}
+                        {address.is_default && (
+                          <span className="px-2 py-1 text-xs bg-primary text-white rounded-full">
+                            Default
+                          </span>
+                        )}
+
+                        {/* Action buttons */}
                         <button
                           onClick={() => handleDeleteAddress(address.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-2 text-red-600"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <TrashBinTrash className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
