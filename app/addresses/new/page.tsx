@@ -779,94 +779,98 @@ export default function NewAddressPage() {
 
   return (
     <div
-      className="bg-white overflow-hidden"
+      className="overflow-hidden"
       style={{ height: "calc(var(--vh, 1vh) * 100)" }}
     >
       <div className="max-w-[1200px] mx-auto w-full h-full flex flex-col">
-        {/* Header */}
-        <div className="flex-shrink-0 z-50 bg-white">
-          <div className="flex items-center justify-between p-4">
-            <Link href="/addresses" className="flex items-center">
-              <ArrowLeft className="h-6 w-6 text-gray-700" />
-            </Link>
-            <h1 className="text-lg font-semibold text-gray-900">
-              Select delivery location
-            </h1>
-            <div className="w-6" />
+        <div className="bg-white rounded-b-[32px] md:rounded-b-none shadow-lg md:shadow-none overflow-hidden mb-[-10px] z-10">
+          {/* Header */}
+          <div className="flex-shrink-0 z-50">
+            <div className="flex items-center justify-between p-4">
+              <Link href="/addresses" className="flex items-center">
+                <ArrowLeft className="h-6 w-6 text-gray-700" />
+              </Link>
+              <h1 className="text-lg font-semibold text-gray-900">
+                Select delivery location
+              </h1>
+              <div className="w-6" />
+            </div>
           </div>
-        </div>
 
-        {/* Search Bar */}
-        <div className="flex-shrink-0 px-4 pb-3 bg-white">
-          <div className="flex gap-3 items-center">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                style={{ color: "#7a0000" }}
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onClick={() => {
-                  if (isMobile) {
-                    setShowSearchDrawer(true);
-                  } else {
-                    setShowSearchDialog(true);
-                  }
-                }}
-                readOnly
-                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent cursor-pointer"
-              />
-              {searchQuery && (
+          {/* Search Bar */}
+          <div className="flex-shrink-0 px-4 pb-4">
+            <div className="flex gap-3 items-center">
+              {/* Search Input */}
+              <div className="relative flex-1">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                  style={{ color: "#7a0000" }}
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onClick={() => {
+                    if (isMobile) {
+                      setShowSearchDrawer(true);
+                    } else {
+                      setShowSearchDialog(true);
+                    }
+                  }}
+                  readOnly
+                  className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent cursor-pointer"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <X className="h-5 w-5 text-gray-400" />
+                  </button>
+                )}
+              </div>
+
+              {/* Desktop Buttons */}
+              <div className="hidden md:flex gap-2">
+                {/* Use Current Location Button */}
+                {mounted && (
+                  <button
+                    onClick={getCurrentLocation}
+                    className="px-4 py-2.5 bg-white border-2 text-[#7a0000] hover:bg-[#7a0000]/10 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap"
+                    style={{ borderColor: "#7a0000" }}
+                  >
+                    <MapPointWave weight="Bold" color="#7a0000" size={16} />
+                    <span className="hidden lg:inline">
+                      Use current location
+                    </span>
+                    <span className="lg:hidden">Current</span>
+                  </button>
+                )}
+
+                {/* Confirm Location Button */}
                 <button
                   onClick={() => {
-                    setSearchQuery("");
-                    setSearchResults([]);
-                    setShowSearchResults(false);
+                    if (selectedLocation) {
+                      setShowAddressDrawer(true);
+                    } else {
+                      alert(
+                        "Please select a location first by using the search or current location."
+                      );
+                    }
                   }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  className="px-4 py-2.5 text-white hover:opacity-90 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap"
+                  style={{ backgroundColor: "#7a0000" }}
                 >
-                  <X className="h-5 w-5 text-gray-400" />
+                  <MapPointWave weight="Bold" color="white" size={16} />
+                  <span className="hidden lg:inline">Confirm location</span>
+                  <span className="lg:hidden">Confirm</span>
                 </button>
-              )}
-            </div>
-
-            {/* Desktop Buttons */}
-            <div className="hidden md:flex gap-2">
-              {/* Use Current Location Button */}
-              {mounted && (
-                <button
-                  onClick={getCurrentLocation}
-                  className="px-4 py-2.5 bg-white border-2 text-[#7a0000] hover:bg-[#7a0000]/10 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap"
-                  style={{ borderColor: "#7a0000" }}
-                >
-                  <MapPointWave weight="Bold" color="#7a0000" size={16} />
-                  <span className="hidden lg:inline">Use current location</span>
-                  <span className="lg:hidden">Current</span>
-                </button>
-              )}
-
-              {/* Confirm Location Button */}
-              <button
-                onClick={() => {
-                  if (selectedLocation) {
-                    setShowAddressDrawer(true);
-                  } else {
-                    alert(
-                      "Please select a location first by using the search or current location."
-                    );
-                  }
-                }}
-                className="px-4 py-2.5 text-white hover:opacity-90 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap"
-                style={{ backgroundColor: "#7a0000" }}
-              >
-                <MapPointWave weight="Bold" color="white" size={16} />
-                <span className="hidden lg:inline">Confirm location</span>
-                <span className="lg:hidden">Confirm</span>
-              </button>
+              </div>
             </div>
           </div>
         </div>
