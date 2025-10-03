@@ -332,7 +332,7 @@ export default function ProfilePage() {
                   <ChevronRight className="h-4 w-4 text-[#858585]" />
                 </Link>
                 <Link
-                  href="/profile/addresses"
+                  href="/addresses"
                   className="flex items-center justify-between px-4 py-2 cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
