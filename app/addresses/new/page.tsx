@@ -13,7 +13,20 @@ import {
   DrawerTitle,
   DrawerFooter,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 // Google Maps types are handled by @types/google.maps
+
+// Extend Window interface for marker reference
+declare global {
+  interface Window {
+    selectedLocationMarker?: google.maps.Marker;
+  }
+}
 
 interface Location {
   lat: number;
@@ -46,6 +59,9 @@ export default function NewAddressPage() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showAddressDrawer, setShowAddressDrawer] = useState(false);
+  const [showSearchDrawer, setShowSearchDrawer] = useState(false);
+  const [showSearchDialog, setShowSearchDialog] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [selectedAddressType, setSelectedAddressType] = useState<
     "Home" | "Work" | "Other"
   >("Home");
@@ -59,6 +75,14 @@ export default function NewAddressPage() {
   // Ensure component is mounted on client side
   useEffect(() => {
     setMounted(true);
+
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
 
     // Prevent body scrolling
     document.body.style.overflow = "hidden";
@@ -77,6 +101,7 @@ export default function NewAddressPage() {
     return () => {
       document.body.style.overflow = "unset";
       window.removeEventListener("resize", setVH);
+      window.removeEventListener("resize", checkMobile);
       window.removeEventListener("orientationchange", setVH);
     };
   }, []);
@@ -210,6 +235,13 @@ export default function NewAddressPage() {
       map.addListener("dragend", () => {
         const center = map.getCenter()!;
         const latLng = { lat: center.lat(), lng: center.lng() };
+
+        // Clear any existing selected location marker
+        if (window.selectedLocationMarker) {
+          window.selectedLocationMarker.setMap(null);
+          window.selectedLocationMarker = undefined;
+        }
+
         reverseGeocode(latLng.lat, latLng.lng);
       });
 
@@ -219,6 +251,13 @@ export default function NewAddressPage() {
           const lat = event.latLng.lat();
           const lng = event.latLng.lng();
           map.setCenter({ lat, lng });
+
+          // Clear any existing selected location marker
+          if (window.selectedLocationMarker) {
+            window.selectedLocationMarker.setMap(null);
+            window.selectedLocationMarker = undefined;
+          }
+
           reverseGeocode(lat, lng);
         }
       });
@@ -292,6 +331,8 @@ export default function NewAddressPage() {
           input: query,
           componentRestrictions: { country: "in" },
           types: ["geocode"],
+          location: new google.maps.LatLng(11.0168, 76.9558), // Coimbatore coordinates
+          radius: 50000, // 50km radius around Coimbatore
         },
         (predictions: any, status: any) => {
           if (status === "OK" && predictions) {
@@ -321,16 +362,30 @@ export default function NewAddressPage() {
   };
 
   const handleLocationSelect = (result: SearchResult) => {
-    const service = new google.maps.places.PlacesService(mapRef.current!);
+    // Check if map is available
+    if (!mapInstanceRef.current) {
+      console.error("Map not initialized yet");
+      return;
+    }
+
+    // First, try to get detailed place information
+    const service = new google.maps.places.PlacesService(
+      mapInstanceRef.current
+    );
     service.getDetails(
       {
         placeId: result.place_id,
         fields: ["geometry", "formatted_address", "address_components"],
       },
       (place: any, status: any) => {
+        console.log("Place details status:", status);
+        console.log("Place details:", place);
+
         if (status === "OK" && place && place.geometry) {
           const lat = place.geometry.location!.lat();
           const lng = place.geometry.location!.lng();
+
+          console.log("Selected location coordinates:", { lat, lng });
 
           setSelectedLocation({
             lat,
@@ -341,11 +396,107 @@ export default function NewAddressPage() {
             ),
           });
 
-          // Update map center
+          // Update map center and add marker
           if (mapInstanceRef.current) {
-            mapInstanceRef.current.setCenter({ lat, lng });
-            mapInstanceRef.current.setZoom(16);
+            const map = mapInstanceRef.current;
+
+            // Clear any existing markers
+            if (window.selectedLocationMarker) {
+              window.selectedLocationMarker.setMap(null);
+            }
+
+            // Center map on selected location
+            map.setCenter({ lat, lng });
+            map.setZoom(16);
+
+            // Add a marker for the selected location
+            const marker = new google.maps.Marker({
+              position: { lat, lng },
+              map: map,
+              title: place.formatted_address || result.formatted_address,
+              icon: {
+                url:
+                  "data:image/svg+xml;charset=UTF-8," +
+                  encodeURIComponent(`
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#7a0000"/>
+                  </svg>
+                `),
+                scaledSize: new google.maps.Size(24, 24),
+                anchor: new google.maps.Point(12, 24),
+              },
+              animation: google.maps.Animation.DROP,
+            });
+
+            console.log("Marker added to map:", marker);
+
+            // Store marker reference for cleanup
+            window.selectedLocationMarker = marker;
           }
+        } else {
+          console.error("Failed to get place details:", status);
+          // Fallback: Use geocoding to get coordinates from the description
+          console.log("Attempting fallback geocoding for:", result.description);
+
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode(
+            { address: result.description },
+            (results: any, status: any) => {
+              if (status === "OK" && results && results[0]) {
+                const lat = results[0].geometry.location.lat();
+                const lng = results[0].geometry.location.lng();
+
+                console.log("Fallback coordinates:", { lat, lng });
+
+                setSelectedLocation({
+                  lat,
+                  lng,
+                  address: result.formatted_address || result.description,
+                  area: extractAreaFromAddress(result.description),
+                });
+
+                // Update map center and add marker
+                if (mapInstanceRef.current) {
+                  const map = mapInstanceRef.current;
+
+                  // Clear any existing markers
+                  if (window.selectedLocationMarker) {
+                    window.selectedLocationMarker.setMap(null);
+                  }
+
+                  // Center map on selected location
+                  map.setCenter({ lat, lng });
+                  map.setZoom(16);
+
+                  // Add a marker for the selected location
+                  const marker = new google.maps.Marker({
+                    position: { lat, lng },
+                    map: map,
+                    title: result.description,
+                    icon: {
+                      url:
+                        "data:image/svg+xml;charset=UTF-8," +
+                        encodeURIComponent(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#7a0000"/>
+                        </svg>
+                      `),
+                      scaledSize: new google.maps.Size(24, 24),
+                      anchor: new google.maps.Point(12, 24),
+                    },
+                    animation: google.maps.Animation.DROP,
+                  });
+
+                  console.log("Fallback marker added to map:", marker);
+
+                  // Store marker reference for cleanup
+                  window.selectedLocationMarker = marker;
+                }
+              } else {
+                console.error("Fallback geocoding also failed:", status);
+              }
+            }
+          );
         }
       }
     );
@@ -406,6 +557,12 @@ export default function NewAddressPage() {
         // Update map center using stored map instance
         console.log("Updating map center to current location");
         if (mapInstanceRef.current) {
+          // Clear any existing selected location marker
+          if (window.selectedLocationMarker) {
+            window.selectedLocationMarker.setMap(null);
+            window.selectedLocationMarker = undefined;
+          }
+
           mapInstanceRef.current.setCenter({ lat, lng });
           mapInstanceRef.current.setZoom(16);
 
@@ -478,6 +635,112 @@ export default function NewAddressPage() {
     );
   };
 
+  // Shared search content component
+  const SearchContent = () => (
+    <>
+      {/* Search Input in Search Component */}
+      <div className="relative">
+        <Search
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+          style={{ color: "#7a0000" }}
+        />
+        <input
+          type="text"
+          placeholder="Search for a location..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            handleSearch(e.target.value);
+          }}
+          className="w-full pl-10 pr-10 py-3 bg-white rounded-xl focus:outline-none"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setSearchResults([]);
+            }}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2"
+          >
+            <X className="h-5 w-5 text-gray-400" />
+          </button>
+        )}
+      </div>
+
+      {/* Use Current Location Button */}
+      {!searchQuery && (
+        <button
+          onClick={() => {
+            getCurrentLocation();
+            if (isMobile) {
+              setShowSearchDrawer(false);
+            } else {
+              setShowSearchDialog(false);
+            }
+          }}
+          className="w-full flex items-center justify-start gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+        >
+          <MapPointWave weight="Bold" color="#7a0000" size={16} />
+          <div className="flex-1 text-left">
+            <div className="font-medium" style={{ color: "#7a0000" }}>
+              Use current location
+            </div>
+            {selectedLocation && (
+              <div className="text-xs text-gray-500 w-[70%] truncate">
+                {selectedLocation.address}
+              </div>
+            )}
+          </div>
+        </button>
+      )}
+
+      {/* Search Results */}
+      <div className="max-h-96 overflow-y-auto">
+        {isSearching ? (
+          <div className="p-4 text-center text-gray-500">Searching...</div>
+        ) : searchResults.length > 0 ? (
+          <div className="space-y-1">
+            {searchResults.map((result, index) => (
+              <button
+                key={result.place_id}
+                onClick={() => {
+                  handleLocationSelect(result);
+                  // Don't close drawer immediately, let the location selection complete
+                  setTimeout(() => {
+                    if (isMobile) {
+                      setShowSearchDrawer(false);
+                    } else {
+                      setShowSearchDialog(false);
+                    }
+                  }, 500);
+                }}
+                className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0 transition-colors"
+              >
+                <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 truncate">
+                    {result.description.split(",")[0]}
+                  </div>
+                  <div className="text-sm text-gray-500 truncate">
+                    {result.description}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : searchQuery ? (
+          <div className="p-4 text-center text-gray-500">
+            No results found for "{searchQuery}"
+          </div>
+        ) : (
+          <div className="p-4 text-center text-gray-500">
+            Start typing to search for locations
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   const handleSaveAddress = () => {
     if (!selectedLocation) {
       alert("Please select a location first.");
@@ -547,11 +810,15 @@ export default function NewAddressPage() {
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleSearch(e.target.value);
+                onClick={() => {
+                  if (isMobile) {
+                    setShowSearchDrawer(true);
+                  } else {
+                    setShowSearchDialog(true);
+                  }
                 }}
-                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                readOnly
+                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent cursor-pointer"
               />
               {searchQuery && (
                 <button
@@ -691,46 +958,49 @@ export default function NewAddressPage() {
           </div>
         </div>
 
-        {/* Search Results Overlay */}
-        {showSearchResults && (
-          <div className="absolute top-32 left-4 right-4 z-40 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
-            {isSearching ? (
-              <div className="p-4 text-center text-gray-500">Searching...</div>
-            ) : searchResults.length > 0 ? (
-              <div className="py-2">
-                {searchResults.map((result, index) => (
+        {/* Search Drawer */}
+        <Drawer open={showSearchDrawer} onOpenChange={setShowSearchDrawer}>
+          <DrawerContent className="bg-[#f5f6fa]">
+            <div className="max-w-md ">
+              <DrawerHeader className="bg-[#f5f6fa]">
+                <div className="flex items-center justify-between">
+                  <DrawerTitle>Select a location</DrawerTitle>
                   <button
-                    key={result.place_id}
-                    onClick={() => handleLocationSelect(result)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0"
+                    onClick={() => setShowSearchDrawer(false)}
+                    className="p-1 hover:bg-gray-100 rounded-full"
                   >
-                    <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 truncate">
-                        {result.description.split(",")[0]}
-                      </div>
-                      <div className="text-sm text-gray-500 truncate">
-                        {result.description}
-                      </div>
-                    </div>
+                    <X className="h-5 w-5 text-gray-500" />
                   </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-4 text-center text-gray-500">
-                No results found
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              </DrawerHeader>
 
-        {/* Backdrop for search results */}
-        {showSearchResults && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-20 z-30"
-            onClick={() => setShowSearchResults(false)}
-          />
-        )}
+              <div className="px-4 space-y-4 bg-[#f5f6fa]">
+                <SearchContent />
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+
+        {/* Search Dialog - Desktop Only */}
+        <Dialog open={showSearchDialog} onOpenChange={setShowSearchDialog}>
+          <DialogContent className="bg-[#f5f6fa] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                Select a location
+                <button
+                  onClick={() => setShowSearchDialog(false)}
+                  className="p-1 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <SearchContent />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Address Details Drawer */}
         <Drawer open={showAddressDrawer} onOpenChange={setShowAddressDrawer}>

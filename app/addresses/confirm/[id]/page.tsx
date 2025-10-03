@@ -48,6 +48,7 @@ export default function ConfirmAddressPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isWithinDeliveryRadius, setIsWithinDeliveryRadius] = useState(true);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -355,6 +356,19 @@ export default function ConfirmAddressPage({
 
           console.log("Route calculated successfully:", routeInfo);
           setRouteInfo(routeInfo);
+
+          // Check if distance is within 30km delivery radius
+          const distanceInKm = (routeInfo.distanceValue || 0) / 1000;
+          const withinRadius = distanceInKm <= 30;
+          setIsWithinDeliveryRadius(withinRadius);
+
+          if (!withinRadius) {
+            console.warn(
+              `Delivery location is ${distanceInKm.toFixed(
+                1
+              )}km away, outside 30km delivery radius`
+            );
+          }
         } else {
           console.warn("Directions service failed, using fallback:", status);
           // Calculate approximate distance as fallback
@@ -364,12 +378,24 @@ export default function ConfirmAddressPage({
             addressData.location.lat,
             addressData.location.lng
           );
+          const distanceInKm = distance / 1000;
+          const withinRadius = distanceInKm <= 30;
+          setIsWithinDeliveryRadius(withinRadius);
+
           setRouteInfo({
-            distance: `${(distance / 1000).toFixed(1)} km`,
-            duration: `${Math.round((distance / 1000) * 2)} mins`,
+            distance: `${distanceInKm.toFixed(1)} km`,
+            duration: `${Math.round(distanceInKm * 2)} mins`,
             distanceValue: distance,
-            durationValue: Math.round((distance / 1000) * 2 * 60),
+            durationValue: Math.round(distanceInKm * 2 * 60),
           });
+
+          if (!withinRadius) {
+            console.warn(
+              `Delivery location is ${distanceInKm.toFixed(
+                1
+              )}km away, outside 30km delivery radius`
+            );
+          }
         }
       });
     } catch (error) {
@@ -381,12 +407,24 @@ export default function ConfirmAddressPage({
         addressData.location.lat,
         addressData.location.lng
       );
+      const distanceInKm = distance / 1000;
+      const withinRadius = distanceInKm <= 30;
+      setIsWithinDeliveryRadius(withinRadius);
+
       setRouteInfo({
-        distance: `${(distance / 1000).toFixed(1)} km`,
-        duration: `${Math.round((distance / 1000) * 2)} mins`,
+        distance: `${distanceInKm.toFixed(1)} km`,
+        duration: `${Math.round(distanceInKm * 2)} mins`,
         distanceValue: distance,
-        durationValue: Math.round((distance / 1000) * 2 * 60),
+        durationValue: Math.round(distanceInKm * 2 * 60),
       });
+
+      if (!withinRadius) {
+        console.warn(
+          `Delivery location is ${distanceInKm.toFixed(
+            1
+          )}km away, outside 30km delivery radius`
+        );
+      }
     }
   };
 
@@ -578,13 +616,18 @@ export default function ConfirmAddressPage({
                 <ArrowLeft className="h-6 w-6 text-gray-700" />
               </div>
             </Link>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900 md:block hidden">
               Confirm Address
             </h1>
+            <div className="md:hidden flex-1 flex justify-center">
+              <h1 className="text-lg font-semibold text-gray-900">
+                Confirm Address
+              </h1>
+            </div>
             {/* Save Address Button - Desktop Only */}
             <button
               onClick={handleSaveAddress}
-              disabled={saving}
+              disabled={saving || !isWithinDeliveryRadius}
               className="hidden md:flex px-4 py-2 bg-[#7a0000] text-white rounded-full hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed items-center gap-2"
             >
               {saving ? (
@@ -592,6 +635,8 @@ export default function ConfirmAddressPage({
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                   Saving...
                 </>
+              ) : !isWithinDeliveryRadius ? (
+                "Outside Delivery Area"
               ) : (
                 "Save Address"
               )}
@@ -661,6 +706,37 @@ export default function ConfirmAddressPage({
               </div>
             )}
 
+            {/* Delivery Radius Warning */}
+            {routeInfo && !isWithinDeliveryRadius && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-red-600 text-sm font-bold">!</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-red-800 mb-1">
+                      Delivery Not Available
+                    </h3>
+                    <p className="text-sm text-red-700 mb-3">
+                      We only cover a 30km radius from our shop in Coimbatore.
+                      This location is {routeInfo.distance} away, which is
+                      outside our delivery area. Please choose a different
+                      location within our delivery radius.
+                    </p>
+                    <Link
+                      href="/addresses/new"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Choose Different Location
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Address Details */}
             <div className="space-y-4">
               <div>
@@ -668,7 +744,7 @@ export default function ConfirmAddressPage({
                   Delivery Address
                 </label>
                 <div className="p-3 bg-white rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 ">
                     {getAddressTypeIcon()}
                     <span className="text-gray-900 font-medium">
                       {getAddressTypeName()}
@@ -692,7 +768,7 @@ export default function ConfirmAddressPage({
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
           <button
             onClick={handleSaveAddress}
-            disabled={saving}
+            disabled={saving || !isWithinDeliveryRadius}
             className="w-full px-4 py-3 bg-[#7a0000] text-white rounded-full hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {saving ? (
@@ -700,6 +776,8 @@ export default function ConfirmAddressPage({
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 Saving...
               </>
+            ) : !isWithinDeliveryRadius ? (
+              "Outside Delivery Area"
             ) : (
               "Save Address"
             )}

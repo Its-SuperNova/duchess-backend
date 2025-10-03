@@ -2,6 +2,9 @@ import path from 'path';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Set the correct workspace root to avoid lockfile warnings
+  outputFileTracingRoot: path.resolve('./'),
+  
   experimental: {
     optimizePackageImports: ['lucide-react', '@solar-icons/react'],
   },
