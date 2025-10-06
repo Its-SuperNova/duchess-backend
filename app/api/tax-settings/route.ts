@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
       const result = await supabaseAdmin
         .from("tax_settings")
         .update({
-          cgst_rate: parseFloat(cgst_rate),
-          sgst_rate: parseFloat(sgst_rate),
+          cgst_rate: cgst_rate,
+          sgst_rate: sgst_rate,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingSettings.id)
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
         .from("tax_settings")
         .insert([
           {
-            cgst_rate: parseFloat(cgst_rate),
-            sgst_rate: parseFloat(sgst_rate),
+            cgst_rate: cgst_rate,
+            sgst_rate: sgst_rate,
             is_active: true,
           },
         ])
