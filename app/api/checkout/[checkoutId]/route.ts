@@ -104,6 +104,20 @@ export async function PATCH(
       updates,
     });
 
+    // Debug: Log financial data being updated
+    if (updates.deliveryFee !== undefined || updates.subtotal !== undefined) {
+      console.log("💰 Financial data in checkout update:", {
+        subtotal: updates.subtotal,
+        discount: updates.discount,
+        deliveryFee: updates.deliveryFee,
+        cgstAmount: updates.cgstAmount,
+        sgstAmount: updates.sgstAmount,
+        totalAmount: updates.totalAmount,
+        addressText: updates.addressText,
+        selectedAddressId: updates.selectedAddressId,
+      });
+    }
+
     // Update checkout session
     const updatedSession = await CheckoutStore.updateSession(
       checkoutId,

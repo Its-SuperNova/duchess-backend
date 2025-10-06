@@ -145,6 +145,19 @@ export class CheckoutStoreDB {
     // Update in database
     const updateData: any = {};
 
+    // Financial fields
+    if (updates.subtotal !== undefined) updateData.subtotal = updates.subtotal;
+    if (updates.discount !== undefined) updateData.discount = updates.discount;
+    if (updates.deliveryFee !== undefined)
+      updateData.delivery_fee = updates.deliveryFee;
+    if (updates.totalAmount !== undefined)
+      updateData.total_amount = updates.totalAmount;
+    if (updates.cgstAmount !== undefined)
+      updateData.cgst_amount = updates.cgstAmount;
+    if (updates.sgstAmount !== undefined)
+      updateData.sgst_amount = updates.sgstAmount;
+
+    // Other fields
     if (updates.notes !== undefined) updateData.notes = updates.notes;
     if (updates.addressText !== undefined)
       updateData.address_text = updates.addressText;
@@ -177,6 +190,12 @@ export class CheckoutStoreDB {
       updateData.payment_attempts = updates.paymentAttempts;
     if (updates.databaseOrderId !== undefined)
       updateData.database_order_id = updates.databaseOrderId;
+
+    // Debug: Log what's being updated in database
+    console.log("🗄️ Updating checkout session in database:", {
+      checkoutId,
+      updateData,
+    });
 
     const { error } = await supabase
       .from("checkout_sessions")

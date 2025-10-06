@@ -82,10 +82,18 @@ export async function POST(req: NextRequest) {
 
         console.log("Order created successfully:", orderResult);
 
+        // Debug: Log delivery fee data for debugging
+        console.log("🔍 Delivery Fee Debug - Order Created:", {
+          orderId: orderResult.orderId,
+          deliveryFeeStored: orderResult.deliveryFeeData,
+          message: "Delivery fee successfully stored in database",
+        });
+
         return NextResponse.json({
           success: true,
           orderId: orderResult.orderId,
           paymentId: razorpay_payment_id,
+          deliveryFeeData: orderResult.deliveryFeeData,
           message: "Payment verified and order created successfully",
         });
       } catch (orderError) {

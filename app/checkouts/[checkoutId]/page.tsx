@@ -69,7 +69,6 @@ import {
   getDisplayDistance,
   getUserAddresses,
 } from "@/lib/address-utils";
-import { calculateDeliveryFee } from "@/lib/distance";
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
@@ -275,10 +274,14 @@ export default function CheckoutClient() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null
   );
+
   const { data: session } = useSession();
   const [addresses, setAddresses] = useState<DbAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState<boolean>(false);
-  const [deliveryCharges, setDeliveryCharges] = useState<any[]>([]);
+  const [taxSettings, setTaxSettings] = useState<{
+    cgst_rate: number;
+    sgst_rate: number;
+  } | null>(null);
 
   // Customization options state
   const [customizationOptions, setCustomizationOptions] = useState({
@@ -313,6 +316,8 @@ export default function CheckoutClient() {
   const [showFailureOverlay, setShowFailureOverlay] = useState(false);
   const [failureCountdown, setFailureCountdown] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  const [showDebugDialog, setShowDebugDialog] = useState(false);
+  const [debugData, setDebugData] = useState<any>(null);
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -685,7 +690,17 @@ export default function CheckoutClient() {
   }, [session]);
 
   // Calculate checkout totals - use checkout data if available, otherwise fall back to cart
-  const subtotal = checkoutData ? checkoutData.subtotal : getSubtotal();
+  const calculateSubtotal = () => {
+    if (checkoutData) {
+      return checkoutData.items.reduce(
+        (total: number, item: any) => total + item.unit_price * item.quantity,
+        0
+      );
+    }
+    return getSubtotal();
+  };
+
+  const subtotal = calculateSubtotal();
   // GST & Taxes removed from calculation per request
   const gstAndTaxes = 0;
   // Load applied coupon (if any) from localStorage and compute discount strictly from coupon
@@ -712,155 +727,83 @@ export default function CheckoutClient() {
       }
     }
   } catch {}
-  // Fetch delivery charges from database
-  const fetchDeliveryCharges = async () => {
+
+  // Fetch tax settings from database
+  const fetchTaxSettings = async () => {
     try {
-      const response = await fetch("/api/delivery-charges");
+      const response = await fetch("/api/tax-settings");
       const result = await response.json();
-      if (response.ok) {
-        setDeliveryCharges(result.data);
+      if (response.ok && result.data) {
+        console.log("Tax settings loaded:", result.data);
+        setTaxSettings({
+          cgst_rate: result.data.cgst_rate,
+          sgst_rate: result.data.sgst_rate,
+        });
+      } else {
+        console.log("No tax settings found, using defaults");
+        // Use default tax rates if no settings found
+        setTaxSettings({ cgst_rate: 9.0, sgst_rate: 9.0 });
       }
     } catch (error) {
-      console.error("Error fetching delivery charges:", error);
+      console.error("Error fetching tax settings:", error);
+      // Use default tax rates on error
+      setTaxSettings({ cgst_rate: 9.0, sgst_rate: 9.0 });
     }
   };
 
-  // Calculate delivery fee based on selected address distance using database
-  const calculateDeliveryFeeFromAddress = async () => {
-    console.log("Calculating delivery fee...");
-    console.log("Address text:", addressText);
-    console.log("Addresses:", addresses);
-    console.log("Delivery charges:", deliveryCharges);
-    console.log("Subtotal:", subtotal);
-
-    if (!addressText || addresses.length === 0) {
-      console.log("No address or addresses available");
-      return 0;
-    }
-
-    // First check for order value based delivery rules
-    const orderValueCharge = deliveryCharges.find(
-      (charge) =>
-        charge.type === "order_value" &&
-        subtotal >= charge.order_value_threshold
-    );
-
-    if (orderValueCharge) {
-      console.log("Found order value charge:", orderValueCharge);
-      if (orderValueCharge.delivery_type === "free") {
-        console.log("Free delivery applied");
-        return 0; // Free delivery
-      } else if (orderValueCharge.delivery_type === "fixed") {
-        console.log("Fixed price delivery:", orderValueCharge.fixed_price);
-        return orderValueCharge.fixed_price || 0; // Fixed price delivery
-      }
-    }
-
-    // Find the current address from the addresses list
-    const currentAddress = addresses.find(
-      (addr) => addr.full_address === addressText
-    );
-
-    console.log("Current address:", currentAddress);
-
-    if (!currentAddress?.distance) {
-      console.log("No distance info, using default fee");
-      // If no distance info, use a default fee
-      return 80; // Default to ₹80 for unknown distances
-    }
-
-    // Convert stored distance (integer * 10) back to display format
-    const distanceInKm = currentAddress.distance / 10;
-    console.log("Distance in km:", distanceInKm);
-
-    // Find matching distance-based delivery charge from database
-    const matchingCharge = deliveryCharges.find(
-      (charge) =>
-        charge.type === "distance" &&
-        distanceInKm >= charge.start_km &&
-        distanceInKm <= charge.end_km
-    );
-
-    console.log("Matching charge:", matchingCharge);
-
-    if (matchingCharge) {
-      console.log("Using database price:", matchingCharge.price);
-      return matchingCharge.price;
-    }
-
-    console.log("No matching charge found, using fallback");
-    // Fallback to hardcoded calculation if no database match
-    return calculateDeliveryFee(distanceInKm);
-  };
-
-  // State for dynamic delivery fee calculation
-  const [calculatedDeliveryFee, setCalculatedDeliveryFee] = useState(0);
-
-  // Fetch delivery charges on component mount
+  // Fetch tax settings on component mount
   useEffect(() => {
-    fetchDeliveryCharges();
+    fetchTaxSettings();
   }, []);
 
-  // Calculate delivery fee when address, delivery charges, or subtotal change
+  // State for calculated tax amounts
+  const [calculatedCgstAmount, setCalculatedCgstAmount] = useState(0);
+  const [calculatedSgstAmount, setCalculatedSgstAmount] = useState(0);
+
+  // Calculate taxes when tax settings, subtotal, or discount change
   useEffect(() => {
-    const updateDeliveryFee = async () => {
-      console.log("useEffect triggered - updating delivery fee");
-      console.log("checkoutData:", checkoutData);
-      console.log("addressText:", addressText);
-      console.log("deliveryCharges.length:", deliveryCharges.length);
+    const taxableAmount = subtotal - discount;
 
-      // Always recalculate if we have address and delivery charges, regardless of checkout data
-      if (addressText && deliveryCharges.length > 0) {
-        console.log("Calculating new delivery fee...");
-        const fee = await calculateDeliveryFeeFromAddress();
-        console.log("Calculated fee:", fee);
-        setCalculatedDeliveryFee(fee);
-      } else if (checkoutData && !addressText) {
-        console.log(
-          "Using checkout data delivery fee:",
-          checkoutData.deliveryFee
-        );
-        setCalculatedDeliveryFee(checkoutData.deliveryFee);
-      } else {
-        console.log("Conditions not met for delivery fee calculation");
-        console.log("addressText:", addressText);
-        console.log("deliveryCharges.length:", deliveryCharges.length);
-      }
-    };
-    updateDeliveryFee();
-  }, [addressText, deliveryCharges, checkoutData, subtotal]);
+    // Always calculate taxes dynamically based on current subtotal
+    // Use tax rates from database or default to 9%
+    const cgstRate = taxSettings?.cgst_rate || 9.0;
+    const sgstRate = taxSettings?.sgst_rate || 9.0;
 
-  const deliveryFee = calculatedDeliveryFee;
+    const cgstAmount = (taxableAmount * cgstRate) / 100;
+    const sgstAmount = (taxableAmount * sgstRate) / 100;
 
-  // Calculate taxes using configurable rates
-  const taxableAmount = subtotal - discount;
-  let cgstAmount = 0;
-  let sgstAmount = 0;
+    // Ensure minimum tax calculation
+    const finalCgstAmount = cgstAmount > 0 ? cgstAmount : 0;
+    const finalSgstAmount = sgstAmount > 0 ? sgstAmount : 0;
 
-  if (checkoutData) {
-    cgstAmount = checkoutData.cgstAmount || 0;
-    sgstAmount = checkoutData.sgstAmount || 0;
-  } else {
-    // Use default tax calculation
-    cgstAmount = taxableAmount * 0.09;
-    sgstAmount = taxableAmount * 0.09;
-  }
+    console.log("Tax calculation:", {
+      taxableAmount,
+      cgstRate,
+      sgstRate,
+      cgstAmount,
+      sgstAmount,
+      finalCgstAmount,
+      finalSgstAmount,
+      taxSettings,
+      subtotal,
+      discount,
+    });
 
-  const total = checkoutData
-    ? checkoutData.totalAmount
-    : subtotal - discount + deliveryFee + cgstAmount + sgstAmount;
+    setCalculatedCgstAmount(finalCgstAmount);
+    setCalculatedSgstAmount(finalSgstAmount);
+  }, [taxSettings, subtotal, discount]);
 
-  // Helper function to get delivery fee breakdown information
-  const getDeliveryFeeBreakdown = () => {
-    // Return 0 delivery fee for all orders
-    return {
-      distance: null,
-      fee: 0,
-      formattedDistance: "Free delivery",
-    };
+  const cgstAmount = calculatedCgstAmount;
+  const sgstAmount = calculatedSgstAmount;
+
+  const calculateTotal = () => {
+    if (checkoutData) {
+      return subtotal - discount + cgstAmount + sgstAmount;
+    }
+    return subtotal - discount + cgstAmount + sgstAmount;
   };
 
-  const deliveryBreakdown = getDeliveryFeeBreakdown();
+  const total = calculateTotal();
 
   // Optimize checkout flow performance
   useEffect(() => {
@@ -915,9 +858,27 @@ export default function CheckoutClient() {
         distance: selectedAddressObj.distance,
         duration: selectedAddressObj.duration,
         deliveryZone: "Zone A", // Default zone, can be customized based on address
+        // Financial data
+        subtotal: subtotal,
+        discount: discount,
+        cgstAmount: cgstAmount,
+        sgstAmount: sgstAmount,
+        totalAmount: total,
       };
 
+      // Debug: Log financial data being sent to checkout session
+      console.log("💳 Financial data being sent to checkout session:", {
+        subtotal,
+        discount,
+        cgstAmount,
+        sgstAmount,
+        total,
+        addressText,
+        selectedAddressObj: selectedAddressObj?.id,
+      });
+
       // Update the checkout session
+      console.log("🔄 Updating checkout session:");
       const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
         method: "PATCH",
         headers: {
@@ -963,27 +924,13 @@ export default function CheckoutClient() {
     console.log("Razorpay payment success:", paymentData);
 
     try {
-      // Close main payment dialog, show success immediately
+      // Close main payment dialog
       setIsPaymentDialogOpen(false);
       setPaymentStatus("success");
-      setShowSuccessOverlay(true);
 
-      // Use the real order ID from the database
-      setSuccessOrderId(paymentData.orderId);
-
-      // Clear cart after successful payment
-      clearCart();
-
-      toast({
-        title: "Payment Successful!",
-        description: "Your order has been placed successfully.",
-        variant: "default",
-      });
-
-      // Redirect to confirmation page after delay
-      setTimeout(() => {
-        router.push(`/confirmation?orderId=${paymentData.orderId}`);
-      }, 1000);
+      // Show debug dialog BEFORE creating order
+      setDebugData(paymentData);
+      setShowDebugDialog(true);
     } catch (error) {
       console.error("Error handling payment success:", error);
       handleRazorpayPaymentFailure("Payment processing error");
@@ -1084,7 +1031,6 @@ export default function CheckoutClient() {
       const ctx = {
         subtotal,
         discount,
-        deliveryFee,
         note,
         addressText,
         selectedAddress: selectedAddressObj || null, // Store the complete address object
@@ -1101,7 +1047,6 @@ export default function CheckoutClient() {
   }, [
     subtotal,
     discount,
-    deliveryFee,
     note,
     addressText,
     addresses,
@@ -1203,6 +1148,54 @@ export default function CheckoutClient() {
         />
       )}
 
+      {/* Debug Dialog */}
+      {showDebugDialog && (
+        <Dialog open={showDebugDialog} onOpenChange={setShowDebugDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>🔍 Debug - Before Order Creation</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium">Order ID:</p>
+                <p className="text-sm text-gray-600">{debugData?.orderId}</p>
+              </div>
+              <div className="bg-yellow-50 p-3 rounded">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Click "Proceed" to create the order and
+                  continue to confirmation page.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  setShowDebugDialog(false);
+                  // Clear cart and show success overlay
+                  clearCart();
+                  setShowSuccessOverlay(true);
+                  setSuccessOrderId(debugData?.orderId);
+
+                  toast({
+                    title: "Payment Successful!",
+                    description: "Your order has been placed successfully.",
+                    variant: "default",
+                  });
+
+                  // Redirect to confirmation page
+                  setTimeout(() => {
+                    router.push(`/confirmation?orderId=${debugData?.orderId}`);
+                  }, 1000);
+                }}
+                className="w-full"
+              >
+                Proceed to Create Order & Confirmation Page
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Show failure overlay if payment failed */}
       {showFailureOverlay && (
         <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
@@ -1261,11 +1254,6 @@ export default function CheckoutClient() {
               <h1 className="text-xl font-semibold absolute left-1/2 transform -translate-x-1/2 md:relative md:left-auto md:transform-none">
                 Checkout
               </h1>
-              {checkoutId && (
-                <p className="text-xs text-gray-500 absolute right-4 top-1/2 transform -translate-y-1/2 md:relative md:right-auto md:top-auto md:transform-none md:ml-4">
-                  ID: {checkoutId.slice(0, 8)}...
-                </p>
-              )}
               <div className="w-9 md:hidden"></div>
             </div>
           </div>
@@ -2365,43 +2353,83 @@ export default function CheckoutClient() {
                                     ).toFixed(2)}
                                   </p>
 
-                                  {/* quantity controls - only show for cart items, not checkout data */}
-                                  {!checkoutData && (
-                                    <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
-                                      <button
-                                        aria-label="Decrease quantity"
-                                        className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
-                                        onClick={() =>
+                                  {/* quantity controls - show for both cart items and checkout data */}
+                                  <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
+                                    <button
+                                      aria-label="Decrease quantity"
+                                      className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
+                                      onClick={() => {
+                                        if (checkoutData) {
+                                          // Update checkout data quantity
+                                          const newItems =
+                                            checkoutData.items.map(
+                                              (
+                                                checkoutItem: any,
+                                                idx: number
+                                              ) =>
+                                                idx === index
+                                                  ? {
+                                                      ...checkoutItem,
+                                                      quantity: Math.max(
+                                                        1,
+                                                        checkoutItem.quantity -
+                                                          1
+                                                      ),
+                                                    }
+                                                  : checkoutItem
+                                            );
+                                          setCheckoutData({
+                                            ...checkoutData,
+                                            items: newItems,
+                                          });
+                                        } else {
+                                          // Update cart quantity
                                           updateQuantity(
                                             uid,
                                             Math.max(1, qty - 1)
-                                          )
+                                          );
                                         }
-                                      >
-                                        <Minus className="h-3 w-3 text-gray-600" />
-                                      </button>
-                                      <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
-                                        {String(qty).padStart(2, "0")}
-                                      </span>
-                                      <button
-                                        aria-label="Increase quantity"
-                                        className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
-                                        onClick={() =>
-                                          updateQuantity(uid, qty + 1)
+                                      }}
+                                    >
+                                      <Minus className="h-3 w-3 text-gray-600" />
+                                    </button>
+                                    <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
+                                      {String(qty).padStart(2, "0")}
+                                    </span>
+                                    <button
+                                      aria-label="Increase quantity"
+                                      className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                                      onClick={() => {
+                                        if (checkoutData) {
+                                          // Update checkout data quantity
+                                          const newItems =
+                                            checkoutData.items.map(
+                                              (
+                                                checkoutItem: any,
+                                                idx: number
+                                              ) =>
+                                                idx === index
+                                                  ? {
+                                                      ...checkoutItem,
+                                                      quantity:
+                                                        checkoutItem.quantity +
+                                                        1,
+                                                    }
+                                                  : checkoutItem
+                                            );
+                                          setCheckoutData({
+                                            ...checkoutData,
+                                            items: newItems,
+                                          });
+                                        } else {
+                                          // Update cart quantity
+                                          updateQuantity(uid, qty + 1);
                                         }
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  )}
-                                  {/* Show quantity for checkout data without controls */}
-                                  {checkoutData && (
-                                    <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
-                                      <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
-                                        {String(qty).padStart(2, "0")}
-                                      </span>
-                                    </div>
-                                  )}
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -2434,35 +2462,13 @@ export default function CheckoutClient() {
                           <span>-₹{discount.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1">
-                            <span>Delivery Fee</span>
-                            <Link
-                              href="/legal/shipping-delivery#delivery-fees"
-                              className="text-blue-500 hover:text-blue-600 transition-colors"
-                              title="Click to view delivery fee details"
-                            >
-                              <InfoCircle className="h-4 w-4" />
-                            </Link>
-                          </div>
-                          {deliveryBreakdown && (
-                            <span className="text-xs text-gray-500">
-                              {deliveryBreakdown.distance
-                                ? `${deliveryBreakdown.formattedDistance} from shop`
-                                : "Default fee (distance unknown)"}
-                            </span>
-                          )}
-                        </div>
-                        <span>₹{deliveryFee.toFixed(2)}</span>
-                      </div>
 
                       <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                        <span>CGST (9%)</span>
+                        <span>CGST ({taxSettings?.cgst_rate || 9}%)</span>
                         <span>₹{cgstAmount.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                        <span>SGST (9%)</span>
+                        <span>SGST ({taxSettings?.sgst_rate || 9}%)</span>
                         <span>₹{sgstAmount.toFixed(2)}</span>
                       </div>
                       <div className="pt-2 mt-2">
@@ -2526,35 +2532,13 @@ export default function CheckoutClient() {
                     <span className="text-[#15A05A]">-₹{discount}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-1">
-                      <span>Delivery Fee</span>
-                      <Link
-                        href="/legal/shipping-delivery#delivery-fees"
-                        className="text-blue-500 hover:text-blue-600 transition-colors"
-                        title="Click to view delivery fee details"
-                      >
-                        <InfoCircle className="h-4 w-4" />
-                      </Link>
-                    </div>
-                    {deliveryBreakdown && (
-                      <span className="text-xs text-gray-500">
-                        {deliveryBreakdown.distance
-                          ? `${deliveryBreakdown.formattedDistance} from shop`
-                          : "Default fee (distance unknown)"}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-green-600 font-medium">Free</span>
-                </div>
 
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                  <span>CGST (9%)</span>
+                  <span>CGST ({taxSettings?.cgst_rate || 9}%)</span>
                   <span>₹{cgstAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                  <span>SGST (9%)</span>
+                  <span>SGST ({taxSettings?.sgst_rate || 9}%)</span>
                   <span>₹{sgstAmount.toFixed(2)}</span>
                 </div>
                 <div className="pt-2 mt-2">
@@ -2731,15 +2715,11 @@ export default function CheckoutClient() {
                         </div>
                       )}
                       <div className="flex justify-between">
-                        <span>Delivery Fee:</span>
-                        <span className="text-green-600 font-medium">Free</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>CGST (9%):</span>
+                        <span>CGST ({taxSettings?.cgst_rate || 9}%):</span>
                         <span>₹{cgstAmount.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>SGST (9%):</span>
+                        <span>SGST ({taxSettings?.sgst_rate || 9}%):</span>
                         <span>₹{sgstAmount.toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-1 mt-2">
@@ -2754,24 +2734,6 @@ export default function CheckoutClient() {
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-medium mb-2">Delivery Address</h4>
                     <p className="text-sm text-gray-700">{addressText}</p>
-                    {(() => {
-                      const currentAddress = addresses.find(
-                        (addr) => addr.full_address === addressText
-                      );
-                      if (currentAddress?.distance) {
-                        return (
-                          <div className="mt-2">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
-                              <Routing weight="Broken" className="h-4 w-4" />
-                              {getDisplayDistance(currentAddress.distance) ??
-                                "-"}{" "}
-                              km
-                            </span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
                     <p className="text-sm text-gray-600 mt-1">
                       Contact: {contactInfo.name}, {contactInfo.phone}
                     </p>

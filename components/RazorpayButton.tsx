@@ -112,6 +112,13 @@ export default function RazorpayButton({
             const verifyData = await verifyRes.json();
 
             if (verifyData.success) {
+              // Debug: Log delivery fee data before redirect
+              console.log("🔍 Delivery Fee Debug - Payment Success:", {
+                orderId: verifyData.orderId,
+                deliveryFeeData: verifyData.deliveryFeeData,
+                message: "Delivery fee successfully stored in database",
+              });
+
               toast({
                 title: "Payment Successful!",
                 description:
@@ -125,6 +132,7 @@ export default function RazorpayButton({
                   orderId: verifyData.orderId,
                   paymentId: response.razorpay_payment_id,
                   signature: response.razorpay_signature,
+                  deliveryFeeData: verifyData.deliveryFeeData,
                 });
               }
             } else {

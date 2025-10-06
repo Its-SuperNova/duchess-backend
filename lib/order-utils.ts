@@ -98,6 +98,103 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     }
   }
 
+  // Debug: Log checkout session data
+  console.log("🔍 Checkout session financial data:", {
+    subtotal: checkoutSession.subtotal,
+    deliveryFee: checkoutSession.deliveryFee,
+    discount: checkoutSession.discount,
+    cgstAmount: checkoutSession.cgstAmount,
+    sgstAmount: checkoutSession.sgstAmount,
+    totalAmount: checkoutSession.totalAmount,
+    sessionKeys: Object.keys(checkoutSession),
+  });
+
+  // Use financial data from checkout session (now properly stored)
+  const itemTotal =
+    checkoutSession.subtotal ||
+    checkoutSession.items.reduce(
+      (total, item) => total + item.unit_price * item.quantity,
+      0
+    );
+
+  // Use delivery fee from checkout session (which was correctly calculated)
+  let deliveryCharge = checkoutSession.deliveryFee || 0;
+
+  console.log("🚚 Using delivery fee from checkout session:", deliveryCharge);
+  console.log("🚚 Checkout session delivery fee:", checkoutSession.deliveryFee);
+
+  // Fallback: If no delivery fee in session, calculate from address distance
+  if (deliveryCharge === 0 && deliveryAddress) {
+    console.log(
+      "🚚 No delivery fee in session, calculating from address distance"
+    );
+    console.log("📍 Address distance:", deliveryAddress.distance);
+
+    // Get delivery charges from database
+    const { data: deliveryCharges } = await supabase
+      .from("delivery_charges")
+      .select("*")
+      .eq("is_active", true)
+      .eq("type", "distance");
+
+    console.log("💰 Available delivery charges:", deliveryCharges);
+
+    if (deliveryCharges && deliveryCharges.length > 0) {
+      const distanceInKm = deliveryAddress.distance / 10;
+      console.log("📏 Distance in km:", distanceInKm);
+
+      const matchingCharge = deliveryCharges.find(
+        (charge) =>
+          distanceInKm >= charge.start_km && distanceInKm <= charge.end_km
+      );
+
+      console.log("🎯 Matching charge:", matchingCharge);
+
+      if (matchingCharge) {
+        deliveryCharge = matchingCharge.price;
+        console.log(
+          "✅ Calculated delivery charge from distance:",
+          deliveryCharge
+        );
+      } else {
+        console.log("❌ No matching charge found, using fallback");
+        deliveryCharge = 80; // Fallback
+      }
+    } else {
+      console.log("❌ No delivery charges in database, using fallback");
+      deliveryCharge = 80; // Fallback
+    }
+  }
+
+  // Final fallback: If still 0, use default delivery fee
+  if (deliveryCharge === 0) {
+    console.log("🚚 Final fallback: Using default delivery fee of 80");
+    deliveryCharge = 80;
+  }
+
+  console.log("🚚 Final delivery charge:", deliveryCharge);
+
+  const discountAmount = checkoutSession.discount || 0;
+
+  // Calculate taxes dynamically
+  const taxableAmount = itemTotal - discountAmount;
+  const taxAmounts = calculateTaxAmounts(taxableAmount);
+  const cgstAmount = taxAmounts.cgstAmount;
+  const sgstAmount = taxAmounts.sgstAmount;
+
+  const totalAmount =
+    itemTotal + deliveryCharge - discountAmount + cgstAmount + sgstAmount;
+
+  // Debug: Log calculated financial data
+  console.log("💰 Calculated financial data for order:", {
+    itemTotal,
+    deliveryCharge,
+    discountAmount,
+    cgstAmount,
+    sgstAmount,
+    totalAmount,
+  });
+
   // Create order - using exact same structure as working orders/create endpoint
   const orderData = {
     // User and order identification
@@ -112,12 +209,12 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     payment_status: paymentStatus,
 
     // Financial information
-    item_total: checkoutSession.subtotal,
-    delivery_charge: checkoutSession.deliveryFee || 0,
-    discount_amount: checkoutSession.discount || 0,
-    cgst: checkoutSession.cgstAmount || 0,
-    sgst: checkoutSession.sgstAmount || 0,
-    total_amount: checkoutSession.totalAmount,
+    item_total: itemTotal,
+    delivery_charge: deliveryCharge, // Store the calculated delivery fee from checkout
+    discount_amount: discountAmount,
+    cgst: cgstAmount,
+    sgst: sgstAmount,
+    total_amount: totalAmount,
 
     // Address and delivery
     delivery_address_id: deliveryAddress?.id || null,
@@ -165,6 +262,19 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     console.error("Order creation error:", orderError);
     throw new Error("Failed to create order");
   }
+
+  // Debug: Log created order data
+  console.log("✅ Order created successfully:", {
+    orderId: order.id,
+    orderData: {
+      item_total: orderData.item_total,
+      delivery_charge: orderData.delivery_charge,
+      discount_amount: orderData.discount_amount,
+      cgst: orderData.cgst,
+      sgst: orderData.sgst,
+      total_amount: orderData.total_amount,
+    },
+  });
 
   // Create order items - mapping to correct database column names
   const orderItems = checkoutSession.items.map((item) => ({
@@ -245,6 +355,14 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
 
   return {
     orderId: order.id,
+    deliveryFeeData: {
+      deliveryCharge,
+      itemTotal,
+      discountAmount,
+      cgstAmount,
+      sgstAmount,
+      totalAmount,
+    },
     message: "Order created successfully",
   };
 }

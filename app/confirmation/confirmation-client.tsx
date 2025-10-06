@@ -101,6 +101,7 @@ export default function ConfirmationClient() {
       }
 
       const data = await response.json();
+      console.log("Order data received:", data.order);
       setOrder(data.order);
     } catch (err) {
       console.error("Error fetching order:", err);
@@ -409,46 +410,59 @@ export default function ConfirmationClient() {
         <div className="bg-white rounded-[20px] p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-3">
+            {/* Item Total */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Subtotal</span>
+              <span className="text-gray-600">Item Total</span>
               <span className="font-medium">
-                {formatCurrency(order.item_total)}
+                {formatCurrency(order.item_total || 0)}
               </span>
             </div>
-            {order.discount_amount && order.discount_amount > 0 ? (
+
+            {/* Discount - Only show if there's actual discount */}
+            {order.discount_amount && order.discount_amount > 0 && (
               <div className="flex justify-between items-center text-green-600">
                 <span>Discount</span>
                 <span className="font-medium">
                   -{formatCurrency(order.discount_amount)}
                 </span>
               </div>
-            ) : null}
+            )}
+
+            {/* Delivery Fee */}
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Delivery Fee</span>
               <span className="font-medium">
-                {formatCurrency(order.delivery_charge)}
+                {formatCurrency(order.delivery_charge || 0)}
               </span>
             </div>
+
+            {/* CGST */}
             {order.cgst && order.cgst > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">CGST (9%)</span>
+                <span className="text-gray-600">CGST</span>
                 <span className="font-medium">
                   {formatCurrency(order.cgst)}
                 </span>
               </div>
             )}
+
+            {/* SGST */}
             {order.sgst && order.sgst > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">SGST (9%)</span>
+                <span className="text-gray-600">SGST</span>
                 <span className="font-medium">
                   {formatCurrency(order.sgst)}
                 </span>
               </div>
             )}
+
+            {/* Separator */}
             <Separator className="my-3" />
+
+            {/* Total */}
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
-              <span>{formatCurrency(order.total_amount)}</span>
+              <span>{formatCurrency(order.total_amount || 0)}</span>
             </div>
           </div>
         </div>
