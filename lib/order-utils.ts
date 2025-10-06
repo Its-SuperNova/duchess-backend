@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { getAreaFromPincode } from "@/lib/pincode-areas";
 import { CheckoutStore } from "@/lib/checkout-store";
 import { calculateTaxAmounts } from "@/lib/pricing-utils";
+import { calculateOptimizedDeliveryCharge } from "@/lib/optimized-delivery-calculation";
 
 export interface CreateOrderData {
   checkoutId: string;
@@ -130,38 +131,25 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     );
     console.log("📍 Address distance:", deliveryAddress.distance);
 
-    // Get delivery charges from database
-    const { data: deliveryCharges } = await supabase
-      .from("delivery_charges")
-      .select("*")
-      .eq("is_active", true)
-      .eq("type", "distance");
-
-    console.log("💰 Available delivery charges:", deliveryCharges);
-
-    if (deliveryCharges && deliveryCharges.length > 0) {
+    try {
       const distanceInKm = deliveryAddress.distance / 10;
-      console.log("📏 Distance in km:", distanceInKm);
+      const orderValue = itemTotal; // Use item total as order value for free delivery check
 
-      const matchingCharge = deliveryCharges.find(
-        (charge) =>
-          distanceInKm >= charge.start_km && distanceInKm <= charge.end_km
+      const deliveryResult = await calculateOptimizedDeliveryCharge(
+        distanceInKm,
+        orderValue
       );
 
-      console.log("🎯 Matching charge:", matchingCharge);
+      deliveryCharge = deliveryResult.deliveryCharge;
 
-      if (matchingCharge) {
-        deliveryCharge = matchingCharge.price;
-        console.log(
-          "✅ Calculated delivery charge from distance:",
-          deliveryCharge
-        );
-      } else {
-        console.log("❌ No matching charge found, using fallback");
-        deliveryCharge = 80; // Fallback
-      }
-    } else {
-      console.log("❌ No delivery charges in database, using fallback");
+      console.log("✅ Optimized delivery calculation result:", {
+        charge: deliveryCharge,
+        method: deliveryResult.calculationMethod,
+        isFree: deliveryResult.isFreeDelivery,
+        details: deliveryResult.details,
+      });
+    } catch (error) {
+      console.error("❌ Error in optimized delivery calculation:", error);
       deliveryCharge = 80; // Fallback
     }
   }

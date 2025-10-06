@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { deliveryChargesCache } from "@/lib/delivery-charges-cache";
 
 // PUT - Update delivery charge
 export async function PUT(
@@ -20,6 +21,9 @@ export async function PUT(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Clear cache to ensure fresh data on next request
+    deliveryChargesCache.clearCache();
 
     return NextResponse.json({ data });
   } catch (error) {
@@ -48,6 +52,9 @@ export async function DELETE(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Clear cache to ensure fresh data on next request
+    deliveryChargesCache.clearCache();
 
     return NextResponse.json({ data });
   } catch (error) {
