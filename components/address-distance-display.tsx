@@ -29,7 +29,11 @@ export default function AddressDistanceDisplay({
     );
   }
 
-  const formattedDistance = formatDistance(displayDistance!);
+  // Show distance with 1 decimal place precision
+  const formattedDistance =
+    displayDistance! < 1
+      ? `${Math.round(displayDistance! * 1000)}m`
+      : `${displayDistance!.toFixed(1)}km`;
   const formattedDuration = address.duration
     ? formatDuration(address.duration)
     : null;

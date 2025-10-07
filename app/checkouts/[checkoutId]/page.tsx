@@ -69,6 +69,7 @@ import {
   getDisplayDistance,
   getUserAddresses,
 } from "@/lib/address-utils";
+// Delivery calculation moved to server-side API
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import zeroPurchaseAnimation from "@/public/Lottie/Zero Purchase.json";
@@ -79,6 +80,9 @@ import CheckoutSuccessOverlay from "@/components/checkout-success-overlay";
 import CheckoutSkeleton from "@/components/checkout-skeleton";
 import CheckoutExpiryScreen from "@/components/checkout-expiry-screen";
 import RazorpayButton from "@/components/RazorpayButton";
+import DeliveryFeeDisplay from "@/components/delivery-fee-display";
+import FreeDeliveryProgress from "@/components/free-delivery-progress";
+import { useDeliveryCalculation } from "@/hooks/use-delivery-calculation";
 import React from "react";
 
 export default function CheckoutClient() {
@@ -154,6 +158,39 @@ export default function CheckoutClient() {
 
         setCheckoutData(data.checkout);
 
+        // Log comprehensive delivery fee data from checkout session
+        console.log("📦 Checkout session data fetched with delivery details:", {
+          checkoutId,
+          deliveryFee: data.checkout.deliveryFee,
+          totalAmount: data.checkout.totalAmount,
+          addressText: data.checkout.addressText,
+          selectedAddressId: data.checkout.selectedAddressId,
+          distance: data.checkout.distance,
+          duration: data.checkout.duration,
+          deliveryZone: data.checkout.deliveryZone,
+          items: data.checkout.items?.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total_price: item.total_price,
+          })),
+          financialBreakdown: {
+            subtotal: data.checkout.subtotal,
+            discount: data.checkout.discount,
+            deliveryFee: data.checkout.deliveryFee,
+            cgstAmount: data.checkout.cgstAmount,
+            sgstAmount: data.checkout.sgstAmount,
+            totalAmount: data.checkout.totalAmount,
+          },
+          orderValue:
+            data.checkout.items?.reduce(
+              (total: number, item: any) =>
+                total + (item.total_price || item.price * item.quantity),
+              0
+            ) || 0,
+        });
+
         // Populate form fields from checkout data
         if (data.checkout.note) setNote(data.checkout.note);
         if (data.checkout.couponCode)
@@ -177,6 +214,118 @@ export default function CheckoutClient() {
         }
         if (data.checkout.customizationOptions)
           setCustomizationOptions(data.checkout.customizationOptions);
+
+        // Calculate delivery fee if we have address and distance data
+        if (
+          data.checkout.addressText &&
+          data.checkout.distance &&
+          data.checkout.items
+        ) {
+          const orderValue = data.checkout.items.reduce(
+            (total: number, item: any) => total + (item.total_price || 0),
+            0
+          );
+
+          console.log("🚚 Auto-calculating delivery fee on checkout load:", {
+            addressText: data.checkout.addressText,
+            distance: data.checkout.distance,
+            orderValue,
+            checkoutId,
+          });
+
+          // Calculate delivery fee using distance from checkout session
+          await calculateDelivery({
+            addressId: data.checkout.selectedAddressId,
+            orderValue,
+            addressText: data.checkout.addressText,
+          });
+
+          // Fallback: If delivery calculation failed, calculate manually
+          if (deliveryCharge === 0 && data.checkout.distance) {
+            console.log("🔄 Fallback delivery calculation on page load:", {
+              distance: data.checkout.distance,
+              distanceInKm: data.checkout.distance / 1000,
+              orderValue,
+            });
+
+            // Simple distance-based calculation as fallback
+            const distanceInKm = data.checkout.distance / 1000;
+            let fallbackDeliveryFee = 0;
+
+            if (distanceInKm <= 5) {
+              fallbackDeliveryFee = 49;
+            } else if (distanceInKm <= 10) {
+              fallbackDeliveryFee = 120;
+            } else if (distanceInKm <= 15) {
+              fallbackDeliveryFee = 200;
+            } else {
+              fallbackDeliveryFee = 300;
+            }
+
+            console.log(
+              "💰 Fallback delivery fee calculated on page load:",
+              fallbackDeliveryFee
+            );
+
+            // Update checkout session with fallback delivery fee
+            try {
+              const updateResponse = await fetch(
+                `/api/checkout/${checkoutId}`,
+                {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    deliveryFee: fallbackDeliveryFee,
+                    totalAmount: orderValue + fallbackDeliveryFee,
+                  }),
+                }
+              );
+
+              if (updateResponse.ok) {
+                console.log(
+                  "✅ Checkout session updated with fallback delivery fee on page load:",
+                  {
+                    deliveryFee: fallbackDeliveryFee,
+                    totalAmount: orderValue + fallbackDeliveryFee,
+                  }
+                );
+              }
+            } catch (updateError) {
+              console.error(
+                "❌ Error updating checkout session with fallback on page load:",
+                updateError
+              );
+            }
+          }
+
+          // Update checkout session with calculated delivery fee
+          try {
+            const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                deliveryFee: deliveryCharge,
+                totalAmount: orderValue + deliveryCharge,
+              }),
+            });
+
+            if (updateResponse.ok) {
+              console.log(
+                "✅ Checkout session updated with calculated delivery fee:",
+                {
+                  deliveryFee: deliveryCharge,
+                  totalAmount: orderValue + deliveryCharge,
+                }
+              );
+            }
+          } catch (updateError) {
+            console.error("❌ Error updating checkout session:", updateError);
+          }
+        }
       } catch (err) {
         console.error("Error fetching checkout data:", err);
         setCheckoutError(
@@ -318,6 +467,17 @@ export default function CheckoutClient() {
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [showDebugDialog, setShowDebugDialog] = useState(false);
   const [debugData, setDebugData] = useState<any>(null);
+
+  // Delivery calculation
+  const {
+    calculateDelivery,
+    isCalculating: isCalculatingDelivery,
+    deliveryData,
+    deliveryCharge,
+    isFreeDelivery,
+    totalWithDelivery,
+    error: deliveryError,
+  } = useDeliveryCalculation({ checkoutId });
 
   // Load checkout context from localStorage on component mount
   useEffect(() => {
@@ -586,6 +746,17 @@ export default function CheckoutClient() {
         const list = await getUserAddresses(user.id);
         setAddresses(list || []);
 
+        console.log(
+          "🏠 Addresses loaded:",
+          list?.map((addr) => ({
+            id: addr.id,
+            full_address: addr.full_address,
+            distance: addr.distance,
+            duration: addr.duration,
+            area: addr.area,
+          }))
+        );
+
         // Set contact info from user profile
         setContactInfo({
           name: user.name || "",
@@ -730,7 +901,14 @@ export default function CheckoutClient() {
 
   // Fetch tax settings from database
   const fetchTaxSettings = async () => {
+    // Prevent duplicate fetches
+    if (taxSettings) {
+      console.log("Tax settings already loaded, skipping fetch");
+      return;
+    }
+
     try {
+      console.log("Fetching tax settings...");
       const response = await fetch("/api/tax-settings");
       const result = await response.json();
       if (response.ok && result.data) {
@@ -793,17 +971,165 @@ export default function CheckoutClient() {
     setCalculatedSgstAmount(finalSgstAmount);
   }, [taxSettings, subtotal, discount]);
 
+  // Recalculate delivery fee when checkout data changes
+  useEffect(() => {
+    if (
+      checkoutData?.addressText &&
+      checkoutData?.distance &&
+      checkoutData?.items
+    ) {
+      const orderValue = checkoutData.items.reduce(
+        (total: number, item: any) => total + (item.total_price || 0),
+        0
+      );
+
+      // Only recalculate if we don't already have delivery data or if the order value changed
+      if (!deliveryData || deliveryData.orderValue !== orderValue) {
+        console.log(
+          "🔄 Recalculating delivery fee due to checkout data change:",
+          {
+            addressText: checkoutData.addressText,
+            distance: checkoutData.distance,
+            duration: checkoutData.duration,
+            deliveryZone: checkoutData.deliveryZone,
+            selectedAddressId: checkoutData.selectedAddressId,
+            orderValue,
+            checkoutId,
+            currentDeliveryFee: checkoutData.deliveryFee,
+            currentTotalAmount: checkoutData.totalAmount,
+            items: checkoutData.items?.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              total_price: item.total_price,
+            })),
+          }
+        );
+
+        calculateDelivery({
+          addressId: checkoutData.selectedAddressId,
+          orderValue,
+          addressText: checkoutData.addressText,
+        });
+      }
+    }
+  }, [checkoutData, calculateDelivery, deliveryData]);
+
   const cgstAmount = calculatedCgstAmount;
   const sgstAmount = calculatedSgstAmount;
 
   const calculateTotal = () => {
-    if (checkoutData) {
-      return subtotal - discount + cgstAmount + sgstAmount;
-    }
-    return subtotal - discount + cgstAmount + sgstAmount;
+    const baseTotal = subtotal - discount + cgstAmount + sgstAmount;
+    // Only add delivery fee if address is selected
+    const hasAddress = selectedAddressId || checkoutData?.selectedAddressId;
+    const deliveryFee = hasAddress
+      ? checkoutData?.deliveryFee || deliveryCharge || 0
+      : 0;
+    const totalWithDelivery = baseTotal + deliveryFee;
+    return totalWithDelivery;
   };
 
   const total = calculateTotal();
+
+  // Auto-calculate delivery fee when address is automatically selected
+  useEffect(() => {
+    const calculateDeliveryForAutoSelectedAddress = async () => {
+      if (!selectedAddressId || !addresses.length || !checkoutData?.items)
+        return;
+
+      const selectedAddress = addresses.find(
+        (addr) => addr.id === selectedAddressId
+      );
+      if (!selectedAddress) return;
+
+      console.log("🚚 Auto-calculating delivery for selected address:", {
+        addressId: selectedAddressId,
+        addressText: selectedAddress.full_address,
+        distance: selectedAddress.distance,
+        duration: selectedAddress.duration,
+        zone: selectedAddress.area || "Zone A",
+      });
+
+      // Calculate order value
+      const orderValue = checkoutData.items.reduce(
+        (total: number, item: any) => total + (item.total_price || 0),
+        0
+      );
+
+      // Calculate delivery fee using server-side API
+      let calculatedDeliveryFee = 0;
+      if (selectedAddress.distance) {
+        try {
+          const distanceInKm = selectedAddress.distance / 1000;
+          const response = await fetch("/api/calculate-delivery", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              distance: distanceInKm,
+              orderValue: orderValue,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            calculatedDeliveryFee = result.deliveryCharge;
+          } else {
+            throw new Error("Failed to calculate delivery fee");
+          }
+        } catch (error) {
+          console.error("Error calculating delivery fee:", error);
+          // Fallback calculation
+          calculatedDeliveryFee = Math.max(
+            0,
+            Math.round((selectedAddress.distance / 1000) * 10)
+          );
+        }
+      }
+
+      const newTotal = orderValue + calculatedDeliveryFee;
+
+      // Update checkout session with delivery information
+      try {
+        const updateData = {
+          addressText: selectedAddress.full_address,
+          selectedAddressId: selectedAddress.id,
+          distance: selectedAddress.distance,
+          duration: selectedAddress.duration,
+          deliveryZone: selectedAddress.area || "Zone A",
+          deliveryFee: calculatedDeliveryFee,
+          totalAmount: newTotal,
+        };
+
+        const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        if (updateResponse.ok) {
+          console.log("✅ Checkout session auto-updated with delivery info:", {
+            deliveryFee: calculatedDeliveryFee,
+            totalAmount: newTotal,
+            addressText: selectedAddress.full_address,
+            distance: selectedAddress.distance,
+            duration: selectedAddress.duration,
+            deliveryZone: selectedAddress.area || "Zone A",
+          });
+        } else {
+          console.error("❌ Failed to auto-update checkout session");
+        }
+      } catch (error) {
+        console.error("❌ Error auto-updating checkout session:", error);
+      }
+    };
+
+    calculateDeliveryForAutoSelectedAddress();
+  }, [selectedAddressId, addresses, checkoutData?.items, checkoutId]);
 
   // Optimize checkout flow performance
   useEffect(() => {
@@ -861,6 +1187,7 @@ export default function CheckoutClient() {
         // Financial data
         subtotal: subtotal,
         discount: discount,
+        deliveryFee: deliveryCharge, // Include calculated delivery fee
         cgstAmount: cgstAmount,
         sgstAmount: sgstAmount,
         totalAmount: total,
@@ -870,6 +1197,7 @@ export default function CheckoutClient() {
       console.log("💳 Financial data being sent to checkout session:", {
         subtotal,
         discount,
+        deliveryFee: deliveryCharge,
         cgstAmount,
         sgstAmount,
         total,
@@ -1439,10 +1767,246 @@ export default function CheckoutClient() {
                                   ? "ring-2 ring-[#2664eb] ring-opacity-50 border-[#2664eb]"
                                   : "hover:bg-gray-50 cursor-pointer"
                               }`}
-                              onClick={() => {
+                              onClick={async () => {
+                                console.log("📍 Address clicked:", {
+                                  id: addr.id,
+                                  full_address: addr.full_address,
+                                  distance: addr.distance,
+                                  duration: addr.duration,
+                                  area: addr.area,
+                                });
+
+                                // Simple test alert
+                                alert(
+                                  `Address clicked: ${
+                                    addr.full_address
+                                  }\nDistance: ${addr.distance || 0}m (${(
+                                    (addr.distance || 0) / 1000
+                                  ).toFixed(2)}km)`
+                                );
+
                                 setAddressText(addr.full_address);
                                 setSelectedAddressId(addr.id);
                                 setIsAddressDrawerOpen(false);
+
+                                // Calculate delivery fee when address is selected
+                                if (
+                                  checkoutData?.items &&
+                                  checkoutData.items.length > 0
+                                ) {
+                                  const orderValue = checkoutData.items.reduce(
+                                    (total: number, item: any) =>
+                                      total + (item.total_price || 0),
+                                    0
+                                  );
+
+                                  console.log(
+                                    "🚚 Address selected, calculating delivery:",
+                                    {
+                                      addressId: addr.id,
+                                      orderValue,
+                                      addressText: addr.full_address,
+                                      distance: addr.distance,
+                                      duration: addr.duration,
+                                      zone: addr.area || "Zone A",
+                                      checkoutDataItems: checkoutData.items,
+                                      hasDistance: !!addr.distance,
+                                    }
+                                  );
+
+                                  // Calculate delivery fee directly based on distance
+                                  let calculatedDeliveryFee = 0;
+                                  if (addr.distance) {
+                                    const distanceInKm = addr.distance / 1000;
+                                    if (distanceInKm <= 5) {
+                                      calculatedDeliveryFee = 49;
+                                    } else if (distanceInKm <= 10) {
+                                      calculatedDeliveryFee = 120;
+                                    } else if (distanceInKm <= 15) {
+                                      calculatedDeliveryFee = 200;
+                                    } else {
+                                      calculatedDeliveryFee = 300;
+                                    }
+                                  } else {
+                                    // Fallback if no distance data
+                                    calculatedDeliveryFee = 49;
+                                  }
+
+                                  const newTotal =
+                                    orderValue + calculatedDeliveryFee;
+
+                                  console.log(
+                                    "🚚 Address selected - direct calculation:",
+                                    {
+                                      addressId: addr.id,
+                                      distance: addr.distance,
+                                      distanceInKm: addr.distance
+                                        ? addr.distance / 1000
+                                        : 0,
+                                      orderValue,
+                                      calculatedDeliveryFee,
+                                      newTotal,
+                                    }
+                                  );
+
+                                  // Update checkout session with calculated delivery fee
+                                  try {
+                                    const updateResponse = await fetch(
+                                      `/api/checkout/${checkoutId}`,
+                                      {
+                                        method: "PATCH",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          selectedAddressId: addr.id,
+                                          addressText: addr.full_address,
+                                          distance: addr.distance,
+                                          duration: addr.duration,
+                                          deliveryZone: addr.area || "Zone A",
+                                          deliveryFee: calculatedDeliveryFee,
+                                          totalAmount: newTotal,
+                                        }),
+                                      }
+                                    );
+
+                                    if (updateResponse.ok) {
+                                      console.log(
+                                        "✅ Checkout session updated with address selection:",
+                                        {
+                                          deliveryFee: calculatedDeliveryFee,
+                                          totalAmount: newTotal,
+                                        }
+                                      );
+
+                                      // Show success message
+                                      alert(
+                                        `✅ Address selected!\n\nDelivery Fee: ₹${calculatedDeliveryFee}\nTotal: ₹${newTotal}\n\nPage will refresh to show updated values.`
+                                      );
+
+                                      // Refresh page to show updated values
+                                      window.location.reload();
+                                    } else {
+                                      console.error(
+                                        "❌ Failed to update checkout session"
+                                      );
+                                    }
+                                  } catch (updateError) {
+                                    console.error(
+                                      "❌ Error updating checkout session:",
+                                      updateError
+                                    );
+                                  }
+
+                                  // Fallback: If delivery calculation failed, calculate manually
+                                  if (deliveryCharge === 0 && addr.distance) {
+                                    console.log(
+                                      "🔄 Fallback delivery calculation:",
+                                      {
+                                        distance: addr.distance,
+                                        distanceInKm: addr.distance / 1000,
+                                        orderValue,
+                                      }
+                                    );
+
+                                    // Simple distance-based calculation as fallback
+                                    const distanceInKm = addr.distance / 1000;
+                                    let fallbackDeliveryFee = 0;
+
+                                    if (distanceInKm <= 5) {
+                                      fallbackDeliveryFee = 49;
+                                    } else if (distanceInKm <= 10) {
+                                      fallbackDeliveryFee = 120;
+                                    } else if (distanceInKm <= 15) {
+                                      fallbackDeliveryFee = 200;
+                                    } else {
+                                      fallbackDeliveryFee = 300;
+                                    }
+
+                                    console.log(
+                                      "💰 Fallback delivery fee calculated:",
+                                      fallbackDeliveryFee
+                                    );
+
+                                    // Update checkout session with fallback delivery fee
+                                    try {
+                                      const updateResponse = await fetch(
+                                        `/api/checkout/${checkoutId}`,
+                                        {
+                                          method: "PATCH",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                          body: JSON.stringify({
+                                            selectedAddressId: addr.id,
+                                            addressText: addr.full_address,
+                                            distance: addr.distance,
+                                            duration: addr.duration,
+                                            deliveryZone: addr.area || "Zone A",
+                                            deliveryFee: fallbackDeliveryFee,
+                                            totalAmount:
+                                              orderValue + fallbackDeliveryFee,
+                                          }),
+                                        }
+                                      );
+
+                                      if (updateResponse.ok) {
+                                        console.log(
+                                          "✅ Checkout session updated with fallback delivery fee:",
+                                          {
+                                            deliveryFee: fallbackDeliveryFee,
+                                            totalAmount:
+                                              orderValue + fallbackDeliveryFee,
+                                          }
+                                        );
+                                      }
+                                    } catch (updateError) {
+                                      console.error(
+                                        "❌ Error updating checkout session with fallback:",
+                                        updateError
+                                      );
+                                    }
+                                  }
+
+                                  // Update checkout session with delivery fee and address data
+                                  try {
+                                    const updateResponse = await fetch(
+                                      `/api/checkout/${checkoutId}`,
+                                      {
+                                        method: "PATCH",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          selectedAddressId: addr.id,
+                                          addressText: addr.full_address,
+                                          distance: addr.distance,
+                                          duration: addr.duration,
+                                          deliveryZone: addr.area || "Zone A",
+                                          deliveryFee: deliveryCharge,
+                                          totalAmount:
+                                            orderValue + deliveryCharge,
+                                        }),
+                                      }
+                                    );
+
+                                    if (updateResponse.ok) {
+                                      console.log(
+                                        "✅ Checkout session updated with delivery fee:",
+                                        {
+                                          deliveryFee: deliveryCharge,
+                                          totalAmount:
+                                            orderValue + deliveryCharge,
+                                        }
+                                      );
+                                    }
+                                  } catch (updateError) {
+                                    console.error(
+                                      "❌ Error updating checkout session:",
+                                      updateError
+                                    );
+                                  }
+                                }
                               }}
                             >
                               <div className="flex items-start justify-between">
@@ -1478,7 +2042,10 @@ export default function CheckoutClient() {
                                     weight="Broken"
                                     className="h-4 w-4"
                                   />
-                                  {getDisplayDistance(addr.distance) ?? "-"} km
+                                  {getDisplayDistance(addr.distance)?.toFixed(
+                                    1
+                                  ) ?? "-"}{" "}
+                                  km
                                 </span>
                                 {addr.duration && (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E6F3FF] text-[#2664eb] text-xs">
@@ -2138,8 +2705,9 @@ export default function CheckoutClient() {
                           return (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
                               <Routing weight="Broken" className="h-4 w-4" />
-                              {getDisplayDistance(currentAddress.distance) ??
-                                "-"}{" "}
+                              {getDisplayDistance(
+                                currentAddress.distance
+                              )?.toFixed(1) ?? "-"}{" "}
                               km
                             </span>
                           );
@@ -2463,6 +3031,33 @@ export default function CheckoutClient() {
                         </div>
                       )}
 
+                      {/* Delivery Fee - Only show when address is selected */}
+                      {(selectedAddressId ||
+                        checkoutData?.selectedAddressId) && (
+                        <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+                          <span>Delivery Fee</span>
+                          <span
+                            className={
+                              isFreeDelivery ? "text-green-600 font-medium" : ""
+                            }
+                          >
+                            {isCalculatingDelivery ? (
+                              <div className="flex items-center gap-1">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
+                                <span className="text-xs">Calculating...</span>
+                              </div>
+                            ) : (checkoutData?.deliveryFee ||
+                                deliveryCharge) === 0 ? (
+                              "FREE"
+                            ) : (
+                              `₹${(
+                                checkoutData?.deliveryFee || deliveryCharge
+                              ).toFixed(2)}`
+                            )}
+                          </span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
                         <span>CGST ({taxSettings?.cgst_rate || 9}%)</span>
                         <span>₹{cgstAmount.toFixed(2)}</span>
@@ -2530,6 +3125,32 @@ export default function CheckoutClient() {
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>Discount</span>
                     <span className="text-[#15A05A]">-₹{discount}</span>
+                  </div>
+                )}
+
+                {/* Delivery Fee - Only show when address is selected */}
+                {(selectedAddressId || checkoutData?.selectedAddressId) && (
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Delivery Fee</span>
+                    <span
+                      className={
+                        isFreeDelivery ? "text-green-600 font-medium" : ""
+                      }
+                    >
+                      {isCalculatingDelivery ? (
+                        <div className="flex items-center gap-1">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
+                          <span className="text-xs">Calculating...</span>
+                        </div>
+                      ) : (checkoutData?.deliveryFee || deliveryCharge) ===
+                        0 ? (
+                        "FREE"
+                      ) : (
+                        `₹${(
+                          checkoutData?.deliveryFee || deliveryCharge
+                        ).toFixed(2)}`
+                      )}
+                    </span>
                   </div>
                 )}
 
@@ -2722,6 +3343,24 @@ export default function CheckoutClient() {
                         <span>SGST ({taxSettings?.sgst_rate || 9}%):</span>
                         <span>₹{sgstAmount.toFixed(2)}</span>
                       </div>
+                      {/* Delivery Fee - Only show when address is selected */}
+                      {(selectedAddressId ||
+                        checkoutData?.selectedAddressId) && (
+                        <div className="flex justify-between">
+                          <span>Delivery Fee:</span>
+                          <span
+                            className={
+                              isFreeDelivery ? "text-green-600 font-medium" : ""
+                            }
+                          >
+                            {(checkoutData?.deliveryFee || deliveryCharge) === 0
+                              ? "FREE"
+                              : `₹${(
+                                  checkoutData?.deliveryFee || deliveryCharge
+                                ).toFixed(2)}`}
+                          </span>
+                        </div>
+                      )}
                       <div className="border-t pt-1 mt-2">
                         <div className="flex justify-between font-semibold">
                           <span>Total:</span>
@@ -2730,6 +3369,50 @@ export default function CheckoutClient() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Free Delivery Progress */}
+                  {!isFreeDelivery && subtotal < 500 && (
+                    <FreeDeliveryProgress
+                      currentOrderValue={subtotal}
+                      freeDeliveryThreshold={500}
+                    />
+                  )}
+
+                  {/* Delivery Fee Details */}
+                  {deliveryData && (
+                    <DeliveryFeeDisplay
+                      deliveryCharge={deliveryCharge}
+                      isFreeDelivery={isFreeDelivery}
+                      calculationMethod={deliveryData.calculationMethod}
+                      details={deliveryData.details}
+                      orderValue={subtotal}
+                      address={deliveryData.address}
+                      freeDeliveryThreshold={500}
+                    />
+                  )}
+
+                  {/* Delivery Calculation Loading */}
+                  {isCalculatingDelivery && (
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <span className="text-sm text-blue-600">
+                          Calculating delivery fee...
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delivery Error */}
+                  {deliveryError && (
+                    <div className="bg-red-50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-600 text-sm">
+                          ⚠️ {deliveryError}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-medium mb-2">Delivery Address</h4>

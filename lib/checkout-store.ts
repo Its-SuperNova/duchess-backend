@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { CheckoutStoreDB } from "./checkout-store-db";
+import { CheckoutStoreRedis } from "./checkout-store-redis";
+import { checkRedisHealth } from "./redis";
 
 export interface CheckoutItem {
   product_id: string;
@@ -90,7 +92,19 @@ export class CheckoutStore {
     >
   ): Promise<CheckoutSession> {
     try {
-      // Try database storage first
+      // Try Redis storage first (best performance)
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        console.log("🚀 Using Redis for checkout session storage");
+        return await CheckoutStoreRedis.createSession(data);
+      }
+    } catch (error) {
+      console.error("Redis storage failed, trying database:", error);
+    }
+
+    try {
+      // Try database storage as fallback
+      console.log("📊 Using database for checkout session storage");
       return await CheckoutStoreDB.createSession(data);
     } catch (error) {
       console.error(
@@ -117,15 +131,29 @@ export class CheckoutStore {
       checkoutSessions.set(checkoutId, session);
 
       // Clean up expired sessions
-      this.cleanupExpiredSessions();
+      await this.cleanupExpiredSessions();
 
+      console.log("⚠️ Using in-memory storage (not persistent)");
       return session;
     }
   }
 
   static async getSession(checkoutId: string): Promise<CheckoutSession | null> {
-    // Try database storage first
     try {
+      // Try Redis storage first (best performance)
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        const redisSession = await CheckoutStoreRedis.getSession(checkoutId);
+        if (redisSession) {
+          return redisSession;
+        }
+      }
+    } catch (error) {
+      console.error("Redis getSession failed, trying database:", error);
+    }
+
+    try {
+      // Try database storage as fallback
       const dbSession = await CheckoutStoreDB.getSession(checkoutId);
       if (dbSession) {
         return dbSession;
@@ -155,7 +183,23 @@ export class CheckoutStore {
     updates: Partial<CheckoutSession>
   ): Promise<CheckoutSession | null> {
     try {
-      // Try database storage first
+      // Try Redis storage first (best performance)
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        const redisResult = await CheckoutStoreRedis.updateSession(
+          checkoutId,
+          updates
+        );
+        if (redisResult) {
+          return redisResult;
+        }
+      }
+    } catch (error) {
+      console.error("Redis updateSession failed, trying database:", error);
+    }
+
+    try {
+      // Try database storage as fallback
       const dbResult = await CheckoutStoreDB.updateSession(checkoutId, updates);
       if (dbResult) {
         return dbResult;
@@ -179,7 +223,20 @@ export class CheckoutStore {
 
   static async deleteSession(checkoutId: string): Promise<boolean> {
     try {
-      // Try database storage first
+      // Try Redis storage first (best performance)
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        const redisResult = await CheckoutStoreRedis.deleteSession(checkoutId);
+        if (redisResult) {
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Redis deleteSession failed, trying database:", error);
+    }
+
+    try {
+      // Try database storage as fallback
       const dbResult = await CheckoutStoreDB.deleteSession(checkoutId);
       if (dbResult) {
         return true;
@@ -192,31 +249,32 @@ export class CheckoutStore {
     return checkoutSessions.delete(checkoutId);
   }
 
-  static cleanupExpiredSessions(): void {
-    const now = new Date();
-
-    for (const [checkoutId, session] of checkoutSessions.entries()) {
-      if (now > new Date(session.expiresAt)) {
-        checkoutSessions.delete(checkoutId);
-      }
-    }
-  }
-
-  static getSessionCount(): number {
-    return checkoutSessions.size;
-  }
-
-  static getAllSessions(): CheckoutSession[] {
-    return Array.from(checkoutSessions.values());
-  }
-
   // Payment specific methods
   static async updatePaymentStatus(
     checkoutId: string,
     status: CheckoutSession["paymentStatus"]
   ): Promise<CheckoutSession | null> {
     try {
-      // Try database storage first
+      // Try Redis storage first (best performance)
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        const redisResult = await CheckoutStoreRedis.updatePaymentStatus(
+          checkoutId,
+          status
+        );
+        if (redisResult) {
+          return redisResult;
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Redis updatePaymentStatus failed, trying database:",
+        error
+      );
+    }
+
+    try {
+      // Try database storage as fallback
       const dbResult = await CheckoutStoreDB.updatePaymentStatus(
         checkoutId,
         status
@@ -251,7 +309,26 @@ export class CheckoutStore {
     databaseOrderId: string
   ): Promise<CheckoutSession | null> {
     try {
-      // Try database storage first
+      // Try Redis storage first (best performance)
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        const redisResult = await CheckoutStoreRedis.updateDatabaseOrderId(
+          checkoutId,
+          databaseOrderId
+        );
+        if (redisResult) {
+          return redisResult;
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Redis updateDatabaseOrderId failed, trying database:",
+        error
+      );
+    }
+
+    try {
+      // Try database storage as fallback
       const dbResult = await CheckoutStoreDB.updateDatabaseOrderId(
         checkoutId,
         databaseOrderId
@@ -275,5 +352,114 @@ export class CheckoutStore {
     const updatedSession = { ...session, databaseOrderId };
     checkoutSessions.set(checkoutId, updatedSession);
     return updatedSession;
+  }
+
+  // Redis-specific utility methods
+  static async getSessionCount(): Promise<number> {
+    try {
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        return await CheckoutStoreRedis.getSessionCount();
+      }
+    } catch (error) {
+      console.error("Redis getSessionCount failed, using in-memory:", error);
+    }
+    return checkoutSessions.size;
+  }
+
+  static async getAllSessions(): Promise<CheckoutSession[]> {
+    try {
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        return await CheckoutStoreRedis.getAllSessions();
+      }
+    } catch (error) {
+      console.error("Redis getAllSessions failed, using in-memory:", error);
+    }
+    return Array.from(checkoutSessions.values());
+  }
+
+  static async getSessionsByUser(userId: string): Promise<CheckoutSession[]> {
+    try {
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        return await CheckoutStoreRedis.getSessionsByUser(userId);
+      }
+    } catch (error) {
+      console.error("Redis getSessionsByUser failed, using in-memory:", error);
+    }
+    return Array.from(checkoutSessions.values()).filter(
+      (session) => session.userId === userId
+    );
+  }
+
+  static async cleanupExpiredSessions(): Promise<number> {
+    try {
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        return await CheckoutStoreRedis.cleanupExpiredSessions();
+      }
+    } catch (error) {
+      console.error(
+        "Redis cleanupExpiredSessions failed, using in-memory:",
+        error
+      );
+    }
+
+    // Fallback to in-memory cleanup
+    const now = new Date();
+    let cleanedCount = 0;
+
+    for (const [checkoutId, session] of checkoutSessions.entries()) {
+      if (now > new Date(session.expiresAt)) {
+        checkoutSessions.delete(checkoutId);
+        cleanedCount++;
+      }
+    }
+
+    return cleanedCount;
+  }
+
+  static async getStats(): Promise<any> {
+    try {
+      const isRedisHealthy = await checkRedisHealth();
+      if (isRedisHealthy) {
+        return await CheckoutStoreRedis.getStats();
+      }
+    } catch (error) {
+      console.error("Redis getStats failed:", error);
+    }
+    return null;
+  }
+
+  static async healthCheck(): Promise<{
+    redis: boolean;
+    database: boolean;
+    inMemory: boolean;
+    sessionCount: number;
+  }> {
+    const health = {
+      redis: false,
+      database: false,
+      inMemory: true,
+      sessionCount: checkoutSessions.size,
+    };
+
+    try {
+      const isRedisHealthy = await checkRedisHealth();
+      health.redis = isRedisHealthy;
+    } catch (error) {
+      console.error("Redis health check failed:", error);
+    }
+
+    try {
+      // Test database connection
+      await CheckoutStoreDB.getSessionCount();
+      health.database = true;
+    } catch (error) {
+      console.error("Database health check failed:", error);
+    }
+
+    return health;
   }
 }

@@ -3,17 +3,17 @@ import type { Address } from "./supabase";
 import { validateAddressForCoimbatoreDelivery } from "./address-validation";
 import { calculateDistanceForAddress } from "./distance";
 
-// Utility function to convert stored distance (integer * 10) back to display format
+// Utility function to get display distance (now stored as float)
 export function getDisplayDistance(
   storedDistance: number | null
 ): number | null {
   if (storedDistance === null) return null;
-  return storedDistance / 10; // Convert back from integer storage format
+  return storedDistance; // Distance is now stored as float, no conversion needed
 }
 
 // Utility function to convert display distance to storage format
 export function getStorageDistance(displayDistance: number): number {
-  return Math.round(displayDistance * 10); // Convert to integer storage format
+  return Math.round(displayDistance * 100) / 100; // Round to 2 decimal places as float
 }
 
 export interface CreateAddressData {
@@ -270,10 +270,10 @@ export async function createAddress(
     }
 
     // Add distance and duration to address data (area is not stored in database)
-    // Ensure distance and duration are integers for database compatibility
+    // Store distance as float with 2 decimal places precision
     const addressDataWithDistance = {
       ...addressData,
-      distance: Math.round(deliveryResult.distance * 10), // Convert to integer (multiply by 10 to preserve 1 decimal place)
+      distance: Math.round(deliveryResult.distance * 100) / 100, // Round to 2 decimal places as float
       duration: Math.round(deliveryResult.duration), // Convert to integer
       is_default: shouldBeDefault,
     };
@@ -281,7 +281,7 @@ export async function createAddress(
     console.log("Address data with distance:", {
       distance: deliveryResult.distance,
       duration: deliveryResult.duration,
-      distanceInt: Math.round(deliveryResult.distance * 10),
+      distanceFloat: Math.round(deliveryResult.distance * 100) / 100,
       durationInt: Math.round(deliveryResult.duration),
     });
 
@@ -385,8 +385,8 @@ export async function updateAddress(
         }
 
         // Add distance and duration to address data (area is not stored in database)
-        // Ensure distance and duration are integers for database compatibility
-        addressData.distance = Math.round(deliveryResult.distance * 10); // Convert to integer (multiply by 10 to preserve 1 decimal place)
+        // Store distance as float with 2 decimal places precision
+        addressData.distance = Math.round(deliveryResult.distance * 100) / 100; // Round to 2 decimal places as float
         addressData.duration = Math.round(deliveryResult.duration); // Convert to integer
       }
     }
@@ -573,7 +573,7 @@ export async function recalculateAddressDistance(
     const { data: updatedAddress, error: updateError } = await supabase
       .from("addresses")
       .update({
-        distance: Math.round(deliveryResult.distance * 10), // Convert to integer (multiply by 10 to preserve 1 decimal place)
+        distance: Math.round(deliveryResult.distance * 100) / 100, // Round to 2 decimal places as float
         duration: Math.round(deliveryResult.duration), // Convert to integer
       })
       .eq("id", addressId)

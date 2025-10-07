@@ -233,6 +233,22 @@ export default function CartPage() {
     setIsCreatingCheckout(true);
 
     try {
+      // Get user ID from database if user is authenticated
+      let userId = null;
+      if (session?.user?.email) {
+        try {
+          const userResponse = await fetch(
+            `/api/user?email=${encodeURIComponent(session.user.email)}`
+          );
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            userId = userData.user?.id || null;
+          }
+        } catch (error) {
+          console.error("Error fetching user ID:", error);
+        }
+      }
+
       // Prepare checkout data
       const checkoutData = {
         items: cart.map((item) => ({
@@ -255,17 +271,11 @@ export default function CartPage() {
           item_has_message_card: item.addMessageCard || false,
           item_message_card_text: item.giftCardText || null,
         })),
-        subtotal: cart.reduce(
-          (total, item) => total + item.price * item.quantity,
-          0
-        ),
-        discount: 0, // TODO: Calculate discount if applicable
-        deliveryFee: 0, // TODO: Calculate delivery fee
         totalAmount: cart.reduce(
           (total, item) => total + item.price * item.quantity,
           0
         ),
-        userId: session?.user?.id || null,
+        userId: userId,
         userEmail: session?.user?.email || null,
       };
 

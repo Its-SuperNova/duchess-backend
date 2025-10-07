@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
       other_address_name,
       additional_details,
       is_default = false,
+      distance: providedDistance,
+      duration: providedDuration,
     } = body;
 
     // Validate required fields
@@ -76,11 +78,18 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id);
     }
 
-    // Calculate distance and duration if coordinates are provided
-    let distance = null;
-    let duration = null;
+    // Use provided distance/duration or calculate if not provided
+    let distance = providedDistance;
+    let duration = providedDuration;
 
-    if (latitude && longitude) {
+    console.log("Distance/Duration handling:", {
+      providedDistance,
+      providedDuration,
+      willCalculate: (!distance || !duration) && latitude && longitude,
+    });
+
+    // Only calculate if not provided and coordinates are available
+    if ((!distance || !duration) && latitude && longitude) {
       try {
         console.log("Calculating distance with coordinates:", {
           latitude,
@@ -106,8 +115,8 @@ export async function POST(request: NextRequest) {
         console.log("Distance calculation result:", result);
 
         if (result.distance && result.duration) {
-          distance = Math.round(result.distance * 10); // Convert to integer (multiply by 10 to preserve 1 decimal place)
-          duration = Math.round(result.duration); // Convert to integer
+          distance = distance || Math.round(result.distance * 100) / 100; // Round to 2 decimal places as float
+          duration = duration || Math.round(result.duration); // Convert to integer
           console.log("Calculated distance and duration:", {
             distance,
             duration,
@@ -135,8 +144,8 @@ export async function POST(request: NextRequest) {
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.distance && result.duration) {
-              distance = Math.round(result.distance * 10);
-              duration = Math.round(result.duration);
+              distance = distance || Math.round(result.distance * 100) / 100; // Round to 2 decimal places as float
+              duration = duration || Math.round(result.duration);
               console.log("Fallback distance calculation successful:", {
                 distance,
                 duration,

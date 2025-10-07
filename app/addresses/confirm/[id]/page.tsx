@@ -534,6 +534,13 @@ export default function ConfirmAddressPage({
             : null,
         additional_details: addressData.details,
         is_default: true, // Set as default for now
+        // Pass the calculated distance and duration to avoid recalculation
+        distance: routeInfo?.distanceValue
+          ? Math.round((routeInfo.distanceValue / 1000) * 100) / 100
+          : null,
+        duration: routeInfo?.durationValue
+          ? Math.round(routeInfo.durationValue / 60)
+          : null,
       };
 
       console.log("Saving address:", addressPayload);

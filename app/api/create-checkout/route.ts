@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CheckoutStore } from "@/lib/checkout-store";
+import { getUserAddresses } from "@/lib/address-utils";
+import { calculateOptimizedDeliveryCharge } from "@/lib/optimized-delivery-calculation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,18 +23,102 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use the totalAmount from the request body
+    const orderValue = body.totalAmount;
+
+    // Fetch address data and calculate delivery fee if address is provided
+    let deliveryFee = 0;
+    let addressData = null;
+    let distance = null;
+    let duration = null;
+    let deliveryZone = null;
+
+    if (body.selectedAddressId) {
+      try {
+        console.log("🏠 Fetching address data for ID:", body.selectedAddressId);
+        const addresses = await getUserAddresses(body.selectedAddressId);
+        addressData = addresses.find(
+          (addr) => addr.id === body.selectedAddressId
+        );
+
+        if (addressData) {
+          distance = addressData.distance;
+          duration = addressData.duration;
+          deliveryZone = addressData.area || "Zone A";
+
+          console.log("📍 Address data found:", {
+            id: addressData.id,
+            distance: addressData.distance,
+            duration: addressData.duration,
+            area: addressData.area,
+            fullAddress: addressData.full_address,
+          });
+
+          // Calculate delivery fee based on distance
+          if (addressData.distance) {
+            const distanceInKm = addressData.distance / 1000; // Convert meters to km
+            const deliveryResult = await calculateOptimizedDeliveryCharge(
+              distanceInKm,
+              orderValue
+            );
+
+            deliveryFee = deliveryResult.deliveryCharge;
+
+            console.log(
+              "🚚 Delivery fee calculated during checkout creation:",
+              {
+                distanceInKm,
+                orderValue,
+                deliveryFee,
+                isFreeDelivery: deliveryResult.isFreeDelivery,
+                calculationMethod: deliveryResult.calculationMethod,
+                details: deliveryResult.details,
+                addressInfo: {
+                  id: addressData.id,
+                  fullAddress: addressData.full_address,
+                  distance: addressData.distance,
+                  duration: addressData.duration,
+                  zone: addressData.area,
+                },
+                breakdown: {
+                  subtotal: orderValue,
+                  deliveryCharge: deliveryFee,
+                  total: orderValue + deliveryFee,
+                },
+              }
+            );
+          }
+        } else {
+          console.log("⚠️ Address not found for ID:", body.selectedAddressId);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching address data:", error);
+        // Continue with default values if address fetch fails
+      }
+    }
+
+    // Update total amount to include delivery fee
+    const finalTotalAmount = orderValue + deliveryFee;
+
+    console.log("💰 Final totals:", {
+      orderValue,
+      deliveryFee,
+      finalTotalAmount,
+      originalTotalAmount: body.totalAmount,
+    });
+
     // Create checkout session
     const checkoutSession = await CheckoutStore.createSession({
       userId: body.userId || null,
       userEmail: body.userEmail || null,
       items: body.items,
-      subtotal: body.subtotal || 0,
+      subtotal: body.subtotal || orderValue,
       discount: body.discount || 0,
-      deliveryFee: body.deliveryFee || 0,
-      totalAmount: body.totalAmount,
+      deliveryFee: deliveryFee, // Use calculated delivery fee
+      totalAmount: finalTotalAmount, // Use total including delivery fee
       cgstAmount: body.cgstAmount || 0,
       sgstAmount: body.sgstAmount || 0,
-      addressText: body.addressText || "",
+      addressText: body.addressText || addressData?.full_address || "",
       selectedAddressId: body.selectedAddressId || null,
       couponCode: body.couponCode || null,
       customizationOptions: body.customizationOptions || {},
@@ -44,21 +130,35 @@ export async function POST(request: NextRequest) {
       deliveryDate: body.deliveryDate || null,
       deliveryTimeSlot: body.deliveryTimeSlot || null,
       estimatedDeliveryTime: body.estimatedDeliveryTime || null,
-      distance: body.distance || null,
-      duration: body.duration || null,
-      deliveryZone: body.deliveryZone || null,
+      distance: distance || undefined,
+      duration: duration || undefined,
+      deliveryZone: deliveryZone || undefined,
     });
 
-    console.log("Checkout session created:", {
+    console.log("✅ Checkout session created with delivery fee:", {
       checkoutId: checkoutSession.checkoutId,
       totalAmount: checkoutSession.totalAmount,
+      deliveryFee: checkoutSession.deliveryFee,
       itemsCount: checkoutSession.items.length,
+      distance: checkoutSession.distance,
+      duration: checkoutSession.duration,
+      deliveryZone: checkoutSession.deliveryZone,
+      addressText: checkoutSession.addressText,
+      selectedAddressId: checkoutSession.selectedAddressId,
+      financialBreakdown: {
+        orderValue,
+        deliveryFee: checkoutSession.deliveryFee,
+        finalTotal: checkoutSession.totalAmount,
+        originalTotal: body.totalAmount,
+      },
     });
 
     return NextResponse.json({
       success: true,
       checkoutId: checkoutSession.checkoutId,
       message: "Checkout session created successfully",
+      deliveryFee: checkoutSession.deliveryFee,
+      totalAmount: checkoutSession.totalAmount,
     });
   } catch (error) {
     console.error("Error creating checkout session:", error);
