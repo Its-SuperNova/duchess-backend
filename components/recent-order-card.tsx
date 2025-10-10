@@ -30,16 +30,18 @@ export default function RecentOrderCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user?.email) {
       fetchRecentOrder();
     } else {
       setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const fetchRecentOrder = async () => {
     try {
-      const response = await fetch("/api/orders/recent");
+      const response = await fetch(
+        `/api/orders/recent?email=${session?.user?.email}`
+      );
       if (response.ok) {
         const data = await response.json();
         const orders = data.orders || [];

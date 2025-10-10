@@ -5,6 +5,17 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Package, Truck, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import dynamic from "next/dynamic";
+
+// Dynamically import Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-6 h-6 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+    </div>
+  ),
+});
 
 interface Order {
   id: string;
@@ -20,18 +31,43 @@ export default function FixedOrderStatusBar() {
   const router = useRouter();
   const [recentOrder, setRecentOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [preparingAnimation, setPreparingAnimation] = useState(null);
+  const [deliveryAnimation, setDeliveryAnimation] = useState(null);
+
+  // Load Lottie animations data dynamically to reduce bundle size
+  useEffect(() => {
+    const loadAnimations = async () => {
+      try {
+        // Load preparing animation
+        const preparingResponse = await fetch("/Lottie/preparing.json");
+        const preparingData = await preparingResponse.json();
+        setPreparingAnimation(preparingData);
+
+        // Load delivery animation
+        const deliveryResponse = await fetch("/Lottie/Delivery.json");
+        const deliveryData = await deliveryResponse.json();
+        setDeliveryAnimation(deliveryData);
+      } catch (error) {
+        console.error("Failed to load animations:", error);
+      }
+    };
+
+    loadAnimations();
+  }, []);
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user?.email) {
       fetchRecentOrder();
     } else {
       setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const fetchRecentOrder = async () => {
     try {
-      const response = await fetch("/api/orders/recent");
+      const response = await fetch(
+        `/api/orders/recent?email=${session?.user?.email}`
+      );
       if (response.ok) {
         const data = await response.json();
         const orders = data.orders || [];
@@ -49,15 +85,51 @@ export default function FixedOrderStatusBar() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string, paymentStatus?: string) => {
     switch (status.toLowerCase()) {
       case "pending":
       case "processing":
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case "confirmed":
       case "preparing":
+        // Show preparing animation for confirmed/preparing status or if payment is successful
+        const isPaymentSuccessful =
+          paymentStatus?.toLowerCase() === "successful" ||
+          paymentStatus?.toLowerCase() === "paid" ||
+          paymentStatus?.toLowerCase() === "captured";
+
+        if (
+          preparingAnimation &&
+          (status.toLowerCase() === "preparing" ||
+            status.toLowerCase() === "confirmed" ||
+            isPaymentSuccessful)
+        ) {
+          return (
+            <div className="w-6 h-6 mt-[-50px] ml-[-10px]">
+              <Lottie
+                animationData={preparingAnimation}
+                loop={true}
+                autoplay={true}
+                style={{ width: "80px", height: "80px" }}
+              />
+            </div>
+          );
+        }
         return <Package className="h-4 w-4 text-blue-600" />;
       case "out_for_delivery":
+        // Show delivery animation for out for delivery status
+        if (deliveryAnimation) {
+          return (
+            <div className="w-6 h-6 mt-[-35px] ml-[-10px]">
+              <Lottie
+                animationData={deliveryAnimation}
+                loop={true}
+                autoplay={true}
+                style={{ width: "60px", height: "60px" }}
+              />
+            </div>
+          );
+        }
         return <Truck className="h-4 w-4 text-purple-600" />;
       case "delivered":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -93,14 +165,20 @@ export default function FixedOrderStatusBar() {
       .join(" ");
   };
 
-  const getSimpleStatusMessage = (status: string) => {
+  const getSimpleStatusMessage = (status: string, paymentStatus?: string) => {
     switch (status.toLowerCase()) {
       case "pending":
         return "Order is being processed";
       case "processing":
         return "Order is being processed";
       case "confirmed":
-        return "Order is confirmed";
+        const isPaymentSuccessful =
+          paymentStatus?.toLowerCase() === "successful" ||
+          paymentStatus?.toLowerCase() === "paid" ||
+          paymentStatus?.toLowerCase() === "captured";
+        return isPaymentSuccessful
+          ? "Payment successful, preparing order"
+          : "Order is confirmed";
       case "preparing":
         return "Order is preparing";
       case "out_for_delivery":
@@ -115,31 +193,42 @@ export default function FixedOrderStatusBar() {
   };
 
   const handleViewOrder = () => {
-    router.push("/profile/orders");
+    if (recentOrder?.id) {
+      router.push(`/orders/track/${recentOrder.id}`);
+    }
   };
 
   // Don't show if loading, no user, or no recent order
-  if (loading || !session?.user || !recentOrder) {
+  if (loading || !session?.user?.email || !recentOrder) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 bg-white border border-gray-200 shadow-lg rounded-2xl transform -translate-x-1/2 max-w-[400px] w-full">
+    <div
+      className="fixed bottom-4 left-1/2 z-50 bg-white border border-gray-200 shadow-lg rounded-2xl transform -translate-x-1/2 max-w-[400px] w-full overflow-hidden cursor-pointer hover:shadow-xl transition-shadow duration-200"
+      onClick={handleViewOrder}
+    >
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Left side - Order Status */}
-          <div className="flex items-center gap-3 flex-1">
-            {getStatusIcon(recentOrder.status)}
+          <div className="flex items-center gap-[50px] flex-1">
+            {getStatusIcon(recentOrder.status, recentOrder.payment_status)}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {getSimpleStatusMessage(recentOrder.status)}
+                {getSimpleStatusMessage(
+                  recentOrder.status,
+                  recentOrder.payment_status
+                )}
               </p>
             </div>
           </div>
 
           {/* Right side - View Button */}
           <Button
-            onClick={handleViewOrder}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewOrder();
+            }}
             className="bg-[#7A0000] hover:bg-[#5A0000] text-white px-6 py-2 rounded-full text-sm font-medium min-w-[80px]"
           >
             View

@@ -21,16 +21,18 @@ export default function OrderStatusIndicator() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user?.email) {
       fetchRecentOrders();
     } else {
       setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const fetchRecentOrders = async () => {
     try {
-      const response = await fetch("/api/orders/recent");
+      const response = await fetch(
+        `/api/orders/recent?email=${session?.user?.email}`
+      );
       if (response.ok) {
         const data = await response.json();
         setRecentOrders(data.orders || []);
@@ -130,16 +132,18 @@ export function OrderStatusCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user?.email) {
       fetchRecentOrders();
     } else {
       setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.email]);
 
   const fetchRecentOrders = async () => {
     try {
-      const response = await fetch("/api/orders/recent");
+      const response = await fetch(
+        `/api/orders/recent?email=${session?.user?.email}`
+      );
       if (response.ok) {
         const data = await response.json();
         setRecentOrders(data.orders || []);
