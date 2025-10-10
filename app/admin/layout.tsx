@@ -75,10 +75,8 @@ export default function AdminLayout({
           />
           <div className="flex flex-col flex-1 overflow-hidden">
             <Topbar sidebarExpanded={sidebarExpanded} />
-            <main className="flex-1 overflow-y-auto ">
-              <div className="max-w-7xl mx-auto">
-                {children}
-              </div>
+            <main className="flex-1 overflow-y-auto bg-[#f5f5f5] ">
+              <div className="max-w-7xl mx-auto">{children}</div>
             </main>
           </div>
         </div>

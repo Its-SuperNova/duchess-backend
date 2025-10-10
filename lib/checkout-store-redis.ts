@@ -40,6 +40,148 @@ export class CheckoutStoreRedis {
         expiresAt: expiresAt.toISOString(),
       };
 
+      // Log initial checkout session data being stored in Redis
+      console.log("🔴 STORING INITIAL CHECKOUT SESSION IN REDIS:", {
+        storageType: "Redis",
+        tableName: "checkout_sessions (Redis)",
+        checkoutId: checkoutId,
+        storageAction: "CREATE",
+        initialDataStored: {
+          // Order Items (always present during creation)
+          orderItems: data.items.map((item) => ({
+            productName: item.product_name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            totalPrice: item.total_price,
+            variant: item.variant || "Standard",
+            redisField: "items",
+          })),
+
+          // Financial Information (always present during creation)
+          financialDetails: {
+            subtotal: data.subtotal,
+            discount: data.discount,
+            deliveryFee: data.deliveryFee,
+            cgstAmount: data.cgstAmount || 0,
+            sgstAmount: data.sgstAmount || 0,
+            totalAmount: data.totalAmount,
+            couponCode: data.couponCode || "No coupon applied",
+            redisFields: {
+              subtotal: data.subtotal,
+              discount: data.discount,
+              deliveryFee: data.deliveryFee,
+              cgstAmount: data.cgstAmount,
+              sgstAmount: data.sgstAmount,
+              totalAmount: data.totalAmount,
+              couponCode: data.couponCode,
+            },
+          },
+
+          // User Information (always present during creation)
+          userInfo: {
+            userId: data.userId || "Guest user",
+            userEmail: data.userEmail || "No email provided",
+            redisFields: {
+              userId: data.userId,
+              userEmail: data.userEmail,
+            },
+          },
+
+          // Receiver Details (may be present during creation, will be updated later)
+          receiverDetails: {
+            contactInfo: data.contactInfo
+              ? {
+                  name: data.contactInfo.name,
+                  phone: data.contactInfo.phone,
+                  alternatePhone:
+                    data.contactInfo.alternatePhone || "Not provided",
+                  redisField: "contactInfo",
+                  status: "Present during creation",
+                }
+              : {
+                  status: "Will be added via PATCH request",
+                  redisField: "contactInfo",
+                },
+
+            deliveryAddress: {
+              addressText:
+                data.addressText || "Will be added via PATCH request",
+              selectedAddressId:
+                data.selectedAddressId || "Will be added via PATCH request",
+              distance: data.distance
+                ? `${data.distance.toFixed(2)} km`
+                : "Will be calculated via PATCH request",
+              duration: data.duration
+                ? `${Math.round(data.duration / 60)} minutes`
+                : "Will be calculated via PATCH request",
+              deliveryZone:
+                data.deliveryZone || "Will be added via PATCH request",
+              redisFields: {
+                addressText: data.addressText,
+                selectedAddressId: data.selectedAddressId,
+                distance: data.distance,
+                duration: data.duration,
+                deliveryZone: data.deliveryZone,
+              },
+            },
+
+            deliveryTiming: {
+              timing: data.deliveryTiming || "Will be added via PATCH request",
+              deliveryDate:
+                data.deliveryDate || "Will be added via PATCH request",
+              deliveryTimeSlot:
+                data.deliveryTimeSlot || "Will be added via PATCH request",
+              estimatedDeliveryTime:
+                data.estimatedDeliveryTime || "Will be added via PATCH request",
+              redisFields: {
+                deliveryTiming: data.deliveryTiming,
+                deliveryDate: data.deliveryDate,
+                deliveryTimeSlot: data.deliveryTimeSlot,
+                estimatedDeliveryTime: data.estimatedDeliveryTime,
+              },
+            },
+
+            customization: {
+              notes: data.notes || "Will be added via PATCH request",
+              cakeText: data.cakeText || "Will be added via PATCH request",
+              messageCardText:
+                data.messageCardText || "Will be added via PATCH request",
+              customizationOptions: data.customizationOptions || {},
+              redisFields: {
+                notes: data.notes,
+                cakeText: data.cakeText,
+                messageCardText: data.messageCardText,
+                customizationOptions: data.customizationOptions,
+              },
+            },
+          },
+
+          // Session Management
+          sessionInfo: {
+            expiresAt: expiresAt.toISOString(),
+            paymentStatus: "pending",
+            paymentAttempts: 0,
+            ttlSeconds: SESSION_EXPIRY_SECONDS,
+            redisFields: {
+              expiresAt: expiresAt.toISOString(),
+              paymentStatus: "pending",
+              paymentAttempts: 0,
+            },
+          },
+        },
+
+        // Redis storage details
+        redisStorage: {
+          key: RedisKeys.CHECKOUT_SESSION(checkoutId),
+          ttlSeconds: SESSION_EXPIRY_SECONDS,
+          expiresAt: expiresAt.toISOString(),
+          completeSessionData: session,
+        },
+
+        // Note about receiver details
+        note: "Receiver details (contact info, delivery address, timing, customization) will be updated via PATCH requests to /api/checkout/[checkoutId] during the checkout process",
+      });
+
       // Store session in Redis with TTL
       await RedisUtils.setWithExpiry(
         RedisKeys.CHECKOUT_SESSION(checkoutId),
@@ -402,6 +544,3 @@ export class CheckoutStoreRedis {
     }
   }
 }
-
-
-

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createOrderFromCheckout } from "@/lib/order-utils";
-import { CheckoutStoreDB } from "@/lib/checkout-store-db";
+import { CheckoutStore } from "@/lib/checkout-store";
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (checkoutId) {
       try {
         // First, update the checkout session payment status to "paid"
-        const updatedSession = await CheckoutStoreDB.updatePaymentStatus(
+        const updatedSession = await CheckoutStore.updatePaymentStatus(
           checkoutId,
           "paid"
         );

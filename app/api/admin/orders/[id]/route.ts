@@ -9,7 +9,10 @@ export async function GET(
   try {
     const { id: orderId } = await params;
 
+    console.log("Admin order detail API called with ID:", orderId);
+
     if (!orderId) {
+      console.error("No order ID provided");
       return NextResponse.json(
         { error: "Order ID is required" },
         { status: 400 }
@@ -57,10 +60,11 @@ export async function GET(
           city,
           state,
           zip_code,
-          alternate_phone,
           additional_details,
           distance,
-          duration
+          duration,
+          latitude,
+          longitude
         ),
         coupons!orders_coupon_id_fkey (
           id,
@@ -76,14 +80,21 @@ export async function GET(
       .single();
 
     if (orderError) {
-      console.error("Error fetching order:", orderError);
+      console.error("Database error fetching order:", {
+        orderId,
+        error: orderError,
+        errorCode: orderError.code,
+        errorMessage: orderError.message,
+        errorDetails: orderError.details,
+      });
       return NextResponse.json(
-        { error: "Failed to fetch order" },
+        { error: "Failed to fetch order", details: orderError.message },
         { status: 500 }
       );
     }
 
     if (!order) {
+      console.error("Order not found in database:", orderId);
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
@@ -223,11 +234,8 @@ export async function GET(
       customer: {
         name: order.users?.name || order.contact_name || "Unknown Customer",
         email: order.users?.email || "No email",
-        phone: order.contact_number || addressData?.alternate_phone || null,
-        alternatePhone:
-          order.contact_alternate_number ||
-          addressData?.alternate_phone ||
-          null,
+        phone: order.contact_number || null,
+        alternatePhone: order.contact_alternate_number || null,
         avatar: `/api/avatar?name=${encodeURIComponent(
           order.users?.name || order.contact_name || "Unknown"
         )}`,
@@ -258,8 +266,10 @@ export async function GET(
             city: addressData.city,
             state: addressData.state,
             zip_code: addressData.zip_code,
-            alternate_phone: addressData.alternate_phone,
+            alternate_phone: null,
             additional_details: addressData.additional_details,
+            latitude: addressData.latitude,
+            longitude: addressData.longitude,
           }
         : parsedDeliveryAddress,
       delivery_address_text: order.delivery_address_text,

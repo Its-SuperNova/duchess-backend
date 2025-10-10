@@ -158,6 +158,11 @@ export default function CheckoutClient() {
 
         setCheckoutData(data.checkout);
 
+        // Set selected address ID from checkout data
+        if (data.checkout.selectedAddressId) {
+          setSelectedAddressId(data.checkout.selectedAddressId);
+        }
+
         // Log comprehensive delivery fee data from checkout session
         console.log("📦 Checkout session data fetched with delivery details:", {
           checkoutId,
@@ -167,7 +172,6 @@ export default function CheckoutClient() {
           selectedAddressId: data.checkout.selectedAddressId,
           distance: data.checkout.distance,
           duration: data.checkout.duration,
-          deliveryZone: data.checkout.deliveryZone,
           items: data.checkout.items?.map((item: any) => ({
             id: item.id,
             name: item.name,
@@ -192,12 +196,32 @@ export default function CheckoutClient() {
         });
 
         // Populate form fields from checkout data
-        if (data.checkout.note) setNote(data.checkout.note);
+        console.log("🔄 Loading form fields from checkout session:", {
+          notes: data.checkout.notes,
+          note: data.checkout.note, // Check both field names
+          messageCardText: data.checkout.messageCardText,
+          cakeText: data.checkout.cakeText,
+          customizationOptions: data.checkout.customizationOptions,
+          contactInfo: data.checkout.contactInfo,
+        });
+
+        if (data.checkout.notes) {
+          console.log(
+            "✅ Loading notes from checkout session:",
+            data.checkout.notes
+          );
+          setNote(data.checkout.notes);
+        }
         if (data.checkout.couponCode)
           setSelectedCoupon(data.checkout.couponCode);
         if (data.checkout.cakeText) setCakeText(data.checkout.cakeText);
-        if (data.checkout.messageCardText)
+        if (data.checkout.messageCardText) {
+          console.log(
+            "✅ Loading messageCardText from checkout session:",
+            data.checkout.messageCardText
+          );
           setMessageCardText(data.checkout.messageCardText);
+        }
         if (data.checkout.contactInfo)
           setContactInfo(data.checkout.contactInfo);
         if (data.checkout.addressText) {
@@ -238,28 +262,34 @@ export default function CheckoutClient() {
             addressId: data.checkout.selectedAddressId,
             orderValue,
             addressText: data.checkout.addressText,
+            distance: data.checkout.distance,
           });
 
           // Fallback: If delivery calculation failed, calculate manually
-          if (deliveryCharge === 0 && data.checkout.distance) {
+          if (
+            (!data.checkout.deliveryFee || data.checkout.deliveryFee === 0) &&
+            data.checkout.distance
+          ) {
             console.log("🔄 Fallback delivery calculation on page load:", {
               distance: data.checkout.distance,
-              distanceInKm: data.checkout.distance / 1000,
+              distanceInKm: data.checkout.distance,
               orderValue,
             });
 
             // Simple distance-based calculation as fallback
-            const distanceInKm = data.checkout.distance / 1000;
+            const distanceInKm = data.checkout.distance; // Distance is already in km
             let fallbackDeliveryFee = 0;
 
-            if (distanceInKm <= 5) {
+            if (distanceInKm <= 10) {
               fallbackDeliveryFee = 49;
-            } else if (distanceInKm <= 10) {
-              fallbackDeliveryFee = 120;
-            } else if (distanceInKm <= 15) {
-              fallbackDeliveryFee = 200;
+            } else if (distanceInKm <= 20) {
+              fallbackDeliveryFee = 89;
+            } else if (distanceInKm <= 30) {
+              fallbackDeliveryFee = 109;
+            } else if (distanceInKm <= 35) {
+              fallbackDeliveryFee = 149;
             } else {
-              fallbackDeliveryFee = 300;
+              fallbackDeliveryFee = 200; // For distances > 35km
             }
 
             console.log(
@@ -291,6 +321,13 @@ export default function CheckoutClient() {
                     totalAmount: orderValue + fallbackDeliveryFee,
                   }
                 );
+
+                // Update local checkout data state
+                setCheckoutData((prev: any) => ({
+                  ...prev,
+                  deliveryFee: fallbackDeliveryFee,
+                  totalAmount: orderValue + fallbackDeliveryFee,
+                }));
               }
             } catch (updateError) {
               console.error(
@@ -321,6 +358,13 @@ export default function CheckoutClient() {
                   totalAmount: orderValue + deliveryCharge,
                 }
               );
+
+              // Update local checkout data state
+              setCheckoutData((prev: any) => ({
+                ...prev,
+                deliveryFee: deliveryCharge,
+                totalAmount: orderValue + deliveryCharge,
+              }));
             }
           } catch (updateError) {
             console.error("❌ Error updating checkout session:", updateError);
@@ -452,8 +496,39 @@ export default function CheckoutClient() {
     phone: "",
     alternatePhone: "",
   });
-  const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
   const [tempContactInfo, setTempContactInfo] = useState(contactInfo);
+  const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
+
+  // Debug: Log when contact drawer opens
+  useEffect(() => {
+    if (isContactDrawerOpen) {
+      console.log(
+        "🔍 Contact drawer opened - tempContactInfo:",
+        tempContactInfo
+      );
+      console.log("🔍 Contact drawer opened - contactInfo:", contactInfo);
+      console.log(
+        "🔍 Are they equal?",
+        JSON.stringify(tempContactInfo) === JSON.stringify(contactInfo)
+      );
+
+      // Ensure tempContactInfo is synced with contactInfo when drawer opens
+      if (JSON.stringify(tempContactInfo) !== JSON.stringify(contactInfo)) {
+        console.log("🔧 Syncing tempContactInfo with contactInfo");
+        setTempContactInfo(contactInfo);
+      }
+    }
+  }, [isContactDrawerOpen, tempContactInfo, contactInfo]);
+
+  // Debug: Log when contactInfo changes
+  useEffect(() => {
+    console.log("🔍 ContactInfo state changed:", contactInfo);
+  }, [contactInfo]);
+
+  // Debug: Log when tempContactInfo changes
+  useEffect(() => {
+    console.log("🔍 TempContactInfo state changed:", tempContactInfo);
+  }, [tempContactInfo]);
 
   // Payment dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -465,8 +540,6 @@ export default function CheckoutClient() {
   const [showFailureOverlay, setShowFailureOverlay] = useState(false);
   const [failureCountdown, setFailureCountdown] = useState(0);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
-  const [showDebugDialog, setShowDebugDialog] = useState(false);
-  const [debugData, setDebugData] = useState<any>(null);
 
   // Delivery calculation
   const {
@@ -758,21 +831,106 @@ export default function CheckoutClient() {
         );
 
         // Set contact info from user profile
-        setContactInfo({
+        const autoFilledContactInfo = {
           name: user.name || "",
           phone: user.phone_number || "",
           alternatePhone: "",
-        });
+        };
+
+        setContactInfo(autoFilledContactInfo);
+
+        // Auto-save contact info to checkout session if we have valid data
+        if (autoFilledContactInfo.name && autoFilledContactInfo.phone) {
+          try {
+            console.log("🔄 Auto-saving contact info to checkout session:", {
+              checkoutId,
+              contactInfo: autoFilledContactInfo,
+            });
+
+            const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contactInfo: autoFilledContactInfo,
+              }),
+            });
+
+            if (updateResponse.ok) {
+              const responseData = await updateResponse.json();
+              console.log(
+                "✅ Contact info auto-saved to checkout session:",
+                responseData
+              );
+            } else {
+              console.error(
+                "❌ Failed to auto-save contact info:",
+                await updateResponse.text()
+              );
+            }
+          } catch (error) {
+            console.error("❌ Error auto-saving contact info:", error);
+          }
+        }
 
         // Only set address text if we don't already have it from new address data
         if (!addressText) {
           const def = await getDefaultAddress(user.id);
+          let selectedAddress = null;
+
           if (def?.full_address) {
             setAddressText(def.full_address);
             setSelectedAddressId(def.id);
+            selectedAddress = def;
           } else if (list?.[0]?.full_address) {
             setAddressText(list[0].full_address);
             setSelectedAddressId(list[0].id);
+            selectedAddress = list[0];
+          }
+
+          // Auto-save address info to checkout session if we have a selected address
+          if (selectedAddress) {
+            try {
+              console.log("🔄 Auto-saving address info to checkout session:", {
+                checkoutId,
+                addressText: selectedAddress.full_address,
+                selectedAddressId: selectedAddress.id,
+                distance: selectedAddress.distance,
+                duration: selectedAddress.duration,
+              });
+
+              const updateResponse = await fetch(
+                `/api/checkout/${checkoutId}`,
+                {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    addressText: selectedAddress.full_address,
+                    selectedAddressId: selectedAddress.id,
+                    distance: selectedAddress.distance,
+                    duration: selectedAddress.duration,
+                  }),
+                }
+              );
+
+              if (updateResponse.ok) {
+                const responseData = await updateResponse.json();
+                console.log(
+                  "✅ Address info auto-saved to checkout session:",
+                  responseData
+                );
+              } else {
+                console.error(
+                  "❌ Failed to auto-save address info:",
+                  await updateResponse.text()
+                );
+              }
+            } catch (error) {
+              console.error("❌ Error auto-saving address info:", error);
+            }
           }
         }
       } finally {
@@ -954,7 +1112,7 @@ export default function CheckoutClient() {
     const finalCgstAmount = cgstAmount > 0 ? cgstAmount : 0;
     const finalSgstAmount = sgstAmount > 0 ? sgstAmount : 0;
 
-    console.log("Tax calculation:", {
+    console.log("Tax calculation (frontend - correct method):", {
       taxableAmount,
       cgstRate,
       sgstRate,
@@ -971,6 +1129,68 @@ export default function CheckoutClient() {
     setCalculatedSgstAmount(finalSgstAmount);
   }, [taxSettings, subtotal, discount]);
 
+  // Auto-update checkout session with tax values when they change
+  useEffect(() => {
+    if (checkoutId && (calculatedCgstAmount > 0 || calculatedSgstAmount > 0)) {
+      const updateTaxesInCheckoutSession = async () => {
+        try {
+          console.log("🔄 Auto-updating tax values in checkout session:", {
+            checkoutId,
+            cgstAmount: calculatedCgstAmount,
+            sgstAmount: calculatedSgstAmount,
+            subtotal,
+            discount,
+          });
+
+          const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              cgstAmount: calculatedCgstAmount,
+              sgstAmount: calculatedSgstAmount,
+              subtotal: subtotal,
+              discount: discount,
+              totalAmount:
+                subtotal -
+                discount +
+                calculatedCgstAmount +
+                calculatedSgstAmount +
+                (deliveryCharge || 0),
+            }),
+          });
+
+          if (updateResponse.ok) {
+            const responseData = await updateResponse.json();
+            console.log(
+              "✅ Tax values auto-updated in checkout session:",
+              responseData
+            );
+          } else {
+            console.error(
+              "❌ Failed to auto-update tax values:",
+              await updateResponse.text()
+            );
+          }
+        } catch (error) {
+          console.error("❌ Error auto-updating tax values:", error);
+        }
+      };
+
+      // Debounce the update to avoid too many API calls
+      const timeoutId = setTimeout(updateTaxesInCheckoutSession, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [
+    checkoutId,
+    calculatedCgstAmount,
+    calculatedSgstAmount,
+    subtotal,
+    discount,
+    deliveryCharge,
+  ]);
+
   // Recalculate delivery fee when checkout data changes
   useEffect(() => {
     if (
@@ -983,15 +1203,17 @@ export default function CheckoutClient() {
         0
       );
 
-      // Only recalculate if we don't already have delivery data or if the order value changed
-      if (!deliveryData || deliveryData.orderValue !== orderValue) {
+      // Only recalculate if we don't already have delivery data, if the order value changed, or if delivery fee is not set
+      if (
+        (!deliveryData || deliveryData.orderValue !== orderValue) &&
+        (!checkoutData?.deliveryFee || checkoutData.deliveryFee === 0)
+      ) {
         console.log(
           "🔄 Recalculating delivery fee due to checkout data change:",
           {
             addressText: checkoutData.addressText,
             distance: checkoutData.distance,
             duration: checkoutData.duration,
-            deliveryZone: checkoutData.deliveryZone,
             selectedAddressId: checkoutData.selectedAddressId,
             orderValue,
             checkoutId,
@@ -1011,10 +1233,17 @@ export default function CheckoutClient() {
           addressId: checkoutData.selectedAddressId,
           orderValue,
           addressText: checkoutData.addressText,
+          distance: checkoutData.distance,
         });
       }
     }
-  }, [checkoutData, calculateDelivery, deliveryData]);
+  }, [
+    checkoutData?.addressText,
+    checkoutData?.distance,
+    checkoutData?.items,
+    calculateDelivery,
+    deliveryData,
+  ]);
 
   const cgstAmount = calculatedCgstAmount;
   const sgstAmount = calculatedSgstAmount;
@@ -1037,6 +1266,15 @@ export default function CheckoutClient() {
     const calculateDeliveryForAutoSelectedAddress = async () => {
       if (!selectedAddressId || !addresses.length || !checkoutData?.items)
         return;
+
+      // Don't recalculate if delivery fee is already set and not 0
+      if (checkoutData?.deliveryFee && checkoutData.deliveryFee > 0) {
+        console.log(
+          "🚫 Skipping auto-calculation - delivery fee already set:",
+          checkoutData.deliveryFee
+        );
+        return;
+      }
 
       const selectedAddress = addresses.find(
         (addr) => addr.id === selectedAddressId
@@ -1061,13 +1299,21 @@ export default function CheckoutClient() {
       let calculatedDeliveryFee = 0;
       if (selectedAddress.distance) {
         try {
-          const distanceInKm = selectedAddress.distance / 1000;
+          const distanceInKm = selectedAddress.distance; // Distance is already in km
+          console.log("🔍 Client-side distance before API call:", {
+            originalDistance: selectedAddress.distance,
+            distanceInKm: distanceInKm,
+            type: typeof distanceInKm,
+          });
           const response = await fetch("/api/calculate-delivery", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
+              addressId: selectedAddress.id,
+              addressText: selectedAddress.full_address,
+              checkoutId: checkoutId,
               distance: distanceInKm,
               orderValue: orderValue,
             }),
@@ -1081,11 +1327,19 @@ export default function CheckoutClient() {
           }
         } catch (error) {
           console.error("Error calculating delivery fee:", error);
-          // Fallback calculation
-          calculatedDeliveryFee = Math.max(
-            0,
-            Math.round((selectedAddress.distance / 1000) * 10)
-          );
+          // Fallback calculation based on distance ranges
+          const distance = selectedAddress.distance;
+          if (distance <= 10) {
+            calculatedDeliveryFee = 49;
+          } else if (distance <= 20) {
+            calculatedDeliveryFee = 89;
+          } else if (distance <= 30) {
+            calculatedDeliveryFee = 109;
+          } else if (distance <= 35) {
+            calculatedDeliveryFee = 149;
+          } else {
+            calculatedDeliveryFee = 200; // For distances > 35km
+          }
         }
       }
 
@@ -1098,7 +1352,6 @@ export default function CheckoutClient() {
           selectedAddressId: selectedAddress.id,
           distance: selectedAddress.distance,
           duration: selectedAddress.duration,
-          deliveryZone: selectedAddress.area || "Zone A",
           deliveryFee: calculatedDeliveryFee,
           totalAmount: newTotal,
         };
@@ -1118,8 +1371,18 @@ export default function CheckoutClient() {
             addressText: selectedAddress.full_address,
             distance: selectedAddress.distance,
             duration: selectedAddress.duration,
-            deliveryZone: selectedAddress.area || "Zone A",
           });
+
+          // Update local checkout data state to reflect the changes
+          setCheckoutData((prev: any) => ({
+            ...prev,
+            deliveryFee: calculatedDeliveryFee,
+            totalAmount: newTotal,
+            addressText: selectedAddress.full_address,
+            selectedAddressId: selectedAddress.id,
+            distance: selectedAddress.distance,
+            duration: selectedAddress.duration,
+          }));
         } else {
           console.error("❌ Failed to auto-update checkout session");
         }
@@ -1183,7 +1446,6 @@ export default function CheckoutClient() {
         estimatedDeliveryTime: null, // Set to null to avoid timestamp format errors
         distance: selectedAddressObj.distance,
         duration: selectedAddressObj.duration,
-        deliveryZone: "Zone A", // Default zone, can be customized based on address
         // Financial data
         subtotal: subtotal,
         discount: discount,
@@ -1256,9 +1518,21 @@ export default function CheckoutClient() {
       setIsPaymentDialogOpen(false);
       setPaymentStatus("success");
 
-      // Show debug dialog BEFORE creating order
-      setDebugData(paymentData);
-      setShowDebugDialog(true);
+      // Clear cart and show success overlay
+      clearCart();
+      setShowSuccessOverlay(true);
+      setSuccessOrderId(paymentData?.orderId);
+
+      toast({
+        title: "Payment Successful!",
+        description: "Your order has been placed successfully.",
+        variant: "default",
+      });
+
+      // Redirect to confirmation page
+      setTimeout(() => {
+        router.push(`/confirmation?orderId=${paymentData?.orderId}`);
+      }, 1000);
     } catch (error) {
       console.error("Error handling payment success:", error);
       handleRazorpayPaymentFailure("Payment processing error");
@@ -1476,54 +1750,6 @@ export default function CheckoutClient() {
         />
       )}
 
-      {/* Debug Dialog */}
-      {showDebugDialog && (
-        <Dialog open={showDebugDialog} onOpenChange={setShowDebugDialog}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>🔍 Debug - Before Order Creation</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <p className="font-medium">Order ID:</p>
-                <p className="text-sm text-gray-600">{debugData?.orderId}</p>
-              </div>
-              <div className="bg-yellow-50 p-3 rounded">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Click "Proceed" to create the order and
-                  continue to confirmation page.
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                onClick={() => {
-                  setShowDebugDialog(false);
-                  // Clear cart and show success overlay
-                  clearCart();
-                  setShowSuccessOverlay(true);
-                  setSuccessOrderId(debugData?.orderId);
-
-                  toast({
-                    title: "Payment Successful!",
-                    description: "Your order has been placed successfully.",
-                    variant: "default",
-                  });
-
-                  // Redirect to confirmation page
-                  setTimeout(() => {
-                    router.push(`/confirmation?orderId=${debugData?.orderId}`);
-                  }, 1000);
-                }}
-                className="w-full"
-              >
-                Proceed to Create Order & Confirmation Page
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
       {/* Show failure overlay if payment failed */}
       {showFailureOverlay && (
         <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
@@ -1601,7 +1827,7 @@ export default function CheckoutClient() {
                     onOpenChange={setIsNoteDrawerOpen}
                   >
                     <DrawerTrigger asChild>
-                      <button className="w-full flex items-center justify-between text-left">
+                      <div className="w-full flex items-center justify-between text-left cursor-pointer  rounded-lg">
                         <div className="flex items-center">
                           <DocumentAdd className="h-5 w-5 mr-3 text-black" />
                           <span className="font-medium text-gray-700 dark:text-gray-300">
@@ -1612,8 +1838,7 @@ export default function CheckoutClient() {
                           {note && (
                             <button
                               className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 setIsNoteDrawerOpen(true);
                               }}
                             >
@@ -1622,7 +1847,7 @@ export default function CheckoutClient() {
                           )}
                           <IoIosArrowForward className="h-5 w-5 text-gray-600" />
                         </div>
-                      </button>
+                      </div>
                     </DrawerTrigger>
                     <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
                       <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
@@ -1663,13 +1888,82 @@ export default function CheckoutClient() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setNote("")}
+                          onClick={async () => {
+                            setNote("");
+                            // Clear note from checkout session
+                            try {
+                              const updateResponse = await fetch(
+                                `/api/checkout/${checkoutId}`,
+                                {
+                                  method: "PATCH",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    notes: "",
+                                  }),
+                                }
+                              );
+
+                              if (updateResponse.ok) {
+                                console.log(
+                                  "✅ Note cleared from checkout session"
+                                );
+                              }
+                            } catch (error) {
+                              console.error("❌ Error clearing note:", error);
+                            }
+                          }}
                           className="h-9 px-5 rounded-[12px]"
                         >
                           Clear
                         </Button>
                         <DrawerClose asChild>
-                          <Button size="sm" className="h-9 px-5 rounded-[12px]">
+                          <Button
+                            size="sm"
+                            className="h-9 px-5 rounded-[12px]"
+                            onClick={async () => {
+                              // Save note to checkout session
+                              try {
+                                console.log(
+                                  "🔄 Saving note to checkout session:",
+                                  {
+                                    checkoutId,
+                                    notes: note,
+                                  }
+                                );
+
+                                const updateResponse = await fetch(
+                                  `/api/checkout/${checkoutId}`,
+                                  {
+                                    method: "PATCH",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      notes: note,
+                                    }),
+                                  }
+                                );
+
+                                if (updateResponse.ok) {
+                                  const responseData =
+                                    await updateResponse.json();
+                                  console.log(
+                                    "✅ Note saved to checkout session:",
+                                    responseData
+                                  );
+                                } else {
+                                  console.error(
+                                    "❌ Failed to save note:",
+                                    await updateResponse.text()
+                                  );
+                                }
+                              } catch (error) {
+                                console.error("❌ Error saving note:", error);
+                              }
+                            }}
+                          >
                             Save
                           </Button>
                         </DrawerClose>
@@ -1679,7 +1973,35 @@ export default function CheckoutClient() {
                           <Button
                             variant="outline"
                             size="xl"
-                            onClick={() => setNote("")}
+                            onClick={async () => {
+                              setNote("");
+                              // Clear note from checkout session
+                              try {
+                                const updateResponse = await fetch(
+                                  `/api/checkout/${checkoutId}`,
+                                  {
+                                    method: "PATCH",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      notes: "",
+                                    }),
+                                  }
+                                );
+
+                                if (updateResponse.ok) {
+                                  console.log(
+                                    "✅ Note cleared from checkout session (mobile)"
+                                  );
+                                }
+                              } catch (error) {
+                                console.error(
+                                  "❌ Error clearing note (mobile):",
+                                  error
+                                );
+                              }
+                            }}
                             className="flex-1 rounded-[20px] text-[16px]"
                           >
                             Clear
@@ -1688,6 +2010,50 @@ export default function CheckoutClient() {
                             <Button
                               size="xl"
                               className="flex-1 py-5 rounded-[20px] text-[16px]"
+                              onClick={async () => {
+                                // Save note to checkout session
+                                try {
+                                  console.log(
+                                    "🔄 Saving note to checkout session (mobile):",
+                                    {
+                                      checkoutId,
+                                      notes: note,
+                                    }
+                                  );
+
+                                  const updateResponse = await fetch(
+                                    `/api/checkout/${checkoutId}`,
+                                    {
+                                      method: "PATCH",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        notes: note,
+                                      }),
+                                    }
+                                  );
+
+                                  if (updateResponse.ok) {
+                                    const responseData =
+                                      await updateResponse.json();
+                                    console.log(
+                                      "✅ Note saved to checkout session (mobile):",
+                                      responseData
+                                    );
+                                  } else {
+                                    console.error(
+                                      "❌ Failed to save note (mobile):",
+                                      await updateResponse.text()
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "❌ Error saving note (mobile):",
+                                    error
+                                  );
+                                }
+                              }}
                             >
                               Save
                             </Button>
@@ -1763,7 +2129,8 @@ export default function CheckoutClient() {
                               className={`bg-white rounded-[18px] shadow-sm p-4 ${
                                 index > 0 ? "mt-3" : ""
                               } ${
-                                selectedAddressId === addr.id
+                                selectedAddressId === addr.id ||
+                                checkoutData?.selectedAddressId === addr.id
                                   ? "ring-2 ring-[#2664eb] ring-opacity-50 border-[#2664eb]"
                                   : "hover:bg-gray-50 cursor-pointer"
                               }`}
@@ -1776,14 +2143,14 @@ export default function CheckoutClient() {
                                   area: addr.area,
                                 });
 
-                                // Simple test alert
-                                alert(
-                                  `Address clicked: ${
-                                    addr.full_address
-                                  }\nDistance: ${addr.distance || 0}m (${(
-                                    (addr.distance || 0) / 1000
-                                  ).toFixed(2)}km)`
-                                );
+                                // Simple test alert - REMOVED
+                                // alert(
+                                //   `Address clicked: ${
+                                //     addr.full_address
+                                //   }\nDistance: ${(addr.distance || 0).toFixed(
+                                //     2
+                                //   )}km`
+                                // );
 
                                 setAddressText(addr.full_address);
                                 setSelectedAddressId(addr.id);
@@ -1817,15 +2184,17 @@ export default function CheckoutClient() {
                                   // Calculate delivery fee directly based on distance
                                   let calculatedDeliveryFee = 0;
                                   if (addr.distance) {
-                                    const distanceInKm = addr.distance / 1000;
-                                    if (distanceInKm <= 5) {
+                                    const distanceInKm = addr.distance; // Distance is already in km
+                                    if (distanceInKm <= 10) {
                                       calculatedDeliveryFee = 49;
-                                    } else if (distanceInKm <= 10) {
-                                      calculatedDeliveryFee = 120;
-                                    } else if (distanceInKm <= 15) {
-                                      calculatedDeliveryFee = 200;
+                                    } else if (distanceInKm <= 20) {
+                                      calculatedDeliveryFee = 89;
+                                    } else if (distanceInKm <= 30) {
+                                      calculatedDeliveryFee = 109;
+                                    } else if (distanceInKm <= 35) {
+                                      calculatedDeliveryFee = 149;
                                     } else {
-                                      calculatedDeliveryFee = 300;
+                                      calculatedDeliveryFee = 200; // For distances > 35km
                                     }
                                   } else {
                                     // Fallback if no distance data
@@ -1840,9 +2209,7 @@ export default function CheckoutClient() {
                                     {
                                       addressId: addr.id,
                                       distance: addr.distance,
-                                      distanceInKm: addr.distance
-                                        ? addr.distance / 1000
-                                        : 0,
+                                      distanceInKm: addr.distance || 0,
                                       orderValue,
                                       calculatedDeliveryFee,
                                       newTotal,
@@ -1863,7 +2230,6 @@ export default function CheckoutClient() {
                                           addressText: addr.full_address,
                                           distance: addr.distance,
                                           duration: addr.duration,
-                                          deliveryZone: addr.area || "Zone A",
                                           deliveryFee: calculatedDeliveryFee,
                                           totalAmount: newTotal,
                                         }),
@@ -1879,13 +2245,21 @@ export default function CheckoutClient() {
                                         }
                                       );
 
-                                      // Show success message
-                                      alert(
-                                        `✅ Address selected!\n\nDelivery Fee: ₹${calculatedDeliveryFee}\nTotal: ₹${newTotal}\n\nPage will refresh to show updated values.`
-                                      );
+                                      // Update local checkout data state
+                                      setCheckoutData((prev: any) => ({
+                                        ...prev,
+                                        deliveryFee: calculatedDeliveryFee,
+                                        totalAmount: newTotal,
+                                        addressText: addr.full_address,
+                                        selectedAddressId: addr.id,
+                                        distance: addr.distance,
+                                        duration: addr.duration,
+                                      }));
 
-                                      // Refresh page to show updated values
-                                      window.location.reload();
+                                      // Show success message - REMOVED
+                                      // alert(
+                                      //   `✅ Address selected!\n\nDelivery Fee: ₹${calculatedDeliveryFee}\nTotal: ₹${newTotal}\n\nValues updated successfully.`
+                                      // );
                                     } else {
                                       console.error(
                                         "❌ Failed to update checkout session"
@@ -1904,23 +2278,25 @@ export default function CheckoutClient() {
                                       "🔄 Fallback delivery calculation:",
                                       {
                                         distance: addr.distance,
-                                        distanceInKm: addr.distance / 1000,
+                                        distanceInKm: addr.distance,
                                         orderValue,
                                       }
                                     );
 
                                     // Simple distance-based calculation as fallback
-                                    const distanceInKm = addr.distance / 1000;
+                                    const distanceInKm = addr.distance; // Distance is already in km
                                     let fallbackDeliveryFee = 0;
 
-                                    if (distanceInKm <= 5) {
+                                    if (distanceInKm <= 10) {
                                       fallbackDeliveryFee = 49;
-                                    } else if (distanceInKm <= 10) {
-                                      fallbackDeliveryFee = 120;
-                                    } else if (distanceInKm <= 15) {
-                                      fallbackDeliveryFee = 200;
+                                    } else if (distanceInKm <= 20) {
+                                      fallbackDeliveryFee = 89;
+                                    } else if (distanceInKm <= 30) {
+                                      fallbackDeliveryFee = 109;
+                                    } else if (distanceInKm <= 35) {
+                                      fallbackDeliveryFee = 149;
                                     } else {
-                                      fallbackDeliveryFee = 300;
+                                      fallbackDeliveryFee = 200; // For distances > 35km
                                     }
 
                                     console.log(
@@ -1942,7 +2318,6 @@ export default function CheckoutClient() {
                                             addressText: addr.full_address,
                                             distance: addr.distance,
                                             duration: addr.duration,
-                                            deliveryZone: addr.area || "Zone A",
                                             deliveryFee: fallbackDeliveryFee,
                                             totalAmount:
                                               orderValue + fallbackDeliveryFee,
@@ -1959,6 +2334,18 @@ export default function CheckoutClient() {
                                               orderValue + fallbackDeliveryFee,
                                           }
                                         );
+
+                                        // Update local checkout data state
+                                        setCheckoutData((prev: any) => ({
+                                          ...prev,
+                                          deliveryFee: fallbackDeliveryFee,
+                                          totalAmount:
+                                            orderValue + fallbackDeliveryFee,
+                                          addressText: addr.full_address,
+                                          selectedAddressId: addr.id,
+                                          distance: addr.distance,
+                                          duration: addr.duration,
+                                        }));
                                       }
                                     } catch (updateError) {
                                       console.error(
@@ -1968,44 +2355,8 @@ export default function CheckoutClient() {
                                     }
                                   }
 
-                                  // Update checkout session with delivery fee and address data
-                                  try {
-                                    const updateResponse = await fetch(
-                                      `/api/checkout/${checkoutId}`,
-                                      {
-                                        method: "PATCH",
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                          selectedAddressId: addr.id,
-                                          addressText: addr.full_address,
-                                          distance: addr.distance,
-                                          duration: addr.duration,
-                                          deliveryZone: addr.area || "Zone A",
-                                          deliveryFee: deliveryCharge,
-                                          totalAmount:
-                                            orderValue + deliveryCharge,
-                                        }),
-                                      }
-                                    );
-
-                                    if (updateResponse.ok) {
-                                      console.log(
-                                        "✅ Checkout session updated with delivery fee:",
-                                        {
-                                          deliveryFee: deliveryCharge,
-                                          totalAmount:
-                                            orderValue + deliveryCharge,
-                                        }
-                                      );
-                                    }
-                                  } catch (updateError) {
-                                    console.error(
-                                      "❌ Error updating checkout session:",
-                                      updateError
-                                    );
-                                  }
+                                  // REMOVED: Duplicate update with outdated deliveryCharge from hook
+                                  // The delivery fee is already updated in the first calculation above
                                 }
                               }}
                             >
@@ -2108,7 +2459,7 @@ export default function CheckoutClient() {
                     onOpenChange={setIsCustomizationDrawerOpen}
                   >
                     <DrawerTrigger asChild>
-                      <button className="w-full flex items-center justify-between text-left">
+                      <div className="w-full flex items-center justify-between text-left cursor-pointer rounded-lg">
                         <div className="flex items-center">
                           {Object.values(customizationOptions).some(
                             (opt) => opt
@@ -2127,8 +2478,7 @@ export default function CheckoutClient() {
                           ) && (
                             <button
                               className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 setIsCustomizationDrawerOpen(true);
                               }}
                             >
@@ -2137,7 +2487,7 @@ export default function CheckoutClient() {
                           )}
                           <IoIosArrowForward className="h-5 w-5 text-gray-600" />
                         </div>
-                      </button>
+                      </div>
                     </DrawerTrigger>
                     <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] flex flex-col">
                       <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full flex-shrink-0">
@@ -2297,7 +2647,7 @@ export default function CheckoutClient() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
+                            onClick={async () => {
                               const clearedOptions = {
                                 addTextOnCake: false,
                                 addCandles: false,
@@ -2306,6 +2656,33 @@ export default function CheckoutClient() {
                               };
                               setCustomizationOptions(clearedOptions);
                               updateAllCartItemsCustomization(clearedOptions);
+
+                              // Clear customization options from checkout session
+                              try {
+                                const updateResponse = await fetch(
+                                  `/api/checkout/${checkoutId}`,
+                                  {
+                                    method: "PATCH",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      customizationOptions: clearedOptions,
+                                    }),
+                                  }
+                                );
+
+                                if (updateResponse.ok) {
+                                  console.log(
+                                    "✅ Customization options cleared from checkout session"
+                                  );
+                                }
+                              } catch (error) {
+                                console.error(
+                                  "❌ Error clearing customization options:",
+                                  error
+                                );
+                              }
                             }}
                             className="h-9 px-5 rounded-[12px]"
                           >
@@ -2315,6 +2692,52 @@ export default function CheckoutClient() {
                             <Button
                               size="sm"
                               className="h-9 px-5 rounded-[12px]"
+                              onClick={async () => {
+                                // Save customization options to checkout session
+                                try {
+                                  console.log(
+                                    "🔄 Saving customization options to checkout session:",
+                                    {
+                                      checkoutId,
+                                      customizationOptions:
+                                        customizationOptions,
+                                    }
+                                  );
+
+                                  const updateResponse = await fetch(
+                                    `/api/checkout/${checkoutId}`,
+                                    {
+                                      method: "PATCH",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        customizationOptions:
+                                          customizationOptions,
+                                      }),
+                                    }
+                                  );
+
+                                  if (updateResponse.ok) {
+                                    const responseData =
+                                      await updateResponse.json();
+                                    console.log(
+                                      "✅ Customization options saved to checkout session:",
+                                      responseData
+                                    );
+                                  } else {
+                                    console.error(
+                                      "❌ Failed to save customization options:",
+                                      await updateResponse.text()
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "❌ Error saving customization options:",
+                                    error
+                                  );
+                                }
+                              }}
                             >
                               Save
                             </Button>
@@ -2325,7 +2748,7 @@ export default function CheckoutClient() {
                           <Button
                             variant="outline"
                             size="xl"
-                            onClick={() => {
+                            onClick={async () => {
                               const clearedOptions = {
                                 addTextOnCake: false,
                                 addCandles: false,
@@ -2334,6 +2757,33 @@ export default function CheckoutClient() {
                               };
                               setCustomizationOptions(clearedOptions);
                               updateAllCartItemsCustomization(clearedOptions);
+
+                              // Clear customization options from checkout session
+                              try {
+                                const updateResponse = await fetch(
+                                  `/api/checkout/${checkoutId}`,
+                                  {
+                                    method: "PATCH",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      customizationOptions: clearedOptions,
+                                    }),
+                                  }
+                                );
+
+                                if (updateResponse.ok) {
+                                  console.log(
+                                    "✅ Customization options cleared from checkout session (mobile)"
+                                  );
+                                }
+                              } catch (error) {
+                                console.error(
+                                  "❌ Error clearing customization options (mobile):",
+                                  error
+                                );
+                              }
                             }}
                             className="flex-1 rounded-[20px] text-[16px]"
                           >
@@ -2343,6 +2793,52 @@ export default function CheckoutClient() {
                             <Button
                               size="xl"
                               className="flex-1 py-5 rounded-[20px] text-[16px]"
+                              onClick={async () => {
+                                // Save customization options to checkout session
+                                try {
+                                  console.log(
+                                    "🔄 Saving customization options to checkout session (mobile):",
+                                    {
+                                      checkoutId,
+                                      customizationOptions:
+                                        customizationOptions,
+                                    }
+                                  );
+
+                                  const updateResponse = await fetch(
+                                    `/api/checkout/${checkoutId}`,
+                                    {
+                                      method: "PATCH",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        customizationOptions:
+                                          customizationOptions,
+                                      }),
+                                    }
+                                  );
+
+                                  if (updateResponse.ok) {
+                                    const responseData =
+                                      await updateResponse.json();
+                                    console.log(
+                                      "✅ Customization options saved to checkout session (mobile):",
+                                      responseData
+                                    );
+                                  } else {
+                                    console.error(
+                                      "❌ Failed to save customization options (mobile):",
+                                      await updateResponse.text()
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "❌ Error saving customization options (mobile):",
+                                    error
+                                  );
+                                }
+                              }}
                             >
                               Save
                             </Button>
@@ -2401,13 +2897,87 @@ export default function CheckoutClient() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setMessageCardText("")}
+                      onClick={async () => {
+                        setMessageCardText("");
+                        // Clear message card text from checkout session
+                        try {
+                          const updateResponse = await fetch(
+                            `/api/checkout/${checkoutId}`,
+                            {
+                              method: "PATCH",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                messageCardText: "",
+                              }),
+                            }
+                          );
+
+                          if (updateResponse.ok) {
+                            console.log(
+                              "✅ Message card text cleared from checkout session"
+                            );
+                          }
+                        } catch (error) {
+                          console.error(
+                            "❌ Error clearing message card text:",
+                            error
+                          );
+                        }
+                      }}
                       className="h-9 px-5 rounded-[12px]"
                     >
                       Clear
                     </Button>
                     <DrawerClose asChild>
-                      <Button size="sm" className="h-9 px-5 rounded-[12px]">
+                      <Button
+                        size="sm"
+                        className="h-9 px-5 rounded-[12px]"
+                        onClick={async () => {
+                          // Save message card text to checkout session
+                          try {
+                            console.log(
+                              "🔄 Saving message card text to checkout session:",
+                              {
+                                checkoutId,
+                                messageCardText: messageCardText,
+                              }
+                            );
+
+                            const updateResponse = await fetch(
+                              `/api/checkout/${checkoutId}`,
+                              {
+                                method: "PATCH",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  messageCardText: messageCardText,
+                                }),
+                              }
+                            );
+
+                            if (updateResponse.ok) {
+                              const responseData = await updateResponse.json();
+                              console.log(
+                                "✅ Message card text saved to checkout session:",
+                                responseData
+                              );
+                            } else {
+                              console.error(
+                                "❌ Failed to save message card text:",
+                                await updateResponse.text()
+                              );
+                            }
+                          } catch (error) {
+                            console.error(
+                              "❌ Error saving message card text:",
+                              error
+                            );
+                          }
+                        }}
+                      >
                         Save
                       </Button>
                     </DrawerClose>
@@ -2417,7 +2987,35 @@ export default function CheckoutClient() {
                       <Button
                         variant="outline"
                         size="xl"
-                        onClick={() => setMessageCardText("")}
+                        onClick={async () => {
+                          setMessageCardText("");
+                          // Clear message card text from checkout session
+                          try {
+                            const updateResponse = await fetch(
+                              `/api/checkout/${checkoutId}`,
+                              {
+                                method: "PATCH",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  messageCardText: "",
+                                }),
+                              }
+                            );
+
+                            if (updateResponse.ok) {
+                              console.log(
+                                "✅ Message card text cleared from checkout session (mobile)"
+                              );
+                            }
+                          } catch (error) {
+                            console.error(
+                              "❌ Error clearing message card text (mobile):",
+                              error
+                            );
+                          }
+                        }}
                         className="flex-1 rounded-[20px] text-[16px]"
                       >
                         Clear
@@ -2426,6 +3024,50 @@ export default function CheckoutClient() {
                         <Button
                           size="xl"
                           className="flex-1 py-5 rounded-[20px] text-[16px]"
+                          onClick={async () => {
+                            // Save message card text to checkout session
+                            try {
+                              console.log(
+                                "🔄 Saving message card text to checkout session (mobile):",
+                                {
+                                  checkoutId,
+                                  messageCardText: messageCardText,
+                                }
+                              );
+
+                              const updateResponse = await fetch(
+                                `/api/checkout/${checkoutId}`,
+                                {
+                                  method: "PATCH",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    messageCardText: messageCardText,
+                                  }),
+                                }
+                              );
+
+                              if (updateResponse.ok) {
+                                const responseData =
+                                  await updateResponse.json();
+                                console.log(
+                                  "✅ Message card text saved to checkout session (mobile):",
+                                  responseData
+                                );
+                              } else {
+                                console.error(
+                                  "❌ Failed to save message card text (mobile):",
+                                  await updateResponse.text()
+                                );
+                              }
+                            } catch (error) {
+                              console.error(
+                                "❌ Error saving message card text (mobile):",
+                                error
+                              );
+                            }
+                          }}
                         >
                           Save
                         </Button>
@@ -2446,8 +3088,8 @@ export default function CheckoutClient() {
                     <div className="flex items-center justify-between w-full">
                       <DrawerTitle className="text-[20px]">
                         {contactInfo.name && contactInfo.phone
-                          ? "Edit Contact Information"
-                          : "Add Contact Information"}
+                          ? "Edit Receiver's Information"
+                          : "Add Receiver's Information"}
                       </DrawerTitle>
                       <DrawerClose asChild>
                         <button
@@ -2472,12 +3114,16 @@ export default function CheckoutClient() {
                           id="contact-name"
                           placeholder="Enter your full name"
                           value={tempContactInfo.name}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            console.log(
+                              "🔍 Name field changed:",
+                              e.target.value
+                            );
                             setTempContactInfo((prev) => ({
                               ...prev,
                               name: e.target.value,
-                            }))
-                          }
+                            }));
+                          }}
                           className="rounded-[12px] placeholder:text-[#C0C0C0]"
                         />
                       </div>
@@ -2490,14 +3136,20 @@ export default function CheckoutClient() {
                         </label>
                         <Input
                           id="contact-phone"
-                          placeholder="Enter your phone number"
+                          type="tel"
+                          placeholder="Enter 10-digit phone number"
                           value={tempContactInfo.phone}
-                          onChange={(e) =>
-                            setTempContactInfo((prev) => ({
-                              ...prev,
-                              phone: e.target.value,
-                            }))
-                          }
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "");
+                            console.log("🔍 Phone field changed:", value);
+                            if (value.length <= 10) {
+                              setTempContactInfo((prev) => ({
+                                ...prev,
+                                phone: value,
+                              }));
+                            }
+                          }}
+                          maxLength={10}
                           className="rounded-[12px] placeholder:text-[#C0C0C0]"
                         />
                       </div>
@@ -2510,14 +3162,19 @@ export default function CheckoutClient() {
                         </label>
                         <Input
                           id="contact-alternate-phone"
-                          placeholder="Enter alternate phone number (optional)"
+                          type="tel"
+                          placeholder="Enter 10-digit alternate phone (optional)"
                           value={tempContactInfo.alternatePhone}
-                          onChange={(e) =>
-                            setTempContactInfo((prev) => ({
-                              ...prev,
-                              alternatePhone: e.target.value,
-                            }))
-                          }
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "");
+                            if (value.length <= 10) {
+                              setTempContactInfo((prev) => ({
+                                ...prev,
+                                alternatePhone: value,
+                              }));
+                            }
+                          }}
+                          maxLength={10}
                           className="rounded-[12px] placeholder:text-[#C0C0C0]"
                         />
                         <p className="text-xs text-gray-500 mt-1">
@@ -2540,9 +3197,106 @@ export default function CheckoutClient() {
                     <Button
                       size="sm"
                       className="h-9 px-5 rounded-[12px]"
-                      onClick={() => {
+                      onClick={async () => {
+                        console.log(
+                          "🔍 Save button clicked - tempContactInfo:",
+                          tempContactInfo
+                        );
+
+                        // Validate phone number (must be exactly 10 digits)
+                        if (
+                          !tempContactInfo.phone ||
+                          tempContactInfo.phone.length !== 10 ||
+                          !/^\d{10}$/.test(tempContactInfo.phone)
+                        ) {
+                          console.log("❌ Phone validation failed:", {
+                            phone: tempContactInfo.phone,
+                            length: tempContactInfo.phone?.length,
+                            isValid: /^\d{10}$/.test(
+                              tempContactInfo.phone || ""
+                            ),
+                          });
+                          toast({
+                            title: "Invalid Phone Number",
+                            description:
+                              "Phone number must be exactly 10 digits.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        // Validate alternate phone if provided
+                        if (
+                          tempContactInfo.alternatePhone &&
+                          (tempContactInfo.alternatePhone.length !== 10 ||
+                            !/^\d{10}$/.test(tempContactInfo.alternatePhone))
+                        ) {
+                          toast({
+                            title: "Invalid Alternate Phone Number",
+                            description:
+                              "Alternate phone number must be exactly 10 digits.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        // Validate name
+                        if (
+                          !tempContactInfo.name ||
+                          tempContactInfo.name.trim() === ""
+                        ) {
+                          toast({
+                            title: "Name Required",
+                            description: "Please enter the receiver's name.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
                         // Update state first
                         setContactInfo(tempContactInfo);
+
+                        // Update checkout session with contact info
+                        try {
+                          console.log(
+                            "🔄 Updating contact info in checkout session:",
+                            {
+                              checkoutId,
+                              contactInfo: tempContactInfo,
+                            }
+                          );
+
+                          const updateResponse = await fetch(
+                            `/api/checkout/${checkoutId}`,
+                            {
+                              method: "PATCH",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                contactInfo: tempContactInfo,
+                              }),
+                            }
+                          );
+
+                          if (updateResponse.ok) {
+                            const responseData = await updateResponse.json();
+                            console.log(
+                              "✅ Contact info updated in checkout session:",
+                              responseData
+                            );
+                          } else {
+                            console.error(
+                              "❌ Failed to update contact info:",
+                              await updateResponse.text()
+                            );
+                          }
+                        } catch (error) {
+                          console.error(
+                            "❌ Error updating contact info:",
+                            error
+                          );
+                        }
 
                         // Save to localStorage immediately
                         if (typeof window !== "undefined") {
@@ -2581,9 +3335,9 @@ export default function CheckoutClient() {
 
                         // Show success message
                         toast({
-                          title: "Contact information saved",
+                          title: "Receiver's information saved",
                           description:
-                            "Your contact details have been updated successfully.",
+                            "Receiver's details have been updated successfully.",
                         });
 
                         // Close drawer after state update
@@ -2608,9 +3362,99 @@ export default function CheckoutClient() {
                       <Button
                         size="xl"
                         className="flex-1 py-5 rounded-[20px] text-[16px]"
-                        onClick={() => {
+                        onClick={async () => {
+                          console.log(
+                            "🔍 Mobile Save button clicked - tempContactInfo:",
+                            tempContactInfo
+                          );
+
+                          // Validate phone number (must be exactly 10 digits)
+                          if (
+                            !tempContactInfo.phone ||
+                            tempContactInfo.phone.length !== 10 ||
+                            !/^\d{10}$/.test(tempContactInfo.phone)
+                          ) {
+                            toast({
+                              title: "Invalid Phone Number",
+                              description:
+                                "Phone number must be exactly 10 digits.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          // Validate alternate phone if provided
+                          if (
+                            tempContactInfo.alternatePhone &&
+                            (tempContactInfo.alternatePhone.length !== 10 ||
+                              !/^\d{10}$/.test(tempContactInfo.alternatePhone))
+                          ) {
+                            toast({
+                              title: "Invalid Alternate Phone Number",
+                              description:
+                                "Alternate phone number must be exactly 10 digits.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          // Validate name
+                          if (
+                            !tempContactInfo.name ||
+                            tempContactInfo.name.trim() === ""
+                          ) {
+                            toast({
+                              title: "Name Required",
+                              description: "Please enter the receiver's name.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
                           // Update state first
                           setContactInfo(tempContactInfo);
+
+                          // Update checkout session with contact info
+                          try {
+                            console.log(
+                              "🔄 Updating contact info in checkout session:",
+                              {
+                                checkoutId,
+                                contactInfo: tempContactInfo,
+                              }
+                            );
+
+                            const updateResponse = await fetch(
+                              `/api/checkout/${checkoutId}`,
+                              {
+                                method: "PATCH",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  contactInfo: tempContactInfo,
+                                }),
+                              }
+                            );
+
+                            if (updateResponse.ok) {
+                              const responseData = await updateResponse.json();
+                              console.log(
+                                "✅ Contact info updated in checkout session:",
+                                responseData
+                              );
+                            } else {
+                              console.error(
+                                "❌ Failed to update contact info:",
+                                await updateResponse.text()
+                              );
+                            }
+                          } catch (error) {
+                            console.error(
+                              "❌ Error updating contact info:",
+                              error
+                            );
+                          }
 
                           // Save to localStorage immediately
                           if (typeof window !== "undefined") {
@@ -2649,9 +3493,9 @@ export default function CheckoutClient() {
 
                           // Show success message
                           toast({
-                            title: "Contact information saved",
+                            title: "Receiver's information saved",
                             description:
-                              "Your contact details have been updated successfully.",
+                              "Receiver's details have been updated successfully.",
                           });
 
                           // Close drawer after state update
@@ -2759,7 +3603,7 @@ export default function CheckoutClient() {
                   <Phone className="h-5 w-5 mr-3 flex-shrink-0 text-black" />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                      Contact
+                      Receiver's Details
                     </h3>
                     <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
                       {contactInfo.name && contactInfo.phone ? (
@@ -3369,50 +4213,6 @@ export default function CheckoutClient() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Free Delivery Progress */}
-                  {!isFreeDelivery && subtotal < 500 && (
-                    <FreeDeliveryProgress
-                      currentOrderValue={subtotal}
-                      freeDeliveryThreshold={500}
-                    />
-                  )}
-
-                  {/* Delivery Fee Details */}
-                  {deliveryData && (
-                    <DeliveryFeeDisplay
-                      deliveryCharge={deliveryCharge}
-                      isFreeDelivery={isFreeDelivery}
-                      calculationMethod={deliveryData.calculationMethod}
-                      details={deliveryData.details}
-                      orderValue={subtotal}
-                      address={deliveryData.address}
-                      freeDeliveryThreshold={500}
-                    />
-                  )}
-
-                  {/* Delivery Calculation Loading */}
-                  {isCalculatingDelivery && (
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span className="text-sm text-blue-600">
-                          Calculating delivery fee...
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Delivery Error */}
-                  {deliveryError && (
-                    <div className="bg-red-50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-red-600 text-sm">
-                          ⚠️ {deliveryError}
-                        </span>
-                      </div>
-                    </div>
-                  )}
 
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-medium mb-2">Delivery Address</h4>

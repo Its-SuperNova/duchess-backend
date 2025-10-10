@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ import {
   Phone,
   AlertTriangle,
   Package,
+  Copy,
 } from "lucide-react";
 import {
   ChefHatHeart,
@@ -83,6 +84,8 @@ interface Order {
     zip_code: string;
     alternate_phone?: string;
     additional_details?: string;
+    latitude?: number;
+    longitude?: number;
   };
   coupon?: {
     id: string;
@@ -109,10 +112,23 @@ interface Order {
   created_at: string;
 }
 
+// Shop location constants
+const SHOP_LOCATION = {
+  latitude: 11.1061944,
+  longitude: 77.0015,
+  address: "Duchess Pastries, Keeranatham",
+};
+
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+
+  // Map-related state
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -562,6 +578,47 @@ export default function OrderDetailPage() {
     setConfirmText(""); // Reset confirm text when dialog closes
   };
 
+  // Function to copy Google Maps link
+  const copyGoogleMapsLink = async () => {
+    if (!order?.delivery_address?.full_address) {
+      toast({
+        title: "Error",
+        description: "No delivery address available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let mapsUrl;
+
+      // If we have coordinates for delivery address, create a pinned location link
+      if (order.delivery_address.latitude && order.delivery_address.longitude) {
+        mapsUrl = `https://www.google.com/maps/place/${order.delivery_address.latitude},${order.delivery_address.longitude}`;
+      } else {
+        // Fallback to search link if coordinates are not available
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          order.delivery_address.full_address
+        )}`;
+      }
+
+      await navigator.clipboard.writeText(mapsUrl);
+
+      toast({
+        title: "Copied!",
+        description: "Delivery location link copied to clipboard",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Failed to copy Google Maps link:", error);
+      toast({
+        title: "Error",
+        description: "Failed to copy Google Maps link",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -570,7 +627,15 @@ export default function OrderDetailPage() {
 
         const response = await fetch(`/api/admin/orders/${params.id}`);
         if (!response.ok) {
-          throw new Error("Failed to fetch order");
+          const errorData = await response.json().catch(() => ({}));
+          console.error("API Error:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+          });
+          throw new Error(
+            `Failed to fetch order: ${response.status} ${response.statusText}`
+          );
         }
 
         const data = await response.json();
@@ -587,6 +652,123 @@ export default function OrderDetailPage() {
       fetchOrder();
     }
   }, [params.id]);
+
+  // Load Google Maps script
+  const loadGoogleMapsScript = () => {
+    if (googleMapsLoaded) return;
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      setGoogleMapsLoaded(true);
+      console.log("Google Maps script loaded");
+    };
+    script.onerror = () => {
+      console.error("Failed to load Google Maps script");
+    };
+
+    document.head.appendChild(script);
+  };
+
+  // Initialize map with route
+  const initializeMap = () => {
+    if (!mapRef.current || !order?.delivery_address) {
+      console.error("Map ref or delivery address not available");
+      return;
+    }
+
+    try {
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat: SHOP_LOCATION.latitude, lng: SHOP_LOCATION.longitude },
+        zoom: 12,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+      });
+
+      mapInstanceRef.current = map;
+
+      // Add shop marker
+      const shopMarker = new google.maps.Marker({
+        position: { lat: SHOP_LOCATION.latitude, lng: SHOP_LOCATION.longitude },
+        map: map,
+        title: "Duchess Pastries - Keeranatham",
+        icon: {
+          url: "/svg/icons/shop.svg",
+          scaledSize: new google.maps.Size(72, 72),
+          anchor: new google.maps.Point(37, 69),
+        },
+      });
+
+      // Add delivery location marker
+      const deliveryMarker = new google.maps.Marker({
+        position: {
+          lat: order.delivery_address.latitude || 0,
+          lng: order.delivery_address.longitude || 0,
+        },
+        map: map,
+        title: "Delivery Location",
+        icon: {
+          url: "/svg/icons/home.svg",
+          scaledSize: new google.maps.Size(72, 72),
+          anchor: new google.maps.Point(37, 70),
+        },
+      });
+
+      // Calculate and display route
+      calculateRoute(map, order.delivery_address);
+      setMapLoaded(true);
+    } catch (error) {
+      console.error("Error initializing map:", error);
+    }
+  };
+
+  // Calculate route between shop and delivery address
+  const calculateRoute = (map: any, deliveryAddress: any) => {
+    const directionsService = new google.maps.DirectionsService();
+    const directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: true, // We'll use our custom markers
+    });
+
+    directionsRenderer.setMap(map);
+
+    const request = {
+      origin: { lat: SHOP_LOCATION.latitude, lng: SHOP_LOCATION.longitude },
+      destination: {
+        lat: deliveryAddress.latitude || 0,
+        lng: deliveryAddress.longitude || 0,
+      },
+      travelMode: google.maps.TravelMode.DRIVING,
+    };
+
+    directionsService.route(request, (result: any, status: any) => {
+      if (status === google.maps.DirectionsStatus.OK) {
+        directionsRenderer.setDirections(result);
+        console.log("Route calculated successfully");
+      } else {
+        console.error("Error calculating route:", status);
+      }
+    });
+  };
+
+  // Load Google Maps when component mounts and order is available
+  useEffect(() => {
+    if (!googleMapsLoaded && order?.delivery_address) {
+      loadGoogleMapsScript();
+    }
+  }, [googleMapsLoaded, order]);
+
+  // Initialize map when Google Maps is loaded
+  useEffect(() => {
+    if (googleMapsLoaded && order?.delivery_address) {
+      setTimeout(() => {
+        initializeMap();
+      }, 100);
+    }
+  }, [googleMapsLoaded, order]);
 
   if (loading) {
     return (
@@ -653,22 +835,28 @@ export default function OrderDetailPage() {
   return (
     <div className="flex-1 space-y-6 p-6 md:p-8 bg-[#f5f5f5]">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          className="bg-white rounded-[12px]"
-          variant="ghost"
-          size="icon"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-[20px] sm:text-[20px] font-bold tracking-tight">
-            Order #{order.order_number || order.id}
-          </h1>
-          <p className="text-muted-foreground text-[14px]">
-            Order details and customer information
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            className="bg-white rounded-[12px]"
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-[20px] sm:text-[20px] font-bold tracking-tight">
+              Order #{order.order_number || order.id}
+            </h1>
+            <p className="text-muted-foreground text-[14px]">
+              Order details and customer information
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 bg-[white] px-3 py-2 rounded-md">
+          <CalendarMark className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium text-sm">{order.fullDate}</span>
         </div>
       </div>
 
@@ -981,117 +1169,226 @@ export default function OrderDetailPage() {
               </div>
             </CardContent>
           </Card>
+          <div className="col-span-2  grid grid-cols-2 gap-6">
+            {/* Delivery Information */}
+            <Card className="bg-white rounded-[24px] border-none w-full col-span-1">
+              <CardContent className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Delivery Information
+                  </h3>
+                </div>
 
-          <div className="flex flex-col md:flex-row w-full gap-6">
-            {/* Customer Information */}
-            <Card className="bg-white rounded-[24px] border-none flex-1">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Customer Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${order.customer.name}`}
-                      alt={order.customer.name}
-                    />
-                    <AvatarFallback>
-                      {order.customer.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium text-lg">{order.customer.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.customer.email}
-                    </p>
+                {/* Estimated Delivery Time */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    Estimated Delivery Time
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Select delivery time"
+                        className="flex-1"
+                        value={
+                          selectedTime ||
+                          formatTimeForDisplay(
+                            order.estimated_time_delivery || null
+                          ) ||
+                          ""
+                        }
+                        readOnly
+                        onClick={() => setShowTimePicker(!showTimePicker)}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowTimePicker(!showTimePicker)}
+                      >
+                        {showTimePicker ? "Close" : "Select Time"}
+                      </Button>
+                    </div>
+
+                    {showTimePicker && (
+                      <div
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                        onClick={(e) =>
+                          e.target === e.currentTarget &&
+                          setShowTimePicker(false)
+                        }
+                      >
+                        <TimePicker
+                          onTimeSelect={(time) => {
+                            setSelectedTime(time);
+                            updateEstimatedDeliveryTime(time);
+                            setShowTimePicker(false);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Contact Information */}
-                {(order.customer.phone || order.customer.alternatePhone) && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      Contact Information
+                <Separator className="my-4" />
+
+                {/* Delivery Person Details */}
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    Delivery Person
+                  </div>
+                  <div className="space-y-3">
+                    {/* Delivery Person Name */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Name
+                      </label>
+                      {!deliveryPersonName && order.delivery_person_name && (
+                        <div className="text-xs text-muted-foreground mb-1">
+                          Current: {order.delivery_person_name}
+                        </div>
+                      )}
+                      <Input
+                        type="text"
+                        placeholder="Enter delivery person name"
+                        value={deliveryPersonName}
+                        onChange={(e) => setDeliveryPersonName(e.target.value)}
+                        onFocus={() => {
+                          if (
+                            !deliveryPersonName &&
+                            order.delivery_person_name
+                          ) {
+                            setDeliveryPersonName(order.delivery_person_name);
+                          }
+                        }}
+                      />
                     </div>
-                    {order.customer.phone && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Phone:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {order.customer.phone}
-                        </span>
-                      </div>
-                    )}
+
+                    {/* Delivery Person Contact */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Contact Number
+                      </label>
+                      {!deliveryPersonContact &&
+                        order.delivery_person_contact && (
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Current: {order.delivery_person_contact}
+                          </div>
+                        )}
+                      <Input
+                        type="tel"
+                        placeholder="Enter contact number"
+                        value={deliveryPersonContact}
+                        onChange={(e) =>
+                          setDeliveryPersonContact(e.target.value)
+                        }
+                        onFocus={() => {
+                          if (
+                            !deliveryPersonContact &&
+                            order.delivery_person_contact
+                          ) {
+                            setDeliveryPersonContact(
+                              order.delivery_person_contact
+                            );
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Single Save Button */}
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          updateDeliveryPersonName(deliveryPersonName);
+                          updateDeliveryPersonContact(deliveryPersonContact);
+                        }}
+                        disabled={
+                          (!deliveryPersonName.trim() &&
+                            !deliveryPersonContact.trim()) ||
+                          isUpdatingName ||
+                          isUpdatingContact
+                        }
+                      >
+                        {isUpdatingName || isUpdatingContact ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Delivery Person"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* Order Summary with Customer Information */}
+            <Card className="bg-white w-full rounded-[24px] border-none col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Order Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Customer Information Section */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium">{order.customer.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-medium">
+                        {order.customer.email}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Phone:</span>
+                      <span className="font-medium">
+                        {order.customer.phone || "N/A"}
+                      </span>
+                    </div>
                     {order.customer.alternatePhone && (
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Alternate:
+                        <span className="text-muted-foreground">
+                          Alternate Phone:
                         </span>
-                        <span className="text-sm font-medium">
+                        <span className="font-medium">
                           {order.customer.alternatePhone}
                         </span>
                       </div>
                     )}
                   </div>
-                )}
-
-                {/* Delivery Address */}
-                {order.address_text && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      Delivery Address
+                  {order.address_text && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        Delivery Address
+                      </div>
+                      <p className="text-sm">{order.address_text}</p>
                     </div>
-                    <p className="text-sm">{order.address_text}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            {/* Order Summary */}
-            <Card className="bg-white rounded-[24px] border-none flex-1">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Order Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between gap-2">
-                  <div className="flex justify-center items-center gap-2 bg-[#f5f5f5] p-2 rounded-md w-full">
-                    <div className="flex items-center gap-2">
-                      <CalendarMark className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <span className="font-medium">{order.fullDate}</span>
-                  </div>
-                  <div className="flex justify-center items-center gap-2 bg-[#f5f5f5] p-2 rounded-md w-full">
-                    <div className="flex items-center gap-2">
-                      <ClockCircle className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <span className="font-medium">
-                      {formatTimeForDisplay(order.created_at)}
-                    </span>
-                  </div>
+                  )}
                 </div>
-                <div className="space-y-3">
+
+                <Separator />
+
+                {/* Order Summary Section */}
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Item Total:</span>
-                      <span>₹{order.item_total || order.total_amount}</span>
+                      <span>₹{order.item_total || 0}</span>
                     </div>
                     {order.discount_amount > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Discount:</span>
-                        <span className="text-green-600">
-                          -₹{order.discount_amount}
-                        </span>
+                      <div className="flex justify-between text-green-600">
+                        <span>Discount:</span>
+                        <span>-₹{order.discount_amount}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
@@ -1120,194 +1417,53 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Delivery Information */}
+        {/* Order Items Section - Moved here */}
         <Card className="bg-white rounded-[24px] border-none w-full">
-          <CardContent className="p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">
-                Delivery Information
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Manage delivery details and personnel
-              </p>
-            </div>
-
-            {/* Estimated Delivery Time */}
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Estimated Delivery Time
-              </div>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Select delivery time"
-                    className="flex-1"
-                    value={
-                      selectedTime ||
-                      formatTimeForDisplay(
-                        order.estimated_time_delivery || null
-                      ) ||
-                      ""
-                    }
-                    readOnly
-                    onClick={() => setShowTimePicker(!showTimePicker)}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowTimePicker(!showTimePicker)}
-                  >
-                    {showTimePicker ? "Close" : "Select Time"}
-                  </Button>
-                </div>
-
-                {showTimePicker && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Order Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {order.products && order.products.length > 0 ? (
+                order.products.map((product, index) => (
                   <div
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                    onClick={(e) =>
-                      e.target === e.currentTarget && setShowTimePicker(false)
-                    }
+                    key={product.id || index}
+                    className="flex items-center justify-between p-4 bg-white rounded-[20px]"
                   >
-                    <TimePicker
-                      onTimeSelect={(time) => {
-                        setSelectedTime(time);
-                        updateEstimatedDeliveryTime(time);
-                        setShowTimePicker(false);
-                      }}
-                    />
+                    <div className="flex items-center gap-4">
+                      {product.image && (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded-md"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Quantity: {product.quantity}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        ₹{product.price * product.quantity}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        ₹{product.price} each
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-
-            <Separator className="my-4" />
-
-            {/* Delivery Person Details */}
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <User className="h-4 w-4" />
-                Delivery Person
-              </div>
-
-              {/* Delivery Person Name */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Name
-                </label>
-                {!deliveryPersonName && order.delivery_person_name && (
-                  <div className="text-xs text-muted-foreground mb-1">
-                    Current: {order.delivery_person_name}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Enter delivery person name"
-                    className="flex-1"
-                    value={deliveryPersonName}
-                    onChange={(e) => setDeliveryPersonName(e.target.value)}
-                    onFocus={() => {
-                      if (!deliveryPersonName && order.delivery_person_name) {
-                        setDeliveryPersonName(order.delivery_person_name);
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateDeliveryPersonName(deliveryPersonName)}
-                    disabled={!deliveryPersonName.trim() || isUpdatingName}
-                  >
-                    {isUpdatingName ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save"
-                    )}
-                  </Button>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No items found</p>
                 </div>
-              </div>
-
-              {/* Delivery Person Contact */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Contact Number
-                </label>
-                {!deliveryPersonContact && order.delivery_person_contact && (
-                  <div className="text-xs text-muted-foreground mb-1">
-                    Current: {order.delivery_person_contact}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    type="tel"
-                    placeholder="Enter contact number"
-                    className="flex-1"
-                    value={deliveryPersonContact}
-                    onChange={(e) => setDeliveryPersonContact(e.target.value)}
-                    onFocus={() => {
-                      if (
-                        !deliveryPersonContact &&
-                        order.delivery_person_contact
-                      ) {
-                        setDeliveryPersonContact(order.delivery_person_contact);
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      updateDeliveryPersonContact(deliveryPersonContact)
-                    }
-                    disabled={
-                      !deliveryPersonContact.trim() || isUpdatingContact
-                    }
-                  >
-                    {isUpdatingContact ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <Separator className="my-4" />
-
-            {/* Current Delivery Status */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                Current Status
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Delivery Status:</span>
-                <Badge
-                  className={
-                    order.orderStatus === "out_for_delivery"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-                      : order.orderStatus === "delivered"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                  }
-                  variant="outline"
-                >
-                  {order.orderStatus === "out_for_delivery"
-                    ? "Out for Delivery"
-                    : order.orderStatus === "delivered"
-                    ? "Delivered"
-                    : "Not Assigned"}
-                </Badge>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1340,24 +1496,6 @@ export default function OrderDetailPage() {
                       {order.delivery_address.full_address}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">City:</span>
-                    <span className="font-medium">
-                      {order.delivery_address.city}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">State:</span>
-                    <span className="font-medium">
-                      {order.delivery_address.state}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pincode:</span>
-                    <span className="font-medium">
-                      {order.delivery_address.zip_code}
-                    </span>
-                  </div>
                   {order.delivery_address.alternate_phone && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
@@ -1385,7 +1523,7 @@ export default function OrderDetailPage() {
                     <span className="text-muted-foreground">Distance:</span>
                     <span className="font-medium">
                       {order.distance
-                        ? `${(order.distance / 10).toFixed(1)} km`
+                        ? `${order.distance.toFixed(2)} km`
                         : "Not available"}
                     </span>
                   </div>
@@ -1397,17 +1535,18 @@ export default function OrderDetailPage() {
                         : "Not available"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Delivery Zone:
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className="bg-blue-50 text-blue-700"
-                    >
-                      {order.delivery_zone || "Not calculated"}
-                    </Badge>
-                  </div>
+                </div>
+                <Separator />
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyGoogleMapsLink}
+                    className="flex items-center gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy Map Link
+                  </Button>
                 </div>
               </>
             ) : (
@@ -1426,52 +1565,38 @@ export default function OrderDetailPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="border-none w-full col-span-2">
-          <CardHeader>
-            <CardTitle>Order Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {order.products && order.products.length > 0 ? (
-                order.products.map((product, index) => (
-                  <div
-                    key={product.id || index}
-                    className="flex items-center justify-between p-4 bg-white rounded-[20px]"
-                  >
-                    <div className="flex items-center gap-4">
-                      {product.image && (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-16 h-16 object-cover rounded-md"
-                        />
-                      )}
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: {product.quantity}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">₹{product.price}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Total: ₹{product.price * product.quantity}
-                      </p>
-                    </div>
+
+        {/* Delivery Route Map - Two Columns */}
+        {order.delivery_address && (
+          <Card className="bg-white rounded-[24px] border-none w-full col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Delivery Route
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div
+                ref={mapRef}
+                className="w-full h-[400px] rounded-lg border border-gray-200"
+                style={{ minHeight: "400px" }}
+              />
+              {!mapLoaded && (
+                <div className="flex items-center justify-center h-[400px] bg-gray-50 rounded-lg">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Loading map...
+                    </p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    No items found in this order
-                  </p>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Customer Information and Order Summary - Moved here */}
+        <div className="flex flex-col md:flex-row w-full gap-6 col-span-2"></div>
       </div>
 
       {/* Confirmation Dialog */}

@@ -57,6 +57,34 @@ class DeliveryChargesCache {
         timestamp: Date.now(),
       });
 
+      // Log the fetched data for debugging
+      console.log("📊 Fetched delivery charges from database:");
+      console.log("Total charges:", data?.length || 0);
+
+      if (data && data.length > 0) {
+        console.log("📋 Delivery Charges Details:");
+        data.forEach((charge, index) => {
+          if (charge.type === "order_value") {
+            console.log(`  ${index + 1}. Order Value Rule:`);
+            console.log(`     - Threshold: ₹${charge.order_value_threshold}`);
+            console.log(`     - Type: ${charge.delivery_type}`);
+            if (charge.fixed_price) {
+              console.log(`     - Fixed Price: ₹${charge.fixed_price}`);
+            }
+          } else if (charge.type === "distance") {
+            console.log(`  ${index + 1}. Distance Rule:`);
+            console.log(
+              `     - Range: ${charge.start_km}km - ${charge.end_km}km`
+            );
+            console.log(`     - Price: ₹${charge.price}`);
+          }
+          console.log(`     - Active: ${charge.is_active}`);
+          console.log(`     - ID: ${charge.id}`);
+        });
+      } else {
+        console.log("⚠️ No delivery charges found in database");
+      }
+
       return data || [];
     } catch (error) {
       console.error("Error fetching delivery charges:", error);

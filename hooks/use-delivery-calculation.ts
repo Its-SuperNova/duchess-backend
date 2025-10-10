@@ -50,10 +50,12 @@ export function useDeliveryCalculation({
       addressId,
       orderValue,
       addressText,
+      distance,
     }: {
       addressId?: string;
       orderValue: number;
       addressText?: string;
+      distance?: number;
     }) => {
       if (!orderValue || orderValue <= 0) {
         setError("Valid order value is required");
@@ -68,6 +70,7 @@ export function useDeliveryCalculation({
           addressId,
           orderValue,
           addressText,
+          distance,
           checkoutId,
         });
 
@@ -81,6 +84,7 @@ export function useDeliveryCalculation({
             orderValue,
             checkoutId,
             addressText,
+            distance,
           }),
         });
 

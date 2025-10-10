@@ -67,20 +67,38 @@ export async function calculateOptimizedDeliveryCharge(
       }
     }
 
+    // Get all distance-based charges for logging
+    const distanceCharges =
+      await deliveryChargesCache.getDistanceBasedCharges();
+
+    console.log("🔍 Available distance-based charges:");
+    distanceCharges.forEach((charge, index) => {
+      console.log(
+        `  ${index + 1}. ${charge.start_km}km - ${charge.end_km}km = ₹${
+          charge.price
+        }`
+      );
+    });
+
     // Calculate distance-based delivery charge
     const distanceCharge = await deliveryChargesCache.calculateDeliveryCharge(
       distanceInKm
     );
 
     // Find the matching range for details
-    const distanceCharges =
-      await deliveryChargesCache.getDistanceBasedCharges();
     const matchingRange = distanceCharges.find(
       (charge) =>
         distanceInKm >= charge.start_km! && distanceInKm <= charge.end_km!
     );
 
     console.log(`📏 Distance-based delivery charge: ₹${distanceCharge}`);
+    if (matchingRange) {
+      console.log(
+        `✅ Matched range: ${matchingRange.start_km}km - ${matchingRange.end_km}km`
+      );
+    } else {
+      console.log(`⚠️ No exact range match found for ${distanceInKm}km`);
+    }
 
     return {
       deliveryCharge: distanceCharge,

@@ -110,6 +110,14 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     sessionKeys: Object.keys(checkoutSession),
   });
 
+  // Debug: Log contact info specifically
+  console.log("📞 Checkout session contact info:", {
+    contactInfo: checkoutSession.contactInfo,
+    contactName: checkoutSession.contactInfo?.name,
+    contactPhone: checkoutSession.contactInfo?.phone,
+    contactAlternatePhone: checkoutSession.contactInfo?.alternatePhone,
+  });
+
   // Use financial data from checkout session (now properly stored)
   const itemTotal =
     checkoutSession.subtotal ||
@@ -164,11 +172,28 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
 
   const discountAmount = checkoutSession.discount || 0;
 
-  // Calculate taxes dynamically
-  const taxableAmount = itemTotal - discountAmount;
-  const taxAmounts = calculateTaxAmounts(taxableAmount);
-  const cgstAmount = taxAmounts.cgstAmount;
-  const sgstAmount = taxAmounts.sgstAmount;
+  // Use tax values from checkout session (which are calculated correctly by frontend)
+  // Only recalculate if not present in checkout session
+  let cgstAmount = checkoutSession.cgstAmount || 0;
+  let sgstAmount = checkoutSession.sgstAmount || 0;
+
+  // If tax values are not in checkout session, calculate them
+  if (!cgstAmount && !sgstAmount) {
+    console.log(
+      "⚠️ Tax values not found in checkout session, calculating dynamically"
+    );
+    const taxableAmount = itemTotal - discountAmount;
+    const taxAmounts = calculateTaxAmounts(taxableAmount);
+    cgstAmount = taxAmounts.cgstAmount;
+    sgstAmount = taxAmounts.sgstAmount;
+  } else {
+    console.log("✅ Using tax values from checkout session:", {
+      cgstAmount,
+      sgstAmount,
+      checkoutSessionCgst: checkoutSession.cgstAmount,
+      checkoutSessionSgst: checkoutSession.sgstAmount,
+    });
+  }
 
   const totalAmount =
     itemTotal + deliveryCharge - discountAmount + cgstAmount + sgstAmount;

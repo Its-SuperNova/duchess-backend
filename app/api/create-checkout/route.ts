@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     let addressData = null;
     let distance = null;
     let duration = null;
-    let deliveryZone = null;
 
     if (body.selectedAddressId) {
       try {
@@ -44,7 +43,6 @@ export async function POST(request: NextRequest) {
         if (addressData) {
           distance = addressData.distance;
           duration = addressData.duration;
-          deliveryZone = addressData.area || "Zone A";
 
           console.log("📍 Address data found:", {
             id: addressData.id,
@@ -56,7 +54,7 @@ export async function POST(request: NextRequest) {
 
           // Calculate delivery fee based on distance
           if (addressData.distance) {
-            const distanceInKm = addressData.distance / 1000; // Convert meters to km
+            const distanceInKm = addressData.distance; // Distance is already stored in km
             const deliveryResult = await calculateOptimizedDeliveryCharge(
               distanceInKm,
               orderValue
@@ -132,7 +130,6 @@ export async function POST(request: NextRequest) {
       estimatedDeliveryTime: body.estimatedDeliveryTime || null,
       distance: distance || undefined,
       duration: duration || undefined,
-      deliveryZone: deliveryZone || undefined,
     });
 
     console.log("✅ Checkout session created with delivery fee:", {
@@ -142,7 +139,6 @@ export async function POST(request: NextRequest) {
       itemsCount: checkoutSession.items.length,
       distance: checkoutSession.distance,
       duration: checkoutSession.duration,
-      deliveryZone: checkoutSession.deliveryZone,
       addressText: checkoutSession.addressText,
       selectedAddressId: checkoutSession.selectedAddressId,
       financialBreakdown: {
@@ -150,6 +146,73 @@ export async function POST(request: NextRequest) {
         deliveryFee: checkoutSession.deliveryFee,
         finalTotal: checkoutSession.totalAmount,
         originalTotal: body.totalAmount,
+      },
+    });
+
+    // Log initial checkout session creation (receiver details will be added later)
+    console.log("🛒 INITIAL CHECKOUT SESSION CREATED:", {
+      checkoutId: checkoutSession.checkoutId,
+      sessionInfo: {
+        // Basic order information available at creation
+        orderItems: checkoutSession.items.map((item) => ({
+          productName: item.product_name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          totalPrice: item.total_price,
+          variant: item.variant || "Standard",
+        })),
+
+        // Financial information
+        financialSummary: {
+          subtotal: checkoutSession.subtotal,
+          discount: checkoutSession.discount,
+          deliveryFee: checkoutSession.deliveryFee,
+          cgstAmount: checkoutSession.cgstAmount || 0,
+          sgstAmount: checkoutSession.sgstAmount || 0,
+          totalAmount: checkoutSession.totalAmount,
+          couponCode: checkoutSession.couponCode || "No coupon applied",
+        },
+
+        // User information
+        userInfo: {
+          userId: checkoutSession.userId || "Guest user",
+          userEmail: checkoutSession.userEmail || "No email provided",
+        },
+
+        // Address information (if provided during creation)
+        addressInfo: {
+          addressText:
+            checkoutSession.addressText || "Will be added during checkout",
+          selectedAddressId:
+            checkoutSession.selectedAddressId ||
+            "Will be selected during checkout",
+          distance: checkoutSession.distance
+            ? `${checkoutSession.distance.toFixed(2)} km`
+            : "Will be calculated during checkout",
+          duration: checkoutSession.duration
+            ? `${Math.round(checkoutSession.duration / 60)} minutes`
+            : "Will be calculated during checkout",
+        },
+      },
+
+      // Receiver details that will be added later via PATCH requests
+      receiverDetailsToBeAdded: {
+        note: "Receiver details (contact info, delivery address, timing, customization) will be added during the checkout process via PATCH requests to /api/checkout/[checkoutId]",
+        expectedUpdates: [
+          "Contact Information (name, phone, alternate phone)",
+          "Delivery Address (full address, distance, duration)",
+          "Delivery Timing (date, time slot, estimated delivery)",
+          "Special Requests (notes, cake text, message card)",
+          "Customization Options (knife, candles, message card)",
+        ],
+      },
+
+      // Database storage details
+      databaseStorage: {
+        tableName: "checkout_sessions",
+        expiresAt: checkoutSession.expiresAt,
+        paymentStatus: checkoutSession.paymentStatus,
+        createdAt: checkoutSession.createdAt,
       },
     });
 

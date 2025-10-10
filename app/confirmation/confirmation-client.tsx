@@ -419,7 +419,7 @@ export default function ConfirmationClient() {
             </div>
 
             {/* Discount - Only show if there's actual discount */}
-            {order.discount_amount && order.discount_amount > 0 && (
+            {(order.discount_amount ?? 0) > 0 && (
               <div className="flex justify-between items-center text-green-600">
                 <span>Discount</span>
                 <span className="font-medium">

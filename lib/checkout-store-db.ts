@@ -35,8 +35,8 @@ export class CheckoutStoreDB {
       expiresAt: expiresAt.toISOString(),
     };
 
-    // Store in database
-    const { error } = await supabase.from("checkout_sessions").insert({
+    // Prepare database insert data
+    const dbInsertData = {
       checkout_id: checkoutId,
       user_id: data.userId,
       user_email: data.userEmail,
@@ -65,7 +65,146 @@ export class CheckoutStoreDB {
       payment_status: "pending",
       payment_attempts: 0,
       expires_at: expiresAt.toISOString(),
+    };
+
+    // Log initial checkout session data being stored in database
+    console.log("💾 STORING INITIAL CHECKOUT SESSION IN DATABASE:", {
+      tableName: "checkout_sessions",
+      checkoutId: checkoutId,
+      storageAction: "CREATE",
+      initialDataStored: {
+        // Order Items (always present during creation)
+        orderItems: data.items.map((item) => ({
+          productName: item.product_name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          totalPrice: item.total_price,
+          variant: item.variant || "Standard",
+          databaseField: "items",
+        })),
+
+        // Financial Information (always present during creation)
+        financialDetails: {
+          subtotal: data.subtotal,
+          discount: data.discount,
+          deliveryFee: data.deliveryFee,
+          cgstAmount: data.cgstAmount || 0,
+          sgstAmount: data.sgstAmount || 0,
+          totalAmount: data.totalAmount,
+          couponCode: data.couponCode || "No coupon applied",
+          databaseFields: {
+            subtotal: data.subtotal,
+            discount: data.discount,
+            delivery_fee: data.deliveryFee,
+            cgst_amount: data.cgstAmount,
+            sgst_amount: data.sgstAmount,
+            total_amount: data.totalAmount,
+            coupon_code: data.couponCode,
+          },
+        },
+
+        // User Information (always present during creation)
+        userInfo: {
+          userId: data.userId || "Guest user",
+          userEmail: data.userEmail || "No email provided",
+          databaseFields: {
+            user_id: data.userId,
+            user_email: data.userEmail,
+          },
+        },
+
+        // Receiver Details (may be present during creation, will be updated later)
+        receiverDetails: {
+          contactInfo: data.contactInfo
+            ? {
+                name: data.contactInfo.name,
+                phone: data.contactInfo.phone,
+                alternatePhone:
+                  data.contactInfo.alternatePhone || "Not provided",
+                databaseField: "contact_info",
+                status: "Present during creation",
+              }
+            : {
+                status: "Will be added via PATCH request",
+                databaseField: "contact_info",
+              },
+
+          deliveryAddress: {
+            addressText: data.addressText || "Will be added via PATCH request",
+            selectedAddressId:
+              data.selectedAddressId || "Will be added via PATCH request",
+            distance: data.distance
+              ? `${data.distance.toFixed(2)} km`
+              : "Will be calculated via PATCH request",
+            duration: data.duration
+              ? `${Math.round(data.duration / 60)} minutes`
+              : "Will be calculated via PATCH request",
+            deliveryZone:
+              data.deliveryZone || "Will be added via PATCH request",
+            databaseFields: {
+              address_text: data.addressText,
+              selected_address_id: data.selectedAddressId,
+              distance: data.distance,
+              duration: data.duration,
+              delivery_zone: data.deliveryZone,
+            },
+          },
+
+          deliveryTiming: {
+            timing: data.deliveryTiming || "Will be added via PATCH request",
+            deliveryDate:
+              data.deliveryDate || "Will be added via PATCH request",
+            deliveryTimeSlot:
+              data.deliveryTimeSlot || "Will be added via PATCH request",
+            estimatedDeliveryTime:
+              data.estimatedDeliveryTime || "Will be added via PATCH request",
+            databaseFields: {
+              delivery_timing: data.deliveryTiming,
+              delivery_date: data.deliveryDate,
+              delivery_time_slot: data.deliveryTimeSlot,
+              estimated_delivery_time: data.estimatedDeliveryTime,
+            },
+          },
+
+          customization: {
+            notes: data.notes || "Will be added via PATCH request",
+            cakeText: data.cakeText || "Will be added via PATCH request",
+            messageCardText:
+              data.messageCardText || "Will be added via PATCH request",
+            customizationOptions: data.customizationOptions || {},
+            databaseFields: {
+              notes: data.notes,
+              cake_text: data.cakeText,
+              message_card_text: data.messageCardText,
+              customization_options: data.customizationOptions,
+            },
+          },
+        },
+
+        // Session Management
+        sessionInfo: {
+          expiresAt: expiresAt.toISOString(),
+          paymentStatus: "pending",
+          paymentAttempts: 0,
+          databaseFields: {
+            expires_at: expiresAt.toISOString(),
+            payment_status: "pending",
+            payment_attempts: 0,
+          },
+        },
+      },
+
+      // Complete database record preview
+      completeDatabaseRecord: dbInsertData,
+
+      // Note about receiver details
+      note: "Receiver details (contact info, delivery address, timing, customization) will be updated via PATCH requests to /api/checkout/[checkoutId] during the checkout process",
     });
+
+    // Store in database
+    const { error } = await supabase
+      .from("checkout_sessions")
+      .insert(dbInsertData);
 
     if (error) {
       console.error("Error creating checkout session:", error);
