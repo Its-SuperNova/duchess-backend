@@ -130,8 +130,17 @@ const Hero = memo(() => {
     <>
       {Array.from({ length: count }).map((_, index) => (
         <div key={index} className="flex flex-col items-center flex-shrink-0">
-          <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gray-200 animate-pulse rounded-[20px] lg:rounded-[24px]" />
-          <div className="w-12 h-4 bg-gray-200 animate-pulse rounded mt-2 lg:mt-3" />
+          <div
+            className="bg-gray-200 animate-pulse rounded-[18px] aspect-square"
+            style={{
+              width: `calc((100vw - 24px - ${
+                mobileCategories - 1
+              }px) / ${mobileCategories})`,
+              maxWidth: "60px",
+              minWidth: "50px",
+            }}
+          />
+          <div className="w-12 h-4 bg-gray-200 animate-pulse rounded mt-2" />
         </div>
       ))}
     </>
@@ -264,7 +273,7 @@ const Hero = memo(() => {
       <div className="hidden sm:block w-full px-4 mb-8">
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Categories</h2>
-          <Link href="/products">
+          <Link href="/categories">
             <button className="text-sm text-primary hover:text-primary/80 underline transition-colors duration-200 whitespace-nowrap font-medium">
               See All
             </button>
@@ -327,7 +336,7 @@ const Hero = memo(() => {
         {/* Categories */}
         <div className="flex w-full justify-between items-center px-1">
           <h2 className="text-lg md:text-xl font-medium">Categories</h2>
-          <Link href="/products">
+          <Link href="/categories">
             <button className="text-sm text-primary hover:text-primary/80 underline transition-colors duration-200">
               See All
             </button>
@@ -338,7 +347,7 @@ const Hero = memo(() => {
         <div className="w-full mt-2">
           {isLoadingCategories ? (
             <div
-              className="grid gap-2"
+              className="grid gap-1"
               style={{
                 gridTemplateColumns: `repeat(${mobileCategories}, 1fr)`,
               }}
@@ -351,7 +360,7 @@ const Hero = memo(() => {
             <CategoriesEmpty />
           ) : (
             <div
-              className="grid gap-2"
+              className="grid gap-4 "
               style={{
                 gridTemplateColumns: `repeat(${mobileCategories}, 1fr)`,
               }}
@@ -363,14 +372,16 @@ const Hero = memo(() => {
                   )}`}
                   key={category.id}
                 >
-                  <div className="flex flex-col items-center cursor-pointer group">
-                    <div className="w-14 h-14 relative bg-[#F9F5F0] rounded-[18px] shadow-sm overflow-hidden flex items-center justify-center">
+                  <div className="flex flex-col items-center  cursor-pointer group">
+                    <div
+                      className="relative bg-[#F9F5F0] rounded-[18px] w-full h-auto shadow-sm overflow-hidden flex items-center justify-center aspect-square"
+                     
+                    >
                       <Image
                         src={getCategoryImage(category) || "/placeholder.svg"}
                         alt={category.name}
-                        width={56}
-                        height={56}
-                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
                       />
                     </div>
                     <p className="text-xs mt-1 text-center line-clamp-2">

@@ -5,6 +5,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Function to create a URL-friendly slug from category name
+export function createCategorySlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[&]/g, "and") // Replace & with "and"
+    .replace(/[^a-z0-9\s-]/g, "") // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+    .trim();
+}
+
 // Utility functions for processing database products
 export interface ProcessedProduct {
   id: string;
