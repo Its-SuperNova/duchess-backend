@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -30,6 +32,7 @@ import {
   Clock,
   DollarSign,
   Download,
+  Filter,
   MoreHorizontal,
   Package,
   ShoppingBag,
@@ -37,130 +40,84 @@ import {
   Star,
   Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
+import { SummaryCardsSkeleton } from "@/components/summary-cards-skeleton";
+import { DateRangeDialog } from "@/components/date-range-dialog";
 
-// Mock data for the dashboard
-const summaryCards = [
+// Types for dashboard data
+interface SummaryCard {
+  title: string;
+  value: string;
+  change: string;
+  trend: "up" | "down";
+  icon: any;
+}
+
+interface RecentOrder {
+  id: string;
+  customer: string;
+  amount: string;
+  status: string;
+  date: string;
+  email: string;
+}
+
+interface TopProduct {
+  name: string;
+  sales: number;
+  revenue: string;
+  image: string;
+}
+
+interface DashboardData {
+  summaryCards: SummaryCard[];
+  recentOrders: RecentOrder[];
+  topProducts: TopProduct[];
+}
+
+// Icon mapping for summary cards
+const iconMap = {
+  "Total Orders": ShoppingBag,
+  "Total Revenue": DollarSign,
+  "Reviews & Feedback": Star,
+  "Total Users": Users,
+};
+
+// Mock data for the dashboard (fallback)
+const fallbackSummaryCards = [
   {
     title: "Total Orders",
-    value: "1,284",
-    change: "+12.5%",
-    trend: "up",
+    value: "0",
+    change: "0%",
+    trend: "up" as const,
     icon: ShoppingBag,
   },
   {
     title: "Total Revenue",
-    value: "$45,231",
-    change: "+8.2%",
-    trend: "up",
+    value: "₹0",
+    change: "0%",
+    trend: "up" as const,
     icon: DollarSign,
   },
   {
-    title: "New Customers",
-    value: "573",
-    change: "+32.1%",
-    trend: "up",
+    title: "Reviews & Feedback",
+    value: "47",
+    change: "+12.5%",
+    trend: "up" as const,
+    icon: Star,
+  },
+  {
+    title: "Total Users",
+    value: "0",
+    change: "0%",
+    trend: "up" as const,
     icon: Users,
   },
-  {
-    title: "Out-of-Stock",
-    value: "12",
-    change: "-2",
-    trend: "down",
-    icon: Package,
-  },
 ];
 
-const recentOrders = [
-  {
-    id: "ORD-7352",
-    customer: "Emma Wilson",
-    amount: "$124.99",
-    status: "delivered",
-    date: "Apr 23, 2025",
-    email: "emma@example.com",
-  },
-  {
-    id: "ORD-7351",
-    customer: "Michael Brown",
-    amount: "$89.50",
-    status: "pending",
-    date: "Apr 23, 2025",
-    email: "michael@example.com",
-  },
-  {
-    id: "ORD-7350",
-    customer: "Sophia Martinez",
-    amount: "$47.25",
-    status: "delivered",
-    date: "Apr 22, 2025",
-    email: "sophia@example.com",
-  },
-  {
-    id: "ORD-7349",
-    customer: "Liam Johnson",
-    amount: "$53.00",
-    status: "cancelled",
-    date: "Apr 22, 2025",
-    email: "liam@example.com",
-  },
-  {
-    id: "ORD-7348",
-    customer: "Olivia Davis",
-    amount: "$212.75",
-    status: "delivered",
-    date: "Apr 21, 2025",
-    email: "olivia@example.com",
-  },
-];
-
-const topProducts = [
-  {
-    name: "Strawberry Cheesecake",
-    sales: 124,
-    revenue: "$3,720",
-    image: "/classic-strawberry-cheesecake.png",
-  },
-  {
-    name: "Chocolate Éclair",
-    sales: 98,
-    revenue: "$2,450",
-    image: "/classic-chocolate-eclair.png",
-  },
-  {
-    name: "Red Velvet Cake",
-    sales: 86,
-    revenue: "$2,150",
-    image: "/red-velvet-cheesecake.png",
-  },
-];
-
-const activityFeed = [
-  {
-    action: "New order placed",
-    description: "Emma Wilson ordered Strawberry Cheesecake",
-    time: "2h ago",
-  },
-  {
-    action: "Product updated",
-    description: "Admin updated Chocolate Éclair price",
-    time: "4h ago",
-  },
-  {
-    action: "New review",
-    description: "Michael Brown left a 5-star review",
-    time: "6h ago",
-  },
-  {
-    action: "Inventory alert",
-    description: "Red Velvet Cake is running low on stock",
-    time: "Yesterday",
-  },
-  {
-    action: "New customer",
-    description: "Sophia Martinez created an account",
-    time: "Yesterday",
-  },
-];
+const fallbackRecentOrders: RecentOrder[] = [];
+const fallbackTopProducts: TopProduct[] = [];
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -176,6 +133,146 @@ const getStatusColor = (status: string) => {
 };
 
 export default function AdminDashboard() {
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
+  const [summaryCardsLoading, setSummaryCardsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState("monthly");
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(
+    undefined
+  );
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(
+    undefined
+  );
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Only show full loading on initial load
+        if (!dashboardData) {
+          setLoading(true);
+        } else {
+          // Show summary cards loading for filter changes
+          setSummaryCardsLoading(true);
+        }
+
+        console.log("useEffect running with:", {
+          selectedFilter,
+          customStartDate,
+          customEndDate,
+        });
+        let url = `/api/admin/dashboard?filter=${selectedFilter}`;
+        if (selectedFilter === "custom" && customStartDate && customEndDate) {
+          url += `&startDate=${customStartDate.toISOString()}&endDate=${customEndDate.toISOString()}`;
+        }
+        console.log("Fetching URL:", url);
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard data");
+        }
+
+        const data = await response.json();
+
+        // Add icons to summary cards
+        const summaryCardsWithIcons = data.summaryCards.map((card: any) => ({
+          ...card,
+          icon: iconMap[card.title as keyof typeof iconMap] || ShoppingBag,
+        }));
+
+        setDashboardData({
+          summaryCards: summaryCardsWithIcons,
+          recentOrders: data.recentOrders,
+          topProducts: data.topProducts,
+        });
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+        setSummaryCardsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [selectedFilter, customStartDate, customEndDate]);
+
+  const handleFilterChange = (
+    filter: string,
+    startDate?: Date,
+    endDate?: Date
+  ) => {
+    console.log("handleFilterChange called with:", {
+      filter,
+      startDate,
+      endDate,
+    });
+    setSelectedFilter(filter);
+    if (filter === "custom" && startDate && endDate) {
+      setCustomStartDate(startDate);
+      setCustomEndDate(endDate);
+    } else {
+      setCustomStartDate(undefined);
+      setCustomEndDate(undefined);
+    }
+  };
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 space-y-6 p-4 md:p-6 overflow-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">
+              Error loading dashboard: {error}
+            </p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <div className="flex-1 space-y-6 p-4 md:p-6 overflow-auto">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      </div>
+    );
+  }
+  {
+    /* Page Header */
+  }
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+        Dashboard
+      </h1>
+      <p className="text-muted-foreground">
+        Welcome back to your admin dashboard.
+      </p>
+    </div>
+    <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 sm:mt-0">
+      <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
+        <Download className="mr-2 h-4 w-4" />
+        Download Report
+      </Button>
+      <Button
+        size="sm"
+        className="h-9 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+      >
+        View Analytics
+      </Button>
+    </div>
+  </div>;
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6 overflow-auto">
       {/* Page Header */}
@@ -189,10 +286,10 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 sm:mt-0">
-          <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
-            <Download className="mr-2 h-4 w-4" />
-            Download Report
-          </Button>
+          <DateRangeDialog
+            selectedFilter={selectedFilter}
+            onFilterChange={handleFilterChange}
+          />
           <Button
             size="sm"
             className="h-9 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
@@ -203,48 +300,56 @@ export default function AdminDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 grid-cols-1 xs:grid-cols-2 lg:grid-cols-4">
-        {summaryCards.map((card, index) => (
-          <Card key={index} className="overflow-hidden">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xl sm:text-2xl font-bold">
-                      {card.value}
+      {summaryCardsLoading ? (
+        <SummaryCardsSkeleton />
+      ) : (
+        <div className="grid gap-4 grid-cols-1 xs:grid-cols-2 lg:grid-cols-4">
+          {dashboardData.summaryCards.map((card, index) => (
+            <Card key={index} className="overflow-hidden bg-white">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {card.title}
                     </p>
-                    <span
-                      className={`flex items-center text-xs font-medium ${
-                        card.trend === "up" ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {card.trend === "up" ? (
-                        <ArrowUp className="mr-1 h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="mr-1 h-3 w-3" />
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl sm:text-2xl font-bold">
+                        {card.value}
+                      </p>
+                      {card.title !== "Total Users" && (
+                        <span
+                          className={`flex items-center text-xs font-medium ${
+                            card.trend === "up"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {card.trend === "up" ? (
+                            <ArrowUp className="mr-1 h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="mr-1 h-3 w-3" />
+                          )}
+                          {card.change}
+                        </span>
                       )}
-                      {card.change}
-                    </span>
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-blue-100 p-2 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
+                    <card.icon className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="rounded-full bg-blue-100 p-2 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
-                  <card.icon className="h-5 w-5" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Left Column (Orders & Chart) */}
         <div className="space-y-6 lg:col-span-2">
           {/* Revenue Chart */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
               <div>
                 <CardTitle>Revenue Overview</CardTitle>
@@ -282,11 +387,11 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Recent Orders */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader>
               <CardTitle>Recent Orders</CardTitle>
               <CardDescription>
-                You have {recentOrders.length} orders this week
+                You have {dashboardData.recentOrders.length} recent orders
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -310,7 +415,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {recentOrders.map((order) => (
+                      {dashboardData.recentOrders.map((order) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium hidden sm:table-cell">
                             {order.id}
@@ -393,7 +498,7 @@ export default function AdminDashboard() {
         {/* Right Column (Top Products & Activity) */}
         <div className="space-y-6">
           {/* Top Selling Products */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader>
               <CardTitle>Top Selling Products</CardTitle>
               <CardDescription>
@@ -401,7 +506,7 @@ export default function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {topProducts.map((product, index) => (
+              {dashboardData.topProducts.map((product, index) => (
                 <div key={index} className="flex items-center gap-4">
                   <div className="relative h-16 w-16 overflow-hidden rounded-md flex-shrink-0">
                     <img
@@ -442,35 +547,15 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Activity Feed */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
               <CardDescription>Latest actions and updates</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {activityFeed.map((activity, index) => (
-                <div key={index} className="flex gap-4 pb-4 last:pb-0">
-                  <div className="relative mt-1">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    {index < activityFeed.length - 1 && (
-                      <div className="absolute bottom-0 left-1/2 top-8 -ml-px border-l border-dashed border-muted-foreground/20" />
-                    )}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {activity.action}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {activity.description}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              <p className="text-muted-foreground text-center py-8">
+                Activity feed coming soon...
+              </p>
             </CardContent>
             <CardFooter className="border-t px-4 py-4 sm:px-6">
               <Button variant="ghost" className="w-full">

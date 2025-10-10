@@ -1972,7 +1972,7 @@ export default function CheckoutClient() {
                         <div className="flex gap-3">
                           <Button
                             variant="outline"
-                            size="xl"
+                            size="lg"
                             onClick={async () => {
                               setNote("");
                               // Clear note from checkout session
@@ -2008,7 +2008,7 @@ export default function CheckoutClient() {
                           </Button>
                           <DrawerClose asChild>
                             <Button
-                              size="xl"
+                              size="lg"
                               className="flex-1 py-5 rounded-[20px] text-[16px]"
                               onClick={async () => {
                                 // Save note to checkout session
@@ -2747,7 +2747,7 @@ export default function CheckoutClient() {
                         <div className="lg:hidden flex gap-3">
                           <Button
                             variant="outline"
-                            size="xl"
+                            size="lg"
                             onClick={async () => {
                               const clearedOptions = {
                                 addTextOnCake: false,
@@ -2791,7 +2791,7 @@ export default function CheckoutClient() {
                           </Button>
                           <DrawerClose asChild>
                             <Button
-                              size="xl"
+                              size="lg"
                               className="flex-1 py-5 rounded-[20px] text-[16px]"
                               onClick={async () => {
                                 // Save customization options to checkout session
@@ -2986,7 +2986,7 @@ export default function CheckoutClient() {
                     <div className="flex gap-3">
                       <Button
                         variant="outline"
-                        size="xl"
+                        size="lg"
                         onClick={async () => {
                           setMessageCardText("");
                           // Clear message card text from checkout session
@@ -3022,7 +3022,7 @@ export default function CheckoutClient() {
                       </Button>
                       <DrawerClose asChild>
                         <Button
-                          size="xl"
+                          size="lg"
                           className="flex-1 py-5 rounded-[20px] text-[16px]"
                           onClick={async () => {
                             // Save message card text to checkout session
@@ -3353,14 +3353,14 @@ export default function CheckoutClient() {
                     <div className="flex gap-3">
                       <Button
                         variant="outline"
-                        size="xl"
+                        size="lg"
                         onClick={() => setTempContactInfo(contactInfo)}
                         className="flex-1 rounded-[20px] text-[16px]"
                       >
                         Reset
                       </Button>
                       <Button
-                        size="xl"
+                        size="lg"
                         className="flex-1 py-5 rounded-[20px] text-[16px]"
                         onClick={async () => {
                           console.log(
