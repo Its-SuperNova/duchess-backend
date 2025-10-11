@@ -83,7 +83,7 @@
     "react-hook-form": "latest",
     "react-icons": "latest",
     "react-resizable-panels": "^2.1.7",
-    "recharts": "2.15.0",
+    "recharts": "^2.15.4",
     "redis": "^4.6.0",
     "sonner": "latest",
     "styled-components": "^6.1.19",

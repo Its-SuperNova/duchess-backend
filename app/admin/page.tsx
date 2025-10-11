@@ -43,6 +43,7 @@ import {
 import { useEffect, useState } from "react";
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 import { SummaryCardsSkeleton } from "@/components/summary-cards-skeleton";
+import { AnalyticsChart } from "@/components/analytics-chart";
 import { DateRangeDialog } from "@/components/date-range-dialog";
 
 // Types for dashboard data
@@ -74,6 +75,12 @@ interface DashboardData {
   summaryCards: SummaryCard[];
   recentOrders: RecentOrder[];
   topProducts: TopProduct[];
+  analyticsChartData: {
+    date: string;
+    orders: number;
+    revenue: number;
+    users: number;
+  }[];
 }
 
 // Icon mapping for summary cards
@@ -139,13 +146,21 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [summaryCardsLoading, setSummaryCardsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState("monthly");
-  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(
+  // Separate filter states for grid cards and chart
+  const [gridFilter, setGridFilter] = useState("overall");
+  const [chartFilter, setChartFilter] = useState("monthly");
+  const [gridCustomStartDate, setGridCustomStartDate] = useState<
+    Date | undefined
+  >(undefined);
+  const [gridCustomEndDate, setGridCustomEndDate] = useState<Date | undefined>(
     undefined
   );
-  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(
-    undefined
-  );
+  const [chartCustomStartDate, setChartCustomStartDate] = useState<
+    Date | undefined
+  >(undefined);
+  const [chartCustomEndDate, setChartCustomEndDate] = useState<
+    Date | undefined
+  >(undefined);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -159,14 +174,31 @@ export default function AdminDashboard() {
         }
 
         console.log("useEffect running with:", {
-          selectedFilter,
-          customStartDate,
-          customEndDate,
+          gridFilter,
+          chartFilter,
+          gridCustomStartDate,
+          gridCustomEndDate,
+          chartCustomStartDate,
+          chartCustomEndDate,
         });
-        let url = `/api/admin/dashboard?filter=${selectedFilter}`;
-        if (selectedFilter === "custom" && customStartDate && customEndDate) {
-          url += `&startDate=${customStartDate.toISOString()}&endDate=${customEndDate.toISOString()}`;
+
+        const params = new URLSearchParams();
+        params.append("gridFilter", gridFilter);
+        params.append("chartFilter", chartFilter);
+        if (gridCustomStartDate) {
+          params.append("gridStartDate", gridCustomStartDate.toISOString());
         }
+        if (gridCustomEndDate) {
+          params.append("gridEndDate", gridCustomEndDate.toISOString());
+        }
+        if (chartCustomStartDate) {
+          params.append("chartStartDate", chartCustomStartDate.toISOString());
+        }
+        if (chartCustomEndDate) {
+          params.append("chartEndDate", chartCustomEndDate.toISOString());
+        }
+
+        const url = `/api/admin/dashboard?${params.toString()}`;
         console.log("Fetching URL:", url);
         const response = await fetch(url);
 
@@ -186,6 +218,7 @@ export default function AdminDashboard() {
           summaryCards: summaryCardsWithIcons,
           recentOrders: data.recentOrders,
           topProducts: data.topProducts,
+          analyticsChartData: data.analyticsChartData,
         });
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -197,25 +230,44 @@ export default function AdminDashboard() {
     };
 
     fetchDashboardData();
-  }, [selectedFilter, customStartDate, customEndDate]);
+  }, [
+    gridFilter,
+    chartFilter,
+    gridCustomStartDate,
+    gridCustomEndDate,
+    chartCustomStartDate,
+    chartCustomEndDate,
+  ]);
 
-  const handleFilterChange = (
+  const handleGridFilterChange = (
     filter: string,
     startDate?: Date,
     endDate?: Date
   ) => {
-    console.log("handleFilterChange called with:", {
-      filter,
-      startDate,
-      endDate,
-    });
-    setSelectedFilter(filter);
+    console.log("Grid filter change:", { filter, startDate, endDate });
+    setGridFilter(filter);
     if (filter === "custom" && startDate && endDate) {
-      setCustomStartDate(startDate);
-      setCustomEndDate(endDate);
+      setGridCustomStartDate(startDate);
+      setGridCustomEndDate(endDate);
     } else {
-      setCustomStartDate(undefined);
-      setCustomEndDate(undefined);
+      setGridCustomStartDate(undefined);
+      setGridCustomEndDate(undefined);
+    }
+  };
+
+  const handleChartFilterChange = (
+    filter: string,
+    startDate?: Date,
+    endDate?: Date
+  ) => {
+    console.log("Chart filter change:", { filter, startDate, endDate });
+    setChartFilter(filter);
+    if (filter === "custom" && startDate && endDate) {
+      setChartCustomStartDate(startDate);
+      setChartCustomEndDate(endDate);
+    } else {
+      setChartCustomStartDate(undefined);
+      setChartCustomEndDate(undefined);
     }
   };
 
@@ -287,8 +339,8 @@ export default function AdminDashboard() {
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 sm:mt-0">
           <DateRangeDialog
-            selectedFilter={selectedFilter}
-            onFilterChange={handleFilterChange}
+            selectedFilter={gridFilter}
+            onFilterChange={handleGridFilterChange}
           />
           <Button
             size="sm"
@@ -344,48 +396,17 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Analytics Chart */}
+      <AnalyticsChart
+        data={dashboardData.analyticsChartData}
+        onFilterChange={handleChartFilterChange}
+        currentFilter={chartFilter}
+      />
+
       {/* Main Content Grid */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Left Column (Orders & Chart) */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Revenue Chart */}
-          <Card className="bg-white">
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
-              <div>
-                <CardTitle>Revenue Overview</CardTitle>
-                <CardDescription>
-                  Daily revenue for the past week
-                </CardDescription>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
-                    Last 7 days <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Last 7 days</DropdownMenuItem>
-                  <DropdownMenuItem>Last month</DropdownMenuItem>
-                  <DropdownMenuItem>This year</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px] sm:h-[350px] w-full bg-muted/20 rounded-md flex items-center justify-center">
-                <div className="text-center p-4">
-                  <h3 className="text-lg font-medium mb-2">Revenue Chart</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Revenue data visualization is available in the full version.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Recent Orders */}
           <Card className="bg-white">
             <CardHeader>
@@ -546,23 +567,6 @@ export default function AdminDashboard() {
             </CardFooter>
           </Card>
 
-          {/* Activity Feed */}
-          <Card className="bg-white">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest actions and updates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground text-center py-8">
-                Activity feed coming soon...
-              </p>
-            </CardContent>
-            <CardFooter className="border-t px-4 py-4 sm:px-6">
-              <Button variant="ghost" className="w-full">
-                View All Activity
-              </Button>
-            </CardFooter>
-          </Card>
         </div>
       </div>
     </div>
