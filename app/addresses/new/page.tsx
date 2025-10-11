@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Navigation, Search, X, ArrowLeft } from "lucide-react";
 import { MapPointWave, HomeSmile, Buildings } from "@solar-icons/react";
 import { HiMapPin, HiMiniMapPin } from "react-icons/hi2";
@@ -48,6 +49,7 @@ interface SearchResult {
 }
 
 export default function NewAddressPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
@@ -68,6 +70,9 @@ export default function NewAddressPage() {
   const [otherAddressName, setOtherAddressName] = useState("");
   const [mounted, setMounted] = useState(false);
 
+  // Detect if user came from checkout page
+  const [cameFromCheckout, setCameFromCheckout] = useState(false);
+
   const mapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -75,6 +80,18 @@ export default function NewAddressPage() {
   // Ensure component is mounted on client side
   useEffect(() => {
     setMounted(true);
+
+    // Detect if user came from checkout page
+    const referrer = document.referrer;
+    if (referrer.includes("/checkout") || referrer.includes("/checkouts")) {
+      setCameFromCheckout(true);
+
+      // Extract checkout ID from referrer URL if available
+      const checkoutMatch = referrer.match(/\/checkouts\/([^\/]+)/);
+      if (checkoutMatch) {
+        sessionStorage.setItem("currentCheckoutId", checkoutMatch[1]);
+      }
+    }
 
     // Detect mobile device
     const checkMobile = () => {
@@ -635,111 +652,16 @@ export default function NewAddressPage() {
     );
   };
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+      }
+    };
+  }, []);
+
   // Shared search content component
-  const SearchContent = () => (
-    <>
-      {/* Search Input in Search Component */}
-      <div className="relative">
-        <Search
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
-          style={{ color: "#7a0000" }}
-        />
-        <input
-          type="text"
-          placeholder="Search for a location..."
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            handleSearch(e.target.value);
-          }}
-          className="w-full pl-10 pr-10 py-3 bg-white rounded-xl focus:outline-none"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setSearchResults([]);
-            }}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2"
-          >
-            <X className="h-5 w-5 text-gray-400" />
-          </button>
-        )}
-      </div>
-
-      {/* Use Current Location Button */}
-      {!searchQuery && (
-        <button
-          onClick={() => {
-            getCurrentLocation();
-            if (isMobile) {
-              setShowSearchDrawer(false);
-            } else {
-              setShowSearchDialog(false);
-            }
-          }}
-          className="w-full flex items-center justify-start gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          <MapPointWave weight="Bold" color="#7a0000" size={16} />
-          <div className="flex-1 text-left">
-            <div className="font-medium" style={{ color: "#7a0000" }}>
-              Use current location
-            </div>
-            {selectedLocation && (
-              <div className="text-xs text-gray-500 w-[70%] truncate">
-                {selectedLocation.address}
-              </div>
-            )}
-          </div>
-        </button>
-      )}
-
-      {/* Search Results */}
-      <div className="max-h-96 overflow-y-auto">
-        {isSearching ? (
-          <div className="p-4 text-center text-gray-500">Searching...</div>
-        ) : searchResults.length > 0 ? (
-          <div className="space-y-1">
-            {searchResults.map((result, index) => (
-              <button
-                key={result.place_id}
-                onClick={() => {
-                  handleLocationSelect(result);
-                  // Don't close drawer immediately, let the location selection complete
-                  setTimeout(() => {
-                    if (isMobile) {
-                      setShowSearchDrawer(false);
-                    } else {
-                      setShowSearchDialog(false);
-                    }
-                  }, 500);
-                }}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0 transition-colors"
-              >
-                <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">
-                    {result.description.split(",")[0]}
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
-                    {result.description}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : searchQuery ? (
-          <div className="p-4 text-center text-gray-500">
-            No results found for "{searchQuery}"
-          </div>
-        ) : (
-          <div className="p-4 text-center text-gray-500">
-            Start typing to search for locations
-          </div>
-        )}
-      </div>
-    </>
-  );
 
   const handleSaveAddress = () => {
     if (!selectedLocation) {
@@ -757,6 +679,7 @@ export default function NewAddressPage() {
       addressType: selectedAddressType,
       otherAddressName: otherAddressName,
       tempId: tempAddressId,
+      cameFromCheckout: cameFromCheckout, // Store the context
     };
 
     sessionStorage.setItem("pendingAddress", JSON.stringify(addressData));
@@ -806,11 +729,7 @@ export default function NewAddressPage() {
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
                   style={{ color: "#7a0000" }}
                 />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
+                <div
                   onClick={() => {
                     if (isMobile) {
                       setShowSearchDrawer(true);
@@ -818,9 +737,12 @@ export default function NewAddressPage() {
                       setShowSearchDialog(true);
                     }
                   }}
-                  readOnly
-                  className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent cursor-pointer"
-                />
+                  className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent cursor-pointer hover:bg-gray-100 transition-colors flex items-center"
+                >
+                  <span className="text-gray-500">
+                    {searchQuery || "Search..."}
+                  </span>
+                </div>
                 {searchQuery && (
                   <button
                     onClick={() => {
@@ -979,7 +901,21 @@ export default function NewAddressPage() {
               </DrawerHeader>
 
               <div className="px-4 space-y-4 bg-[#f5f6fa]">
-                <SearchContent />
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                    style={{ color: "#7a0000" }}
+                  />
+                  <button
+                    onClick={() => {
+                      setShowSearchDrawer(false);
+                      setShowSearchDialog(true);
+                    }}
+                    className="w-full pl-10 pr-10 py-3 bg-white rounded-xl focus:outline-none text-left text-gray-500 hover:bg-gray-50 transition-colors"
+                  >
+                    {searchQuery || "Search for a location..."}
+                  </button>
+                </div>
               </div>
             </div>
           </DrawerContent>
@@ -987,21 +923,94 @@ export default function NewAddressPage() {
 
         {/* Search Dialog - Desktop Only */}
         <Dialog open={showSearchDialog} onOpenChange={setShowSearchDialog}>
-          <DialogContent className="bg-[#f5f6fa] max-w-md">
+          <DialogContent className="bg-[#f5f6fa] max-w-md h-[500px] flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 Select a location
-                <button
-                  onClick={() => setShowSearchDialog(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <SearchContent />
+            <div className="space-y-4 flex-1 flex flex-col">
+              {/* Search Input */}
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                  style={{ color: "#7a0000" }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search for a location..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  className="w-full pl-10 pr-4 py-3 bg-white rounded-xl focus:outline-none"
+                />
+              </div>
+
+              {/* Use Current Location Button */}
+              {!searchQuery && (
+                <button
+                  onClick={() => {
+                    getCurrentLocation();
+                    setShowSearchDialog(false);
+                  }}
+                  className="w-full flex items-center justify-start gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  <MapPointWave weight="Bold" color="#7a0000" size={16} />
+                  <div className="flex-1 text-left">
+                    <div className="font-medium" style={{ color: "#7a0000" }}>
+                      Use current location
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Get your current device location
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {/* Search Results */}
+              <div className="flex-1 overflow-y-auto min-h-[300px]">
+                {isSearching ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-1">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={result.place_id}
+                        onClick={() => {
+                          handleLocationSelect(result);
+                          setTimeout(() => {
+                            setShowSearchDialog(false);
+                          }, 500);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-b-0 transition-colors"
+                      >
+                        <HiMapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">
+                            {result.description.split(",")[0]}
+                          </div>
+                          <div className="text-sm text-gray-500 truncate">
+                            {result.description}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : searchQuery ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No results found for "{searchQuery}"
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-gray-500">
+                    Start typing to search for locations
+                  </div>
+                )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>

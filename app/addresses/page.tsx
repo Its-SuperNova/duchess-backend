@@ -39,6 +39,33 @@ export default function ManageAddressPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [cameFromCheckout, setCameFromCheckout] = useState(false);
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+
+  // Detect if user came from checkout page
+  useEffect(() => {
+    const referrer = document.referrer;
+    if (referrer.includes("/checkout") || referrer.includes("/checkouts")) {
+      setCameFromCheckout(true);
+
+      // Extract checkout ID from referrer URL if available
+      const checkoutMatch = referrer.match(/\/checkouts\/([^\/]+)/);
+      if (checkoutMatch) {
+        setCheckoutId(checkoutMatch[1]);
+      }
+    }
+  }, []);
+
+  // Handle back navigation based on context
+  const handleBackNavigation = () => {
+    if (cameFromCheckout && checkoutId) {
+      router.push(`/checkouts/${checkoutId}`);
+    } else if (cameFromCheckout) {
+      router.push("/checkouts");
+    } else {
+      router.push("/profile");
+    }
+  };
 
   // Load addresses from database
   useEffect(() => {
@@ -169,11 +196,11 @@ export default function ManageAddressPage() {
       <div className="min-h-screen bg-[#F5F6FB] flex flex-col">
         <div className="max-w-[1200px] mx-auto w-full">
           <div className="p-4 flex items-center">
-            <Link href="/profile" className="inline-block">
+            <button onClick={handleBackNavigation} className="inline-block">
               <div className="bg-white p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <IoIosArrowBack className="h-5 w-5 text-gray-700" />
               </div>
-            </Link>
+            </button>
             <h1 className="text-xl font-semibold ml-4">My Addresses</h1>
           </div>
 
@@ -218,11 +245,11 @@ export default function ManageAddressPage() {
       <div className="max-w-[1200px] mx-auto w-full">
         {/* Back Button and Title */}
         <div className="p-4 flex items-center">
-          <Link href="/profile" className="inline-block">
+          <button onClick={handleBackNavigation} className="inline-block">
             <div className="bg-white p-3 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
               <IoIosArrowBack className="h-5 w-5 text-gray-700" />
             </div>
-          </Link>
+          </button>
           <h1 className="text-xl font-semibold ml-4">My Addresses</h1>
         </div>
 

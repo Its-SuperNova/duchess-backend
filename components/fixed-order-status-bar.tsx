@@ -131,8 +131,6 @@ export default function FixedOrderStatusBar() {
           );
         }
         return <Truck className="h-4 w-4 text-purple-600" />;
-      case "delivered":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
       default:
         return <ShoppingBag className="h-4 w-4 text-gray-600" />;
     }
@@ -149,10 +147,6 @@ export default function FixedOrderStatusBar() {
         return "text-orange-600";
       case "out_for_delivery":
         return "text-purple-600";
-      case "delivered":
-        return "text-green-600";
-      case "cancelled":
-        return "text-red-600";
       default:
         return "text-gray-600";
     }
@@ -176,17 +170,11 @@ export default function FixedOrderStatusBar() {
           paymentStatus?.toLowerCase() === "successful" ||
           paymentStatus?.toLowerCase() === "paid" ||
           paymentStatus?.toLowerCase() === "captured";
-        return isPaymentSuccessful
-          ? "Payment successful, preparing order"
-          : "Order is confirmed";
+        return "Order is preparing";
       case "preparing":
         return "Order is preparing";
       case "out_for_delivery":
         return "Order is on the way";
-      case "delivered":
-        return "Order is delivered";
-      case "cancelled":
-        return "Order is cancelled";
       default:
         return "Order status unknown";
     }

@@ -20,6 +20,7 @@ interface AddressData {
   addressType: "Home" | "Work" | "Other";
   otherAddressName: string;
   tempId: string;
+  cameFromCheckout?: boolean;
 }
 
 interface RouteInfo {
@@ -556,10 +557,22 @@ export default function ConfirmAddressPage({
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // Clear session storage and redirect
+        // Clear session storage and redirect based on context
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("pendingAddress");
-          window.location.href = "/addresses";
+
+          // Navigate based on where user came from
+          if (addressData.cameFromCheckout) {
+            // Try to get the checkout ID from session storage or URL params
+            const checkoutId = sessionStorage.getItem("currentCheckoutId");
+            if (checkoutId) {
+              window.location.href = `/checkouts/${checkoutId}`;
+            } else {
+              window.location.href = "/checkouts";
+            }
+          } else {
+            window.location.href = "/addresses";
+          }
         }
       } else {
         console.error("Failed to save address:", result.error);

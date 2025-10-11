@@ -258,7 +258,7 @@ export default function ProductAddToCart({
           <DrawerTrigger asChild>
             <div
               onClick={(e) => {
-                if (showViewCart) {
+                if (showViewCart || isAddedToCart) {
                   e.preventDefault();
                   e.stopPropagation();
                   handleViewCart();

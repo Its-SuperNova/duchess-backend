@@ -837,7 +837,11 @@ export default function ProductPage() {
 
                 {/* Add to Cart button */}
                 <button
-                  onClick={showViewCart ? handleViewCart : handleAddToCart}
+                  onClick={
+                    showViewCart || isAddedToCart
+                      ? handleViewCart
+                      : handleAddToCart
+                  }
                   disabled={currentStock === 0 || isAddingToCart}
                   className={`text-white rounded-xl px-6 py-4 items-center justify-center font-medium text-base transition-all hidden md:flex ${
                     currentStock === 0

@@ -518,7 +518,7 @@ export default function CheckoutClient() {
         setTempContactInfo(contactInfo);
       }
     }
-  }, [isContactDrawerOpen, tempContactInfo, contactInfo]);
+  }, [isContactDrawerOpen, contactInfo]);
 
   // Debug: Log when contactInfo changes
   useEffect(() => {
@@ -830,52 +830,60 @@ export default function CheckoutClient() {
           }))
         );
 
-        // Set contact info from user profile
-        const autoFilledContactInfo = {
-          name: user.name || "",
-          phone: user.phone_number || "",
-          alternatePhone: "",
-        };
+        // Set contact info from user profile only if no contact info exists in checkout session
+        if (!contactInfo.name && !contactInfo.phone) {
+          const autoFilledContactInfo = {
+            name: user.name || "",
+            phone: user.phone_number || "",
+            alternatePhone: "",
+          };
 
-        setContactInfo(autoFilledContactInfo);
+          setContactInfo(autoFilledContactInfo);
 
-        // Auto-save contact info to checkout session if we have valid data
-        if (autoFilledContactInfo.name && autoFilledContactInfo.phone) {
-          try {
-            console.log("🔄 Auto-saving contact info to checkout session:", {
-              checkoutId,
-              contactInfo: autoFilledContactInfo,
-            });
-
-            const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
+          // Auto-save contact info to checkout session if we have valid data
+          if (autoFilledContactInfo.name && autoFilledContactInfo.phone) {
+            try {
+              console.log("🔄 Auto-saving contact info to checkout session:", {
+                checkoutId,
                 contactInfo: autoFilledContactInfo,
-              }),
-            });
+              });
 
-            if (updateResponse.ok) {
-              const responseData = await updateResponse.json();
-              console.log(
-                "✅ Contact info auto-saved to checkout session:",
-                responseData
+              const updateResponse = await fetch(
+                `/api/checkout/${checkoutId}`,
+                {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    contactInfo: autoFilledContactInfo,
+                  }),
+                }
               );
-            } else {
-              console.error(
-                "❌ Failed to auto-save contact info:",
-                await updateResponse.text()
-              );
+
+              if (updateResponse.ok) {
+                const responseData = await updateResponse.json();
+                console.log(
+                  "✅ Contact info auto-saved to checkout session:",
+                  responseData
+                );
+              } else {
+                console.error(
+                  "❌ Failed to auto-save contact info:",
+                  await updateResponse.text()
+                );
+              }
+            } catch (error) {
+              console.error("❌ Error auto-saving contact info:", error);
             }
-          } catch (error) {
-            console.error("❌ Error auto-saving contact info:", error);
           }
         }
 
-        // Only set address text if we don't already have it from new address data
-        if (!addressText) {
+        // Only set address text if we don't already have it from new address data or checkout session
+        if (!addressText || addressText.trim() === "") {
+          console.log(
+            "🔄 Auto-filling default address - no address currently set"
+          );
           const def = await getDefaultAddress(user.id);
           let selectedAddress = null;
 
@@ -985,15 +993,17 @@ export default function CheckoutClient() {
             const list = await getUserAddresses(user.id);
             setAddresses(list || []);
 
-            // Update contact info from user profile
-            setContactInfo({
-              name: user.name || "",
-              phone: user.phone_number || "",
-              alternatePhone: "",
-            });
+            // Contact info is handled by the main checkout data loading useEffect
 
-            // Update address if we have new addresses
-            if (list && list.length > 0) {
+            // Update address if we have new addresses and no address is currently set
+            if (
+              list &&
+              list.length > 0 &&
+              (!addressText || addressText.trim() === "")
+            ) {
+              console.log(
+                "🔄 Auto-filling default address in refresh - no address currently set"
+              );
               const def = await getDefaultAddress(user.id);
               if (def?.full_address) {
                 setAddressText(def.full_address);
@@ -2435,7 +2445,7 @@ export default function CheckoutClient() {
               </div>
               {/* Coupons Section */}
               <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
-                <Link href="/checkout/coupons">
+                <Link href={`/checkouts/${checkoutId}/coupons`}>
                   <button className="w-full flex items-center justify-between text-left">
                     <div className="flex items-center">
                       <TicketSale className="h-5 w-5 mr-3 text-black" />
