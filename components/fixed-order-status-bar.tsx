@@ -193,7 +193,7 @@ export default function FixedOrderStatusBar() {
 
   return (
     <div
-      className="fixed bottom-4 left-1/2 z-50 bg-white border border-gray-200 shadow-lg rounded-2xl transform -translate-x-1/2 max-w-[400px] w-full overflow-hidden cursor-pointer hover:shadow-xl transition-shadow duration-200"
+      className="fixed bottom-4 left-1/2 z-50 bg-white border border-gray-200 shadow-lg rounded-2xl transform -translate-x-1/2 w-full max-w-[450px] mx-4 overflow-hidden cursor-pointer hover:shadow-xl transition-shadow duration-200"
       onClick={handleViewOrder}
     >
       <div className="px-4 py-3">
