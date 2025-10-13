@@ -95,12 +95,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update total amount to include delivery fee
-    const finalTotalAmount = orderValue + deliveryFee;
+    // Update total amount to include delivery fee and taxes
+    const cgstAmount = body.cgstAmount || 0;
+    const sgstAmount = body.sgstAmount || 0;
+    const finalTotalAmount = orderValue + deliveryFee + cgstAmount + sgstAmount;
 
     console.log("💰 Final totals:", {
       orderValue,
       deliveryFee,
+      cgstAmount,
+      sgstAmount,
       finalTotalAmount,
       originalTotalAmount: body.totalAmount,
     });

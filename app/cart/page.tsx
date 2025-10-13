@@ -352,7 +352,8 @@ export default function CartPage() {
               isMobile ? "text-center w-full" : "w-[300px] text-right"
             }`}
           >
-            Taxes included. Discounts and shipping calculated at checkout.
+            Taxes, Discounts and delivery charges will be calculated at checkout
+            page
           </p>
 
           {/* Checkout Button */}

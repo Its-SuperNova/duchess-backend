@@ -308,7 +308,11 @@ export default function CheckoutClient() {
                   },
                   body: JSON.stringify({
                     deliveryFee: fallbackDeliveryFee,
-                    totalAmount: orderValue + fallbackDeliveryFee,
+                    totalAmount:
+                      orderValue +
+                      fallbackDeliveryFee +
+                      calculatedCgstAmount +
+                      calculatedSgstAmount,
                   }),
                 }
               );
@@ -318,7 +322,11 @@ export default function CheckoutClient() {
                   "✅ Checkout session updated with fallback delivery fee on page load:",
                   {
                     deliveryFee: fallbackDeliveryFee,
-                    totalAmount: orderValue + fallbackDeliveryFee,
+                    totalAmount:
+                      orderValue +
+                      fallbackDeliveryFee +
+                      calculatedCgstAmount +
+                      calculatedSgstAmount,
                   }
                 );
 
@@ -326,7 +334,11 @@ export default function CheckoutClient() {
                 setCheckoutData((prev: any) => ({
                   ...prev,
                   deliveryFee: fallbackDeliveryFee,
-                  totalAmount: orderValue + fallbackDeliveryFee,
+                  totalAmount:
+                    orderValue +
+                    fallbackDeliveryFee +
+                    calculatedCgstAmount +
+                    calculatedSgstAmount,
                 }));
               }
             } catch (updateError) {
@@ -1167,7 +1179,7 @@ export default function CheckoutClient() {
                 discount +
                 calculatedCgstAmount +
                 calculatedSgstAmount +
-                (deliveryCharge || 0),
+                (checkoutData?.deliveryFee || deliveryCharge || 0),
             }),
           });
 
@@ -1353,7 +1365,11 @@ export default function CheckoutClient() {
         }
       }
 
-      const newTotal = orderValue + calculatedDeliveryFee;
+      const newTotal =
+        orderValue +
+        calculatedDeliveryFee +
+        calculatedCgstAmount +
+        calculatedSgstAmount;
 
       // Update checkout session with delivery information
       try {
@@ -2212,7 +2228,10 @@ export default function CheckoutClient() {
                                   }
 
                                   const newTotal =
-                                    orderValue + calculatedDeliveryFee;
+                                    orderValue +
+                                    calculatedDeliveryFee +
+                                    calculatedCgstAmount +
+                                    calculatedSgstAmount;
 
                                   console.log(
                                     "🚚 Address selected - direct calculation:",

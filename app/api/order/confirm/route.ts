@@ -405,13 +405,13 @@ export async function POST(req: Request) {
                     )}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (9%):</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (2.5%):</td>
                     <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${cgst.toFixed(
                       2
                     )}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">SGST (9%):</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">SGST (2.5%):</td>
                     <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${sgst.toFixed(
                       2
                     )}</td>
@@ -671,13 +671,13 @@ export async function POST(req: Request) {
                     )}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (9%):</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (2.5%):</td>
                     <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${cgst.toFixed(
                       2
                     )}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">SGST (9%):</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">SGST (2.5%):</td>
                     <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${sgst.toFixed(
                       2
                     )}</td>

@@ -134,9 +134,9 @@ export async function POST(request: NextRequest) {
 
     // Calculate taxes if not provided
     const calculatedCgst =
-      cgstAmount ?? (subtotalAmount - discountAmount) * 0.09;
+      cgstAmount ?? (subtotalAmount - discountAmount) * 0.025;
     const calculatedSgst =
-      sgstAmount ?? (subtotalAmount - discountAmount) * 0.09;
+      sgstAmount ?? (subtotalAmount - discountAmount) * 0.025;
 
     // Enhanced order data structure (AFTER migration)
     const enhancedOrderData = {

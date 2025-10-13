@@ -14,9 +14,9 @@ export interface TaxAmounts {
  * @returns Object containing CGST, SGST, and total tax amounts
  */
 export function calculateTaxAmounts(taxableAmount: number): TaxAmounts {
-  // CGST and SGST rates (9% each = 18% total GST)
-  const CGST_RATE = 0.09; // 9%
-  const SGST_RATE = 0.09; // 9%
+  // CGST and SGST rates (2.5% each = 5% total GST)
+  const CGST_RATE = 0.025; // 2.5%
+  const SGST_RATE = 0.025; // 2.5%
 
   const cgstAmount = Math.round(taxableAmount * CGST_RATE * 100) / 100;
   const sgstAmount = Math.round(taxableAmount * SGST_RATE * 100) / 100;

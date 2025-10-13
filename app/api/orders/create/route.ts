@@ -230,8 +230,8 @@ export async function POST(request: NextRequest) {
         console.error("Error calculating configurable tax amounts:", error);
         // Fallback to hardcoded calculation
         const taxableAmount = finalItemTotal - finalDiscountAmount;
-        calculatedCgst = calculatedCgst ?? taxableAmount * 0.09;
-        calculatedSgst = calculatedSgst ?? taxableAmount * 0.09;
+        calculatedCgst = calculatedCgst ?? taxableAmount * 0.025;
+        calculatedSgst = calculatedSgst ?? taxableAmount * 0.025;
       }
     }
 
