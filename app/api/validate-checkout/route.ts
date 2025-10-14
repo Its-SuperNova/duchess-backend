@@ -209,42 +209,89 @@ export async function POST(request: NextRequest) {
     }
 
     // ============================================================================
-    // CALCULATION 4: Calculate Delivery Fee
+    // CALCULATION 4: Calculate Delivery Fee with Free Delivery Check
     // ============================================================================
     let validatedDeliveryFee = 0;
+    let freeDeliveryQualified = false;
 
     if (distance) {
-      // Fetch delivery charges from database based on distance
-      const { data: deliverySettings, error: deliveryError } = await supabase
-        .from("delivery_settings")
+      // First, check if order qualifies for free delivery based on order value
+      const { data: orderValueCharge, error: orderValueError } = await supabase
+        .from("delivery_charges")
         .select("*")
-        .order("max_distance", { ascending: true });
+        .eq("type", "order_value")
+        .eq("is_active", true)
+        .single();
 
-      if (deliverySettings && !deliveryError) {
-        // Find appropriate delivery charge based on distance
-        const applicableSetting = deliverySettings.find(
-          (setting) => distance <= setting.max_distance
-        );
+      if (
+        orderValueCharge &&
+        !orderValueError &&
+        orderValueCharge.delivery_type === "free"
+      ) {
+        const orderValueThreshold = orderValueCharge.order_value_threshold;
 
-        if (applicableSetting) {
-          validatedDeliveryFee = applicableSetting.charge;
-        } else {
-          // Use the highest tier if distance exceeds all settings
-          validatedDeliveryFee =
-            deliverySettings[deliverySettings.length - 1]?.charge || 0;
+        if (validatedSubtotal >= orderValueThreshold) {
+          validatedDeliveryFee = 0;
+          freeDeliveryQualified = true;
+
+          console.log("✅ Order qualifies for free delivery:", {
+            subtotal: validatedSubtotal,
+            threshold: orderValueThreshold,
+            deliveryFee: validatedDeliveryFee,
+            freeDeliveryQualified,
+          });
         }
+      }
 
-        console.log("✅ Server-side delivery fee calculation:", {
-          distance,
-          deliveryFee: validatedDeliveryFee,
-          applicableSetting,
-        });
-      } else {
-        console.error("❌ Failed to fetch delivery settings:", deliveryError);
-        return NextResponse.json(
-          { error: "Failed to calculate delivery fee" },
-          { status: 500 }
-        );
+      // If not qualified for free delivery, calculate based on distance
+      if (!freeDeliveryQualified) {
+        // Fetch distance-based delivery charges
+        const { data: distanceCharges, error: deliveryError } = await supabase
+          .from("delivery_charges")
+          .select("*")
+          .eq("type", "distance")
+          .eq("is_active", true)
+          .order("start_km", { ascending: true });
+
+        if (distanceCharges && !deliveryError) {
+          // Find appropriate delivery charge based on distance
+          const applicableCharge = distanceCharges.find(
+            (charge) => distance >= charge.start_km && distance <= charge.end_km
+          );
+
+          if (applicableCharge) {
+            validatedDeliveryFee = applicableCharge.price;
+          } else {
+            // Use the closest range if no exact match
+            const sortedCharges = distanceCharges.sort(
+              (a, b) => a.start_km - b.start_km
+            );
+
+            if (distance < sortedCharges[0].start_km) {
+              validatedDeliveryFee = sortedCharges[0].price;
+            } else if (
+              distance > sortedCharges[sortedCharges.length - 1].end_km
+            ) {
+              validatedDeliveryFee =
+                sortedCharges[sortedCharges.length - 1].price;
+            } else {
+              validatedDeliveryFee = 80; // Fallback
+            }
+          }
+
+          console.log("✅ Server-side delivery fee calculation:", {
+            distance,
+            deliveryFee: validatedDeliveryFee,
+            applicableCharge,
+            freeDeliveryQualified,
+          });
+        } else {
+          console.error("❌ Failed to fetch delivery charges:", deliveryError);
+          return NextResponse.json(
+            { error: "Failed to calculate delivery fee" },
+            { status: 500 }
+          );
+        }
       }
     } else {
       return NextResponse.json(
@@ -304,6 +351,7 @@ export async function POST(request: NextRequest) {
         cgstAmount: validatedCgstAmount,
         sgstAmount: validatedSgstAmount,
         deliveryFee: validatedDeliveryFee,
+        freeDeliveryQualified: freeDeliveryQualified,
         total: validatedTotal,
         coupon: couponDetails,
         taxSettings: {

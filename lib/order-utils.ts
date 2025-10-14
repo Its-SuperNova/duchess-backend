@@ -131,9 +131,18 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
 
   console.log("🚚 Using delivery fee from checkout session:", deliveryCharge);
   console.log("🚚 Checkout session delivery fee:", checkoutSession.deliveryFee);
+  console.log(
+    "🚚 Free delivery qualified:",
+    checkoutSession.freeDeliveryQualified
+  );
 
-  // Fallback: If no delivery fee in session, calculate from address distance
-  if (deliveryCharge === 0 && deliveryAddress) {
+  // If order qualifies for free delivery, keep delivery fee as 0
+  if (checkoutSession.freeDeliveryQualified) {
+    deliveryCharge = 0;
+    console.log(
+      "✅ Order qualifies for free delivery, keeping delivery fee as 0"
+    );
+  } else if (deliveryCharge === 0 && deliveryAddress) {
     console.log(
       "🚚 No delivery fee in session, calculating from address distance"
     );
@@ -162,8 +171,8 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     }
   }
 
-  // Final fallback: If still 0, use default delivery fee
-  if (deliveryCharge === 0) {
+  // Final fallback: If still 0 and NOT qualified for free delivery, use default delivery fee
+  if (deliveryCharge === 0 && !checkoutSession.freeDeliveryQualified) {
     console.log("🚚 Final fallback: Using default delivery fee of 80");
     deliveryCharge = 80;
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CheckoutStore } from "@/lib/checkout-store";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -140,10 +141,80 @@ export async function PATCH(
       });
     }
 
+    // ============================================================================
+    // FREE DELIVERY LOGIC - Check if order qualifies for free delivery
+    // ============================================================================
+    let processedUpdates = { ...updates };
+
+    if (updates.subtotal !== undefined) {
+      try {
+        // Fetch free delivery threshold from database
+        const { data: orderValueCharge, error: orderValueError } =
+          await supabase
+            .from("delivery_charges")
+            .select("*")
+            .eq("type", "order_value")
+            .eq("is_active", true)
+            .single();
+
+        if (
+          orderValueCharge &&
+          !orderValueError &&
+          orderValueCharge.delivery_type === "free"
+        ) {
+          const orderValueThreshold = orderValueCharge.order_value_threshold;
+
+          if (updates.subtotal >= orderValueThreshold) {
+            // Order qualifies for free delivery
+            processedUpdates.deliveryFee = 0;
+            processedUpdates.freeDeliveryQualified = true;
+
+            // Recalculate totalAmount with free delivery
+            const subtotal = updates.subtotal || 0;
+            const discount = updates.discount || 0;
+            const cgstAmount = updates.cgstAmount || 0;
+            const sgstAmount = updates.sgstAmount || 0;
+            const freeDeliveryFee = 0;
+
+            processedUpdates.totalAmount =
+              subtotal - discount + cgstAmount + sgstAmount + freeDeliveryFee;
+
+            console.log(
+              "✅ Order qualifies for free delivery in checkout update:",
+              {
+                subtotal: updates.subtotal,
+                threshold: orderValueThreshold,
+                originalDeliveryFee: updates.deliveryFee || "not provided",
+                finalDeliveryFee: 0,
+                freeDeliveryQualified: true,
+                originalTotalAmount: updates.totalAmount,
+                recalculatedTotalAmount: processedUpdates.totalAmount,
+                calculation: `${subtotal} - ${discount} + ${cgstAmount} + ${sgstAmount} + ${freeDeliveryFee} = ${processedUpdates.totalAmount}`,
+                updatesKeys: Object.keys(updates),
+                allUpdates: updates,
+              }
+            );
+          } else {
+            processedUpdates.freeDeliveryQualified = false;
+
+            console.log("ℹ️ Order does not qualify for free delivery:", {
+              subtotal: updates.subtotal,
+              threshold: orderValueThreshold,
+              deliveryFee: updates.deliveryFee || "not provided",
+              freeDeliveryQualified: false,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error checking free delivery qualification:", error);
+        // Continue with original updates if free delivery check fails
+      }
+    }
+
     // Update checkout session
     const updatedSession = await CheckoutStore.updateSession(
       checkoutId,
-      updates
+      processedUpdates
     );
 
     if (!updatedSession) {
@@ -214,7 +285,11 @@ export async function PATCH(
         financialUpdates: {
           subtotal: updates.subtotal || "No subtotal update",
           discount: updates.discount || "No discount update",
-          deliveryFee: updates.deliveryFee || "No delivery fee update",
+          deliveryFee: processedUpdates.deliveryFee || "No delivery fee update",
+          freeDeliveryQualified:
+            processedUpdates.freeDeliveryQualified !== undefined
+              ? processedUpdates.freeDeliveryQualified
+              : "No free delivery status",
           cgstAmount: updates.cgstAmount || "No CGST update",
           sgstAmount: updates.sgstAmount || "No SGST update",
           totalAmount: updates.totalAmount || "No total amount update",
@@ -248,6 +323,7 @@ export async function PATCH(
         subtotal: updatedSession.subtotal,
         discount: updatedSession.discount,
         deliveryFee: updatedSession.deliveryFee,
+        freeDeliveryQualified: updatedSession.freeDeliveryQualified,
         cgstAmount: updatedSession.cgstAmount,
         sgstAmount: updatedSession.sgstAmount,
         totalAmount: updatedSession.totalAmount,
@@ -292,6 +368,7 @@ export async function PATCH(
         subtotal: updatedSession.subtotal,
         discount: updatedSession.discount,
         deliveryFee: updatedSession.deliveryFee,
+        freeDeliveryQualified: updatedSession.freeDeliveryQualified,
         totalAmount: updatedSession.totalAmount,
         cgstAmount: updatedSession.cgstAmount,
         sgstAmount: updatedSession.sgstAmount,

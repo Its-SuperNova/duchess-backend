@@ -22,6 +22,7 @@ interface BillDetailsProps {
   };
   onPaymentClick: () => void;
   className?: string;
+  freeDeliveryThreshold?: number;
 }
 
 export default function BillDetails({
@@ -40,6 +41,7 @@ export default function BillDetails({
   contactInfo,
   onPaymentClick,
   className = "",
+  freeDeliveryThreshold,
 }: BillDetailsProps) {
   const isDisabled =
     !addressText ||
@@ -48,73 +50,120 @@ export default function BillDetails({
     !contactInfo.phone ||
     isCalculatingDelivery;
 
+  // Calculate amount needed for free delivery
+  const amountNeededForFreeDelivery =
+    freeDeliveryThreshold && !isFreeDelivery && subtotal > 0
+      ? Math.max(0, freeDeliveryThreshold - subtotal)
+      : 0;
+
+  // Check if order qualifies for free delivery
+  const qualifiesForFreeDelivery =
+    freeDeliveryThreshold && subtotal >= freeDeliveryThreshold;
+
   return (
-    <div
-      className={`bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600 ${className}`}
-    >
-      <div className="flex items-center mb-3 gap-2">
-        <Bill className="h-5 w-5 text-[#570000]" />
-        <h3 className="font-medium text-gray-800 dark:text-gray-200">
-          Bill Details
-        </h3>
-      </div>
-      <div className="space-y-2">
-        <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-          <span>Item Total</span>
-          <span>₹{subtotal.toFixed(2)}</span>
-        </div>
-        {discount > 0 && (
-          <div className="flex justify-between text-green-600 text-sm">
-            <span>Discount</span>
-            <span>-₹{discount.toFixed(2)}</span>
-          </div>
-        )}
+    <div className={`mx-4 ${className}`}>
+      {/* Free Delivery Message */}
+      {freeDeliveryThreshold && (
+        <>
+          {/* Show "Add X more" message when not qualifying */}
+          {!qualifiesForFreeDelivery && amountNeededForFreeDelivery > 0 && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-[18px] p-4 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-800 font-medium text-sm">
+                  Add ₹{amountNeededForFreeDelivery.toFixed(2)} more to get{" "}
+                  <span className="font-semibold">FREE delivery</span>
+                </span>
+              </div>
+            </div>
+          )}
 
-        {/* Delivery Fee - Only show when address is selected */}
-        {(selectedAddressId || checkoutData?.selectedAddressId) && (
+          {/* Show "Free Delivery applied" message when qualifying */}
+          {qualifiesForFreeDelivery && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-[18px] p-4 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-green-800 font-medium text-sm">
+                  <span className="font-semibold">Free Delivery</span> applied
+                  on order above ₹{freeDeliveryThreshold.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Bill Details Card */}
+      <div className="bg-white p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
+        <div className="flex items-center mb-3 gap-2">
+          <Bill className="h-5 w-5 text-[#570000]" />
+          <h3 className="font-medium text-gray-800 dark:text-gray-200">
+            Bill Details
+          </h3>
+        </div>
+        <div className="space-y-2">
           <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-            <span>Delivery Fee</span>
-            <span
-              className={isFreeDelivery ? "text-green-600 font-medium" : ""}
-            >
-              {isCalculatingDelivery ? (
-                <div className="flex items-center gap-1">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
-                  <span className="text-xs">Calculating...</span>
-                </div>
-              ) : (checkoutData?.deliveryFee || deliveryCharge) === 0 ? (
-                "FREE"
-              ) : (
-                `₹${(checkoutData?.deliveryFee || deliveryCharge).toFixed(2)}`
-              )}
-            </span>
+            <span>Item Total</span>
+            <span>₹{subtotal.toFixed(2)}</span>
           </div>
-        )}
+          {discount > 0 && (
+            <div className="flex justify-between text-green-600 text-sm">
+              <span>Discount</span>
+              <span>-₹{discount.toFixed(2)}</span>
+            </div>
+          )}
 
-        <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-          <span>CGST ({taxSettings?.cgst_rate}%)</span>
-          <span>₹{cgstAmount.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-          <span>SGST ({taxSettings?.sgst_rate}%)</span>
-          <span>₹{sgstAmount.toFixed(2)}</span>
-        </div>
-        <div className="pt-2 mt-2">
-          <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
-          <div className="flex justify-between font-semibold text-black dark:text-white mt-2">
-            <span>To Pay</span>
-            <span>₹{total.toFixed(2)}</span>
+          {/* Delivery Fee - Only show when address is selected */}
+          {(selectedAddressId || checkoutData?.selectedAddressId) && (
+            <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+              <span>Delivery Fee</span>
+              <span
+                className={
+                  isFreeDelivery || qualifiesForFreeDelivery
+                    ? "text-green-600 font-medium"
+                    : ""
+                }
+              >
+                {isCalculatingDelivery ? (
+                  <div className="flex items-center gap-1">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
+                    <span className="text-xs">Calculating...</span>
+                  </div>
+                ) : (checkoutData?.deliveryFee || deliveryCharge) === 0 ||
+                  qualifiesForFreeDelivery ? (
+                  "FREE"
+                ) : (
+                  `₹${(checkoutData?.deliveryFee || deliveryCharge).toFixed(2)}`
+                )}
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+            <span>CGST ({taxSettings?.cgst_rate}%)</span>
+            <span>₹{cgstAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
+            <span>SGST ({taxSettings?.sgst_rate}%)</span>
+            <span>₹{sgstAmount.toFixed(2)}</span>
+          </div>
+          <div className="pt-2 mt-2">
+            <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
+            <div className="flex justify-between font-semibold text-black dark:text-white mt-2">
+              <span>To Pay</span>
+              <span>₹{total.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="mt-4">
-        <Button
-          className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isDisabled}
-          onClick={onPaymentClick}
-        >
-          Confirm Order
-        </Button>
+        <div className="mt-4">
+          <Button
+            className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isDisabled}
+            onClick={onPaymentClick}
+          >
+            Confirm Order
+          </Button>
+        </div>
       </div>
     </div>
   );

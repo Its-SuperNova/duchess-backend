@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     if (body.type === "order_value") {
       if (
         body.order_value_threshold === undefined ||
-        body.order_value_threshold === null ||
-        !body.delivery_type
+        body.order_value_threshold === null
       ) {
         return NextResponse.json(
           { error: "Missing required fields for order value" },

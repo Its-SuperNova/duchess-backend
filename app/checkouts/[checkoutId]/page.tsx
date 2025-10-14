@@ -778,14 +778,24 @@ export default function CheckoutClient() {
 
           // Update checkout session with calculated delivery fee
           try {
+            // Check if order qualifies for free delivery
+            const qualifiesForFreeDelivery =
+              freeDeliveryThreshold && orderValue >= freeDeliveryThreshold;
+
+            // Use 0 delivery fee if order qualifies for free delivery
+            const finalDeliveryFee = qualifiesForFreeDelivery
+              ? 0
+              : deliveryCharge;
+            const finalTotalAmount = orderValue + finalDeliveryFee;
+
             const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
               method: "PATCH",
               headers: {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                deliveryFee: deliveryCharge,
-                totalAmount: orderValue + deliveryCharge,
+                deliveryFee: finalDeliveryFee,
+                totalAmount: finalTotalAmount,
               }),
             });
 
@@ -796,16 +806,18 @@ export default function CheckoutClient() {
               console.log(
                 "✅ Checkout session updated with calculated delivery fee:",
                 {
-                  deliveryFee: deliveryCharge,
-                  totalAmount: orderValue + deliveryCharge,
+                  deliveryFee: finalDeliveryFee,
+                  totalAmount: finalTotalAmount,
+                  qualifiesForFreeDelivery,
+                  originalDeliveryFee: deliveryCharge,
                 }
               );
 
               // Update local checkout data state
               setCheckoutData((prev: any) => ({
                 ...prev,
-                deliveryFee: deliveryCharge,
-                totalAmount: orderValue + deliveryCharge,
+                deliveryFee: finalDeliveryFee,
+                totalAmount: finalTotalAmount,
               }));
             }
           } catch (updateError) {
@@ -823,6 +835,32 @@ export default function CheckoutClient() {
         } else {
           console.log("No tax settings found, using defaults");
           setTaxSettings({ cgst_rate: 0.0, sgst_rate: 0.0 });
+        }
+
+        // Fetch free delivery threshold
+        try {
+          const deliveryResponse = await fetch("/api/delivery-charges");
+          const deliveryData = await deliveryResponse.json();
+
+          if (deliveryResponse.ok && deliveryData.data) {
+            const orderValueCharge = deliveryData.data.find(
+              (charge: any) => charge.type === "order_value" && charge.is_active
+            );
+
+            if (orderValueCharge && orderValueCharge.delivery_type === "free") {
+              setFreeDeliveryThreshold(orderValueCharge.order_value_threshold);
+              console.log(
+                "✅ Free delivery threshold loaded:",
+                orderValueCharge.order_value_threshold
+              );
+            } else {
+              setFreeDeliveryThreshold(undefined);
+              console.log("No free delivery threshold found");
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching free delivery threshold:", error);
+          setFreeDeliveryThreshold(undefined);
         }
       } catch (err) {
         console.error("Error fetching checkout data:", err);
@@ -946,6 +984,11 @@ export default function CheckoutClient() {
     cgst_rate: number;
     sgst_rate: number;
   } | null>(null);
+
+  // Free delivery threshold state
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<
+    number | undefined
+  >(undefined);
 
   // OPTIMIZED: Comprehensive loading state for all critical data
   const [isInitializing, setIsInitializing] = useState(true);
@@ -1632,9 +1675,31 @@ export default function CheckoutClient() {
     const baseTotal = subtotal - discount + cgstAmount + sgstAmount;
     // Only add delivery fee if address is selected
     const hasAddress = selectedAddressId || checkoutData?.selectedAddressId;
+
+    // Check if order qualifies for free delivery
+    const qualifiesForFreeDelivery =
+      freeDeliveryThreshold && subtotal >= freeDeliveryThreshold;
+
     const deliveryFee = hasAddress
-      ? checkoutData?.deliveryFee || deliveryCharge || 0
+      ? qualifiesForFreeDelivery
+        ? 0 // Free delivery when order qualifies
+        : checkoutData?.deliveryFee || deliveryCharge || 0
       : 0;
+
+    console.log("🧮 Total calculation:", {
+      subtotal,
+      discount,
+      cgstAmount,
+      sgstAmount,
+      baseTotal,
+      qualifiesForFreeDelivery,
+      freeDeliveryThreshold,
+      checkoutDataDeliveryFee: checkoutData?.deliveryFee,
+      deliveryCharge,
+      finalDeliveryFee: deliveryFee,
+      total: baseTotal + deliveryFee,
+    });
+
     return baseTotal + deliveryFee;
   }, [
     subtotal,
@@ -1645,6 +1710,7 @@ export default function CheckoutClient() {
     checkoutData?.selectedAddressId,
     checkoutData?.deliveryFee,
     deliveryCharge,
+    freeDeliveryThreshold, // Add freeDeliveryThreshold to dependencies
   ]);
 
   // Auto-calculate delivery fee when address is automatically selected
@@ -1727,9 +1793,18 @@ export default function CheckoutClient() {
         }
       }
 
+      // Check if order qualifies for free delivery
+      const qualifiesForFreeDelivery =
+        freeDeliveryThreshold && orderValue >= freeDeliveryThreshold;
+
+      // Use 0 delivery fee if order qualifies for free delivery
+      const finalDeliveryFee = qualifiesForFreeDelivery
+        ? 0
+        : calculatedDeliveryFee;
+
       const newTotal =
         orderValue +
-        calculatedDeliveryFee +
+        finalDeliveryFee +
         calculatedCgstAmount +
         calculatedSgstAmount;
 
@@ -1740,7 +1815,7 @@ export default function CheckoutClient() {
           selectedAddressId: selectedAddress.id,
           distance: selectedAddress.distance,
           duration: selectedAddress.duration,
-          deliveryFee: calculatedDeliveryFee,
+          deliveryFee: finalDeliveryFee,
           totalAmount: newTotal,
         };
 
@@ -1754,17 +1829,19 @@ export default function CheckoutClient() {
 
         if (updateResponse.ok) {
           console.log("✅ Checkout session auto-updated with delivery info:", {
-            deliveryFee: calculatedDeliveryFee,
+            deliveryFee: finalDeliveryFee,
             totalAmount: newTotal,
             addressText: selectedAddress.full_address,
             distance: selectedAddress.distance,
             duration: selectedAddress.duration,
+            qualifiesForFreeDelivery,
+            originalDeliveryFee: calculatedDeliveryFee,
           });
 
           // Update local checkout data state to reflect the changes
           setCheckoutData((prev: any) => ({
             ...prev,
-            deliveryFee: calculatedDeliveryFee,
+            deliveryFee: finalDeliveryFee,
             totalAmount: newTotal,
             addressText: selectedAddress.full_address,
             selectedAddressId: selectedAddress.id,
@@ -1906,6 +1983,7 @@ export default function CheckoutClient() {
         subtotal: validated.subtotal,
         discount: validated.discount,
         deliveryFee: validated.deliveryFee,
+        freeDeliveryQualified: validated.freeDeliveryQualified,
         cgstAmount: validated.cgstAmount,
         sgstAmount: validated.sgstAmount,
         totalAmount: validated.total,
@@ -1928,6 +2006,7 @@ export default function CheckoutClient() {
             subtotal: validated.subtotal,
             discount: validated.discount,
             deliveryFee: validated.deliveryFee,
+            freeDeliveryQualified: validated.freeDeliveryQualified,
             cgstAmount: validated.cgstAmount,
             sgstAmount: validated.sgstAmount,
             total: validated.total,
@@ -2401,6 +2480,7 @@ export default function CheckoutClient() {
                   contactInfo={contactInfo}
                   onPaymentClick={() => setIsPaymentDialogOpen(true)}
                   className="hidden lg:block"
+                  freeDeliveryThreshold={freeDeliveryThreshold}
                 />
               </div>
             </div>
@@ -2423,6 +2503,7 @@ export default function CheckoutClient() {
               contactInfo={contactInfo}
               onPaymentClick={() => setIsPaymentDialogOpen(true)}
               className="lg:hidden"
+              freeDeliveryThreshold={freeDeliveryThreshold}
             />
 
             <PaymentSection className="mx-4 pb-6" />
@@ -2493,6 +2574,7 @@ export default function CheckoutClient() {
               setPaymentStatus("idle");
               setIsPaymentInProgress(false);
             }}
+            freeDeliveryThreshold={freeDeliveryThreshold}
           />
         </div>
       </div>

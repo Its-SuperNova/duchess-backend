@@ -38,6 +38,7 @@ export interface CheckoutSession {
   subtotal: number;
   discount: number;
   deliveryFee: number;
+  freeDeliveryQualified?: boolean;
   totalAmount: number;
   cgstAmount?: number;
   sgstAmount?: number;

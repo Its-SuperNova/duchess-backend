@@ -41,6 +41,7 @@ interface PaymentConfirmationDialogProps {
   onPaymentVerifying: () => void;
   onRetryPayment: () => void;
   onCancelPayment: () => void;
+  freeDeliveryThreshold?: number;
 }
 
 export default function PaymentConfirmationDialog({
@@ -70,6 +71,7 @@ export default function PaymentConfirmationDialog({
   onPaymentVerifying,
   onRetryPayment,
   onCancelPayment,
+  freeDeliveryThreshold,
 }: PaymentConfirmationDialogProps) {
   const handleOpenChange = (open: boolean) => {
     // Only allow closing if payment is not in progress
@@ -153,6 +155,47 @@ export default function PaymentConfirmationDialog({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Free Delivery Message */}
+            {freeDeliveryThreshold &&
+              subtotal > 0 &&
+              (() => {
+                const amountNeededForFreeDelivery = Math.max(
+                  0,
+                  freeDeliveryThreshold - subtotal
+                );
+                const qualifiesForFreeDelivery =
+                  subtotal >= freeDeliveryThreshold;
+
+                if (qualifiesForFreeDelivery) {
+                  return (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-[18px] p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-green-800 font-medium text-sm">
+                          <span className="font-semibold">Free Delivery</span>{" "}
+                          applied on order above ₹
+                          {freeDeliveryThreshold.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                } else if (amountNeededForFreeDelivery > 0) {
+                  return (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-[18px] p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-green-800 font-medium text-sm">
+                          Add ₹{amountNeededForFreeDelivery.toFixed(2)} more to
+                          get{" "}
+                          <span className="font-semibold">FREE delivery</span>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-medium mb-2">Order Summary</h4>
               <div className="space-y-1 text-sm">
@@ -180,10 +223,16 @@ export default function PaymentConfirmationDialog({
                     <span>Delivery Fee:</span>
                     <span
                       className={
-                        isFreeDelivery ? "text-green-600 font-medium" : ""
+                        isFreeDelivery ||
+                        (freeDeliveryThreshold &&
+                          subtotal >= freeDeliveryThreshold)
+                          ? "text-green-600 font-medium"
+                          : ""
                       }
                     >
-                      {(checkoutData?.deliveryFee || deliveryCharge) === 0
+                      {(checkoutData?.deliveryFee || deliveryCharge) === 0 ||
+                      (freeDeliveryThreshold &&
+                        subtotal >= freeDeliveryThreshold)
                         ? "FREE"
                         : `₹${(
                             checkoutData?.deliveryFee || deliveryCharge
