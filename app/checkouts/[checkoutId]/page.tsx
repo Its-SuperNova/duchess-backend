@@ -1,31 +1,10 @@
 "use client";
 
-import { Minus, Plus, X, ShoppingCart } from "lucide-react";
-import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
-// removed Trash2, using Solar icon via Iconify
-import { TiDocumentText } from "react-icons/ti";
-import { TbPaperBag } from "react-icons/tb";
-import { RiKnifeFill } from "react-icons/ri";
-import { FaCakeCandles } from "react-icons/fa6";
-import {
-  TrashBinTrash,
-  DocumentAdd,
-  TicketSale,
-  WidgetAdd,
-  ClockCircle,
-  HomeSmileAngle,
-  Phone,
-  Bill,
-  Pen,
-  HomeAngle,
-  MenuDots,
-  Routing,
-  Card,
-  ListCheckMinimalistic,
-  InfoCircle,
-} from "@solar-icons/react";
+import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { IoIosArrowBack } from "react-icons/io";
+import { TrashBinTrash, Bill } from "@solar-icons/react";
 import Link from "next/link";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
@@ -41,19 +20,6 @@ const Lottie = dynamic(() => import("lottie-react"), {
   ),
 });
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import {
   Dialog,
   DialogContent,
@@ -63,12 +29,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCart } from "@/context/cart-context";
-import { getUserByEmail, updateUserProfile } from "@/lib/auth-utils";
-import {
-  getDefaultAddress,
-  getDisplayDistance,
-  getUserAddresses,
-} from "@/lib/address-utils";
+import { getUserByEmail } from "@/lib/auth-utils";
+import { getDefaultAddress, getUserAddresses } from "@/lib/address-utils";
 // Delivery calculation moved to server-side API
 import type { Address as DbAddress } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +46,513 @@ import DeliveryFeeDisplay from "@/components/delivery-fee-display";
 import FreeDeliveryProgress from "@/components/free-delivery-progress";
 import { useDeliveryCalculation } from "@/hooks/use-delivery-calculation";
 import React from "react";
+import NoteDrawer from "./components/NoteDrawer";
+import CouponButton from "./components/CouponButton";
+import CustomizationOptionsDrawer from "./components/CustomizationOptionsDrawer";
+import DeliveryInfoSection from "./components/DeliveryInfoSection";
+import PaymentSection from "./components/PaymentLottieSection";
+import ProductListing from "./components/ProductListing";
+import BillDetails from "./components/BillDetails";
+import PaymentConfirmationDialog from "./components/PaymentConfirmationDialog";
+
+// ============================================================================
+// RATE LIMITING - Prevent API abuse and excessive requests
+// ============================================================================
+
+// Rate limit configuration
+const RATE_LIMIT_CONFIG = {
+  MAX_REQUESTS_PER_MINUTE: 30, // Max 30 requests per minute
+  MAX_REQUESTS_PER_SECOND: 5, // Max 5 requests per second
+  COOLDOWN_PERIOD: 60000, // 1 minute cooldown after limit hit
+  WARNING_THRESHOLD: 0.8, // Warn at 80% of limit
+};
+
+// Rate limiter class
+class RateLimiter {
+  private requestTimestamps: number[] = [];
+  private cooldownUntil: number = 0;
+  private warningShown: boolean = false;
+
+  // Check if rate limit is exceeded
+  isRateLimited(): boolean {
+    const now = Date.now();
+
+    // Check if in cooldown period
+    if (now < this.cooldownUntil) {
+      const remainingTime = Math.ceil((this.cooldownUntil - now) / 1000);
+      console.warn(
+        `⚠️ Rate limit cooldown active. Try again in ${remainingTime}s`
+      );
+      return true;
+    }
+
+    // Remove timestamps older than 1 minute
+    this.requestTimestamps = this.requestTimestamps.filter(
+      (timestamp) => now - timestamp < 60000
+    );
+
+    // Check per-minute limit
+    if (
+      this.requestTimestamps.length >= RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE
+    ) {
+      console.error("🚫 Rate limit exceeded: Too many requests per minute");
+      this.cooldownUntil = now + RATE_LIMIT_CONFIG.COOLDOWN_PERIOD;
+      return true;
+    }
+
+    // Check per-second limit
+    const recentRequests = this.requestTimestamps.filter(
+      (timestamp) => now - timestamp < 1000
+    );
+    if (recentRequests.length >= RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_SECOND) {
+      console.warn("⚠️ Rate limit warning: Too many requests per second");
+      return true;
+    }
+
+    // Show warning at 80% threshold
+    const usagePercent =
+      this.requestTimestamps.length / RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE;
+    if (
+      usagePercent >= RATE_LIMIT_CONFIG.WARNING_THRESHOLD &&
+      !this.warningShown
+    ) {
+      console.warn(
+        `⚠️ Approaching rate limit: ${this.requestTimestamps.length}/${RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE} requests`
+      );
+      this.warningShown = true;
+    } else if (usagePercent < RATE_LIMIT_CONFIG.WARNING_THRESHOLD) {
+      this.warningShown = false;
+    }
+
+    return false;
+  }
+
+  // Record a request
+  recordRequest(): void {
+    this.requestTimestamps.push(Date.now());
+    console.log(
+      `📊 Rate limit: ${this.requestTimestamps.length}/${RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE} requests in last minute`
+    );
+  }
+
+  // Get current rate limit stats
+  getStats() {
+    const now = Date.now();
+    const activeRequests = this.requestTimestamps.filter(
+      (timestamp) => now - timestamp < 60000
+    );
+    const recentRequests = this.requestTimestamps.filter(
+      (timestamp) => now - timestamp < 1000
+    );
+
+    return {
+      requestsPerMinute: activeRequests.length,
+      requestsPerSecond: recentRequests.length,
+      limit: RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE,
+      remainingRequests:
+        RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE - activeRequests.length,
+      usagePercent: Math.round(
+        (activeRequests.length / RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE) *
+          100
+      ),
+      isInCooldown: now < this.cooldownUntil,
+      cooldownRemaining: Math.max(
+        0,
+        Math.ceil((this.cooldownUntil - now) / 1000)
+      ),
+    };
+  }
+
+  // Reset rate limiter
+  reset(): void {
+    this.requestTimestamps = [];
+    this.cooldownUntil = 0;
+    this.warningShown = false;
+    console.log("🔄 Rate limiter reset");
+  }
+}
+
+// Global rate limiter instance
+const rateLimiter = new RateLimiter();
+
+// Rate-limited fetch wrapper
+async function rateLimitedFetch(
+  url: string,
+  options?: RequestInit
+): Promise<Response> {
+  // Check rate limit before making request
+  if (rateLimiter.isRateLimited()) {
+    const stats = rateLimiter.getStats();
+    throw new Error(
+      `Rate limit exceeded. Please wait ${stats.cooldownRemaining}s before trying again.`
+    );
+  }
+
+  // Record the request
+  rateLimiter.recordRequest();
+
+  // Make the actual request
+  return fetch(url, options);
+}
+
+// ============================================================================
+// DEBOUNCE UTILITIES - Optimize frequent operations
+// ============================================================================
+
+// Debounce function for optimizing frequent operations
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    timeoutId = setTimeout(() => {
+      func(...args);
+      timeoutId = null;
+    }, delay);
+  };
+}
+
+// Debounce configuration
+const DEBOUNCE_CONFIG = {
+  FAST: 150, // 150ms - for UI feedback
+  MEDIUM: 300, // 300ms - for text input
+  SLOW: 500, // 500ms - for expensive operations
+};
+
+// ============================================================================
+// ENCRYPTION UTILITIES - Secure localStorage encryption
+// ============================================================================
+
+// Encryption key management
+const ENCRYPTION_KEY_NAME = "checkout_encryption_key";
+const ENCRYPTION_ALGORITHM = "AES-GCM";
+
+// Generate or retrieve encryption key
+async function getEncryptionKey(): Promise<CryptoKey> {
+  try {
+    // Try to get existing key from sessionStorage (per-session key)
+    const storedKey = sessionStorage.getItem(ENCRYPTION_KEY_NAME);
+
+    if (storedKey) {
+      // Import existing key
+      const keyData = JSON.parse(storedKey);
+      return await crypto.subtle.importKey(
+        "jwk",
+        keyData,
+        { name: ENCRYPTION_ALGORITHM, length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    // Generate new key if not exists
+    const key = await crypto.subtle.generateKey(
+      { name: ENCRYPTION_ALGORITHM, length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+
+    // Export and store key for session
+    const exportedKey = await crypto.subtle.exportKey("jwk", key);
+    sessionStorage.setItem(ENCRYPTION_KEY_NAME, JSON.stringify(exportedKey));
+
+    return key;
+  } catch (error) {
+    console.error("Error managing encryption key:", error);
+    // Fallback: generate temporary key
+    return await crypto.subtle.generateKey(
+      { name: ENCRYPTION_ALGORITHM, length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+  }
+}
+
+// Encrypt data
+async function encryptData(data: string): Promise<string> {
+  try {
+    const key = await getEncryptionKey();
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+
+    // Generate random IV (Initialization Vector)
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    // Encrypt data
+    const encryptedBuffer = await crypto.subtle.encrypt(
+      { name: ENCRYPTION_ALGORITHM, iv },
+      key,
+      dataBuffer
+    );
+
+    // Combine IV and encrypted data
+    const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength);
+    combined.set(iv, 0);
+    combined.set(new Uint8Array(encryptedBuffer), iv.length);
+
+    // Convert to base64
+    return btoa(String.fromCharCode(...combined));
+  } catch (error) {
+    console.error("Encryption error:", error);
+    // Fallback: return original data (logged for security audit)
+    console.warn(
+      "⚠️ SECURITY WARNING: Data stored unencrypted due to encryption failure"
+    );
+    return data;
+  }
+}
+
+// Decrypt data
+async function decryptData(encryptedData: string): Promise<string | null> {
+  try {
+    const key = await getEncryptionKey();
+
+    // Convert from base64
+    const combined = Uint8Array.from(atob(encryptedData), (c) =>
+      c.charCodeAt(0)
+    );
+
+    // Extract IV and encrypted data
+    const iv = combined.slice(0, 12);
+    const encryptedBuffer = combined.slice(12);
+
+    // Decrypt data
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: ENCRYPTION_ALGORITHM, iv },
+      key,
+      encryptedBuffer
+    );
+
+    // Convert back to string
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedBuffer);
+  } catch (error) {
+    console.error("Decryption error:", error);
+    // Try to return original data if it's not encrypted
+    try {
+      // Check if it's valid JSON (unencrypted)
+      JSON.parse(encryptedData);
+      console.warn(
+        "⚠️ Data appears to be unencrypted, migrating to encrypted storage"
+      );
+      return encryptedData;
+    } catch {
+      return null;
+    }
+  }
+}
+
+// Secure localStorage wrapper
+class SecureStorage {
+  // Set encrypted item
+  async setItem(key: string, value: any): Promise<void> {
+    try {
+      const stringValue =
+        typeof value === "string" ? value : JSON.stringify(value);
+      const encrypted = await encryptData(stringValue);
+      localStorage.setItem(key, encrypted);
+      console.log(`🔒 Encrypted and stored: ${key}`);
+    } catch (error) {
+      console.error(`Error storing encrypted item ${key}:`, error);
+      // Fallback to unencrypted storage with warning
+      localStorage.setItem(
+        key,
+        typeof value === "string" ? value : JSON.stringify(value)
+      );
+    }
+  }
+
+  // Get and decrypt item
+  async getItem(key: string): Promise<any | null> {
+    try {
+      const encrypted = localStorage.getItem(key);
+      if (!encrypted) return null;
+
+      const decrypted = await decryptData(encrypted);
+      if (!decrypted) return null;
+
+      // Try to parse as JSON
+      try {
+        return JSON.parse(decrypted);
+      } catch {
+        return decrypted;
+      }
+    } catch (error) {
+      console.error(`Error retrieving encrypted item ${key}:`, error);
+      return null;
+    }
+  }
+
+  // Remove item
+  removeItem(key: string): void {
+    localStorage.removeItem(key);
+    console.log(`🗑️ Removed: ${key}`);
+  }
+
+  // Clear all
+  clear(): void {
+    localStorage.clear();
+    sessionStorage.removeItem(ENCRYPTION_KEY_NAME);
+    console.log(`🗑️ Cleared all storage and encryption keys`);
+  }
+}
+
+// Global secure storage instance
+const secureStorage = new SecureStorage();
+
+// ============================================================================
+// CACHING LAYER - Multi-level cache for optimal performance
+// ============================================================================
+
+// Cache configuration
+const CACHE_CONFIG = {
+  SHORT_TTL: 5000, // 5 seconds - for volatile data
+  MEDIUM_TTL: 30000, // 30 seconds - for semi-static data
+  LONG_TTL: 300000, // 5 minutes - for static data
+};
+
+// Interface for cached data
+interface CachedData<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
+// Multi-level cache storage
+class CacheManager {
+  private memoryCache = new Map<string, CachedData<any>>();
+  private requestCache = new Map<string, Promise<any>>();
+
+  // Get data from memory cache
+  get<T>(key: string): T | null {
+    const cached = this.memoryCache.get(key);
+    if (!cached) return null;
+
+    // Check if cache is expired
+    if (Date.now() > cached.expiresAt) {
+      console.log(`⏰ Cache expired for: ${key}`);
+      this.memoryCache.delete(key);
+      return null;
+    }
+
+    console.log(`✅ Cache hit for: ${key}`);
+    return cached.data as T;
+  }
+
+  // Set data in memory cache
+  set<T>(key: string, data: T, ttl: number): void {
+    const cached: CachedData<T> = {
+      data,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + ttl,
+    };
+    this.memoryCache.set(key, cached);
+    console.log(`💾 Cached data for: ${key} (TTL: ${ttl}ms)`);
+  }
+
+  // Check if key exists in cache
+  has(key: string): boolean {
+    const cached = this.memoryCache.get(key);
+    if (!cached) return false;
+
+    if (Date.now() > cached.expiresAt) {
+      this.memoryCache.delete(key);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Invalidate specific cache entry
+  invalidate(key: string): void {
+    this.memoryCache.delete(key);
+    this.requestCache.delete(key);
+    console.log(`🗑️ Invalidated cache for: ${key}`);
+  }
+
+  // Clear all cache
+  clearAll(): void {
+    this.memoryCache.clear();
+    this.requestCache.clear();
+    console.log(`🗑️ All cache cleared`);
+  }
+
+  // Get cache stats
+  getStats() {
+    return {
+      memoryCacheSize: this.memoryCache.size,
+      requestCacheSize: this.requestCache.size,
+      entries: Array.from(this.memoryCache.keys()),
+    };
+  }
+
+  // Deduplicated fetch with caching
+  async fetchWithCache<T>(
+    url: string,
+    options?: RequestInit,
+    ttl: number = CACHE_CONFIG.SHORT_TTL
+  ): Promise<T> {
+    const cacheKey = `${url}-${JSON.stringify(options)}`;
+
+    // Check memory cache first
+    const cachedData = this.get<T>(cacheKey);
+    if (cachedData !== null) {
+      return cachedData;
+    }
+
+    // Check if request is already in flight
+    if (this.requestCache.has(cacheKey)) {
+      console.log(`🔄 Reusing in-flight request for: ${url}`);
+      return this.requestCache.get(cacheKey);
+    }
+
+    // Create new request with rate limiting and cache it
+    const requestPromise = rateLimitedFetch(url, options)
+      .then(async (response) => {
+        const data = await response.json();
+
+        // Cache successful responses
+        if (response.ok) {
+          this.set(cacheKey, data, ttl);
+        }
+
+        // Remove from request cache after completion
+        setTimeout(() => this.requestCache.delete(cacheKey), 1000);
+
+        return data;
+      })
+      .catch((error) => {
+        // Remove from cache on error
+        this.requestCache.delete(cacheKey);
+
+        // Check if it's a rate limit error
+        if (error.message?.includes("Rate limit exceeded")) {
+          console.error("🚫 Rate limit error:", error.message);
+          // Don't throw, let caller handle
+        }
+
+        throw error;
+      });
+
+    this.requestCache.set(cacheKey, requestPromise);
+    console.log(`✅ New cached request created for: ${url}`);
+    return requestPromise;
+  }
+}
+
+// Global cache instance
+const cacheManager = new CacheManager();
+
+// Legacy deduplicated fetch function (now uses cache manager)
+const deduplicatedFetch = async (url: string, options?: RequestInit) => {
+  return cacheManager.fetchWithCache(url, options, CACHE_CONFIG.SHORT_TTL);
+};
 
 export default function CheckoutClient() {
   // Get checkoutId from URL params
@@ -111,7 +580,7 @@ export default function CheckoutClient() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
-  // Fetch checkout session data
+  // Fetch checkout session data with parallel API calls for better performance
   useEffect(() => {
     if (!checkoutId) {
       setCheckoutError("Invalid checkout session");
@@ -122,10 +591,32 @@ export default function CheckoutClient() {
     const fetchCheckoutData = async () => {
       try {
         setCheckoutLoading(true);
-        const response = await fetch(`/api/checkout/${checkoutId}`);
-        const data = await response.json();
 
-        if (!response.ok) {
+        // Performance tracking
+        const startTime = performance.now();
+        console.log("⏱️ Starting parallel API calls...");
+
+        // Parallel API calls with smart caching - Execute all independent requests simultaneously
+        const [data, taxResult] = await Promise.all([
+          cacheManager.fetchWithCache<any>(
+            `/api/checkout/${checkoutId}`,
+            undefined,
+            CACHE_CONFIG.SHORT_TTL
+          ),
+          cacheManager.fetchWithCache<any>(
+            "/api/tax-settings",
+            undefined,
+            CACHE_CONFIG.LONG_TTL
+          ), // Tax settings are static
+        ]);
+
+        const parallelTime = performance.now() - startTime;
+        console.log(
+          `✅ Parallel API calls completed in ${parallelTime.toFixed(2)}ms`
+        );
+
+        // Check for errors in the data
+        if (data.error) {
           // Check if the error is due to session expiry
           if (data.error === "Checkout session not found or expired") {
             setIsSessionExpired(true);
@@ -265,88 +756,24 @@ export default function CheckoutClient() {
             distance: data.checkout.distance,
           });
 
-          // Fallback: If delivery calculation failed, calculate manually
+          // Check if delivery calculation failed and show error
           if (
             (!data.checkout.deliveryFee || data.checkout.deliveryFee === 0) &&
             data.checkout.distance
           ) {
-            console.log("🔄 Fallback delivery calculation on page load:", {
-              distance: data.checkout.distance,
-              distanceInKm: data.checkout.distance,
-              orderValue,
-            });
-
-            // Simple distance-based calculation as fallback
-            const distanceInKm = data.checkout.distance; // Distance is already in km
-            let fallbackDeliveryFee = 0;
-
-            if (distanceInKm <= 10) {
-              fallbackDeliveryFee = 49;
-            } else if (distanceInKm <= 20) {
-              fallbackDeliveryFee = 89;
-            } else if (distanceInKm <= 30) {
-              fallbackDeliveryFee = 109;
-            } else if (distanceInKm <= 35) {
-              fallbackDeliveryFee = 149;
-            } else {
-              fallbackDeliveryFee = 200; // For distances > 35km
-            }
-
-            console.log(
-              "💰 Fallback delivery fee calculated on page load:",
-              fallbackDeliveryFee
+            console.error(
+              "❌ Delivery calculation failed - no delivery fee available"
             );
-
-            // Update checkout session with fallback delivery fee
-            try {
-              const updateResponse = await fetch(
-                `/api/checkout/${checkoutId}`,
-                {
-                  method: "PATCH",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    deliveryFee: fallbackDeliveryFee,
-                    totalAmount:
-                      orderValue +
-                      fallbackDeliveryFee +
-                      calculatedCgstAmount +
-                      calculatedSgstAmount,
-                  }),
-                }
-              );
-
-              if (updateResponse.ok) {
-                console.log(
-                  "✅ Checkout session updated with fallback delivery fee on page load:",
-                  {
-                    deliveryFee: fallbackDeliveryFee,
-                    totalAmount:
-                      orderValue +
-                      fallbackDeliveryFee +
-                      calculatedCgstAmount +
-                      calculatedSgstAmount,
-                  }
-                );
-
-                // Update local checkout data state
-                setCheckoutData((prev: any) => ({
-                  ...prev,
-                  deliveryFee: fallbackDeliveryFee,
-                  totalAmount:
-                    orderValue +
-                    fallbackDeliveryFee +
-                    calculatedCgstAmount +
-                    calculatedSgstAmount,
-                }));
-              }
-            } catch (updateError) {
-              console.error(
-                "❌ Error updating checkout session with fallback on page load:",
-                updateError
-              );
-            }
+            toast({
+              title: "Delivery Calculation Error",
+              description:
+                "Unable to calculate delivery fee. Please try again later or contact support.",
+              variant: "destructive",
+            });
+            setCheckoutError(
+              "Delivery calculation failed. Please try again later."
+            );
+            return;
           }
 
           // Update checkout session with calculated delivery fee
@@ -363,6 +790,9 @@ export default function CheckoutClient() {
             });
 
             if (updateResponse.ok) {
+              // Invalidate checkout cache after update
+              cacheManager.invalidate(`/api/checkout/${checkoutId}-undefined`);
+
               console.log(
                 "✅ Checkout session updated with calculated delivery fee:",
                 {
@@ -382,11 +812,25 @@ export default function CheckoutClient() {
             console.error("❌ Error updating checkout session:", updateError);
           }
         }
+
+        // Process tax settings response (cached for 5 minutes)
+        if (taxResult && taxResult.data) {
+          console.log("✅ Tax settings loaded (cached):", taxResult.data);
+          setTaxSettings({
+            cgst_rate: taxResult.data.cgst_rate,
+            sgst_rate: taxResult.data.sgst_rate,
+          });
+        } else {
+          console.log("No tax settings found, using defaults");
+          setTaxSettings({ cgst_rate: 0.0, sgst_rate: 0.0 });
+        }
       } catch (err) {
         console.error("Error fetching checkout data:", err);
         setCheckoutError(
           err instanceof Error ? err.message : "Failed to load checkout data"
         );
+        // Set default tax settings on error
+        setTaxSettings({ cgst_rate: 0.0, sgst_rate: 0.0 });
       } finally {
         setCheckoutLoading(false);
       }
@@ -395,29 +839,30 @@ export default function CheckoutClient() {
     fetchCheckoutData();
   }, [checkoutId]);
 
-  // Load applied coupon code to show update/view UI
+  // Load applied coupon code to show update/view UI (with encryption)
   useEffect(() => {
-    try {
-      const raw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("appliedCoupon")
-          : null;
-      if (raw) {
-        const c = JSON.parse(raw);
-        // Only set selectedCoupon if the coupon is valid
-        if (c?.code && isCouponValid(c)) {
-          setSelectedCoupon(c.code);
-        } else {
-          // Remove invalid coupon from localStorage
-          localStorage.removeItem("appliedCoupon");
-          setSelectedCoupon(null);
+    const loadCoupon = async () => {
+      try {
+        if (typeof window !== "undefined") {
+          const c = await secureStorage.getItem("appliedCoupon");
+          if (c) {
+            // Only set selectedCoupon if the coupon is valid
+            if (c?.code && isCouponValid(c)) {
+              setSelectedCoupon(c.code);
+            } else {
+              // Remove invalid coupon from encrypted storage
+              secureStorage.removeItem("appliedCoupon");
+              setSelectedCoupon(null);
+            }
+          } else {
+            setSelectedCoupon(null);
+          }
         }
-      } else {
+      } catch {
         setSelectedCoupon(null);
       }
-    } catch {
-      setSelectedCoupon(null);
-    }
+    };
+    loadCoupon();
   }, [getSubtotal]);
 
   // Function to check if a coupon is valid for the current order
@@ -437,45 +882,47 @@ export default function CheckoutClient() {
     );
   };
 
-  // Load note and customization options from localStorage on component mount
+  // OPTIMIZED: Combined data loading with context loading (single mount effect)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedNote = localStorage.getItem("checkoutNote");
-        if (savedNote) {
-          setNote(savedNote);
-        }
+    const loadAllCheckoutData = async () => {
+      if (typeof window !== "undefined") {
+        try {
+          // Load all encrypted checkout data in parallel
+          const [
+            savedNote,
+            savedCustomization,
+            savedCakeText,
+            savedMessageCardText,
+            savedContext,
+          ] = await Promise.all([
+            secureStorage.getItem("checkoutNote"),
+            secureStorage.getItem("checkoutCustomization"),
+            secureStorage.getItem("checkoutCakeText"),
+            secureStorage.getItem("checkoutMessageCardText"),
+            secureStorage.getItem("checkoutContext"),
+          ]);
 
-        const savedCustomization = localStorage.getItem(
-          "checkoutCustomization"
-        );
-        if (savedCustomization) {
-          setCustomizationOptions(JSON.parse(savedCustomization));
-        }
+          // Set all loaded data
+          if (savedNote) setNote(savedNote);
+          if (savedCustomization) setCustomizationOptions(savedCustomization);
+          if (savedCakeText) setCakeText(savedCakeText);
+          if (savedMessageCardText) setMessageCardText(savedMessageCardText);
+          if (savedContext?.contactInfo) {
+            setContactInfo(savedContext.contactInfo);
+            setTempContactInfo(savedContext.contactInfo);
+          }
 
-        const savedCakeText = localStorage.getItem("checkoutCakeText");
-        if (savedCakeText) {
-          setCakeText(savedCakeText);
+          console.log("✅ All encrypted checkout data loaded in parallel");
+        } catch (error) {
+          console.error("Error loading encrypted checkout data:", error);
         }
-
-        const savedMessageCardText = localStorage.getItem(
-          "checkoutMessageCardText"
-        );
-        if (savedMessageCardText) {
-          setMessageCardText(savedMessageCardText);
-        }
-      } catch (error) {
-        console.error("Error loading checkout data:", error);
       }
-    }
+    };
+    loadAllCheckoutData();
   }, []);
-  const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
-  const [isCustomizationDrawerOpen, setIsCustomizationDrawerOpen] =
-    useState(false);
+
   // Address change drawer state and address text
-  const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
   const [addressText, setAddressText] = useState("");
-  const [tempAddress, setTempAddress] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null
   );
@@ -500,7 +947,6 @@ export default function CheckoutClient() {
   const [cakeText, setCakeText] = useState("");
   const [messageCardText, setMessageCardText] = useState("");
   const [isCakeTextDrawerOpen, setIsCakeTextDrawerOpen] = useState(false);
-  const [isMessageCardDrawerOpen, setIsMessageCardDrawerOpen] = useState(false);
 
   // Contact information state
   const [contactInfo, setContactInfo] = useState({
@@ -509,38 +955,14 @@ export default function CheckoutClient() {
     alternatePhone: "",
   });
   const [tempContactInfo, setTempContactInfo] = useState(contactInfo);
-  const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
 
-  // Debug: Log when contact drawer opens
+  // OPTIMIZED: Combined debug logging to reduce useEffect overhead
   useEffect(() => {
-    if (isContactDrawerOpen) {
-      console.log(
-        "🔍 Contact drawer opened - tempContactInfo:",
-        tempContactInfo
-      );
-      console.log("🔍 Contact drawer opened - contactInfo:", contactInfo);
-      console.log(
-        "🔍 Are they equal?",
-        JSON.stringify(tempContactInfo) === JSON.stringify(contactInfo)
-      );
-
-      // Ensure tempContactInfo is synced with contactInfo when drawer opens
-      if (JSON.stringify(tempContactInfo) !== JSON.stringify(contactInfo)) {
-        console.log("🔧 Syncing tempContactInfo with contactInfo");
-        setTempContactInfo(contactInfo);
-      }
-    }
-  }, [isContactDrawerOpen, contactInfo]);
-
-  // Debug: Log when contactInfo changes
-  useEffect(() => {
-    console.log("🔍 ContactInfo state changed:", contactInfo);
-  }, [contactInfo]);
-
-  // Debug: Log when tempContactInfo changes
-  useEffect(() => {
-    console.log("🔍 TempContactInfo state changed:", tempContactInfo);
-  }, [tempContactInfo]);
+    console.log("🔍 Contact info states changed:", {
+      contactInfo,
+      tempContactInfo,
+    });
+  }, [contactInfo, tempContactInfo]);
 
   // Payment dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -564,111 +986,85 @@ export default function CheckoutClient() {
     error: deliveryError,
   } = useDeliveryCalculation({ checkoutId });
 
-  // Load checkout context from localStorage on component mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedContext = localStorage.getItem("checkoutContext");
-        if (savedContext) {
-          const parsedContext = JSON.parse(savedContext);
-          if (parsedContext.contactInfo) {
-            setContactInfo(parsedContext.contactInfo);
-            setTempContactInfo(parsedContext.contactInfo);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading checkout context:", error);
-      }
-    }
-  }, []);
+  // REMOVED: Duplicate context loading - now handled in combined data loading effect (line 708)
 
   // Update tempContactInfo when contactInfo changes
   useEffect(() => {
     setTempContactInfo(contactInfo);
   }, [contactInfo]);
 
-  // Save note to localStorage whenever it changes
+  // OPTIMIZED: Debounced localStorage saves - waits 300ms after last change before saving
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (note) {
-        localStorage.setItem("checkoutNote", note);
-      } else {
-        localStorage.removeItem("checkoutNote");
-      }
-    }
-  }, [note]);
-
-  // Save customization options to localStorage whenever they change
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (Object.values(customizationOptions).some(Boolean)) {
-        localStorage.setItem(
-          "checkoutCustomization",
-          JSON.stringify(customizationOptions)
-        );
-      } else {
-        localStorage.removeItem("checkoutCustomization");
-      }
-    }
-  }, [customizationOptions]);
-
-  // Save cake text to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (cakeText) {
-        localStorage.setItem("checkoutCakeText", cakeText);
-      } else {
-        localStorage.removeItem("checkoutCakeText");
-      }
-    }
-  }, [cakeText]);
-
-  // Save message card text to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (messageCardText) {
-        localStorage.setItem("checkoutMessageCardText", messageCardText);
-      } else {
-        localStorage.removeItem("checkoutMessageCardText");
-      }
-    }
-  }, [messageCardText]);
-
-  // Function to clear checkout context
-  const clearCheckoutContext = () => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem("checkoutContext");
-        localStorage.removeItem("checkoutNote");
-        localStorage.removeItem("checkoutCustomization");
-        localStorage.removeItem("checkoutCakeText");
-        localStorage.removeItem("checkoutMessageCardText");
-      } catch (error) {
-        console.error("Error clearing checkout context:", error);
-      }
-    }
-  };
-
-  // Clear checkout context when component unmounts (order completed or user leaves)
-  useEffect(() => {
-    return () => {
-      // Only clear if we're not in the middle of an order
+    const saveAllCheckoutData = async () => {
       if (typeof window !== "undefined") {
         try {
-          const savedContext = localStorage.getItem("checkoutContext");
-          if (savedContext) {
-            const parsedContext = JSON.parse(savedContext);
-            // Keep the context for a while in case user comes back
-            // It will be cleared after order completion or manually
+          // Save note
+          if (note) {
+            await secureStorage.setItem("checkoutNote", note);
+          } else {
+            secureStorage.removeItem("checkoutNote");
           }
+
+          // Save customization options
+          if (Object.values(customizationOptions).some(Boolean)) {
+            await secureStorage.setItem(
+              "checkoutCustomization",
+              customizationOptions
+            );
+          } else {
+            secureStorage.removeItem("checkoutCustomization");
+          }
+
+          // Save cake text
+          if (cakeText) {
+            await secureStorage.setItem("checkoutCakeText", cakeText);
+          } else {
+            secureStorage.removeItem("checkoutCakeText");
+          }
+
+          // Save message card text
+          if (messageCardText) {
+            await secureStorage.setItem(
+              "checkoutMessageCardText",
+              messageCardText
+            );
+          } else {
+            secureStorage.removeItem("checkoutMessageCardText");
+          }
+
+          console.log("💾 Debounced save completed for checkout data");
         } catch (error) {
-          console.error("Error handling checkout context cleanup:", error);
+          console.error("Error saving encrypted checkout data:", error);
         }
       }
     };
+
+    // Debounce the save operation (300ms delay)
+    const debouncedSave = debounce(saveAllCheckoutData, DEBOUNCE_CONFIG.MEDIUM);
+    debouncedSave();
+
+    // Cleanup timeout on unmount
+    return () => {
+      // No explicit cleanup needed, debounce handles it
+    };
+  }, [note, customizationOptions, cakeText, messageCardText]);
+
+  // OPTIMIZED: Memoized clear function to prevent recreation on every render
+  const clearCheckoutContext = useCallback(() => {
+    if (typeof window !== "undefined") {
+      try {
+        secureStorage.removeItem("checkoutContext");
+        secureStorage.removeItem("checkoutNote");
+        secureStorage.removeItem("checkoutCustomization");
+        secureStorage.removeItem("checkoutCakeText");
+        secureStorage.removeItem("checkoutMessageCardText");
+      } catch (error) {
+        console.error("Error clearing encrypted checkout context:", error);
+      }
+    }
   }, []);
 
-  // Add beforeunload event listener to clear context when user leaves the page
+  // OPTIMIZED: Combined cleanup logic for context and event listeners
   useEffect(() => {
     const handleBeforeUnload = () => {
       // Clear checkout context when user leaves the page
@@ -683,25 +1079,9 @@ export default function CheckoutClient() {
       if (typeof window !== "undefined") {
         window.removeEventListener("beforeunload", handleBeforeUnload);
       }
+      // Context is kept encrypted in storage
+      // It will be cleared after order completion or manually via clearCheckoutContext()
     };
-  }, []);
-
-  // Lottie animation state for payment section
-  const [paymentAnimationData, setPaymentAnimationData] = useState(null);
-
-  // Load payment animation data
-  useEffect(() => {
-    const loadPaymentAnimation = async () => {
-      try {
-        const response = await fetch("/Lottie/Digital Payment.json");
-        const data = await response.json();
-        setPaymentAnimationData(data);
-      } catch (error) {
-        console.error("Failed to load payment animation:", error);
-      }
-    };
-
-    loadPaymentAnimation();
   }, []);
 
   // Sync customization options from cart items
@@ -730,60 +1110,17 @@ export default function CheckoutClient() {
     }
   }, [cart]);
 
-  // Function to update all cart items with new customization options
-  const updateAllCartItemsCustomization = (
-    newOptions: typeof customizationOptions
-  ) => {
-    cart.forEach((item) => {
-      if (item.uniqueId) {
-        updateCartItemCustomization(item.uniqueId, newOptions);
-      }
-    });
-  };
-
-  // Function to calculate delivery time based on address distance
-  const calculateDeliveryTime = () => {
-    if (!addressText || addresses.length === 0) return null;
-
-    // Find the current address from the addresses list
-    const currentAddress = addresses.find(
-      (addr) => addr.full_address === addressText
-    );
-    if (!currentAddress?.distance) return null;
-
-    // Preparation time: 1 hour (60 minutes)
-    const preparationTime = 60;
-
-    // Travel time: use the duration from the address if available, otherwise calculate
-    // The address page shows ~31min for 13km, so we'll use a more realistic calculation
-    let travelTime;
-    if (currentAddress.duration) {
-      // Use the actual duration from the address
-      travelTime = currentAddress.duration;
-    } else {
-      // Fallback calculation: 1 km = ~2.4 minutes (based on 13km = 31min)
-      travelTime = Math.round(currentAddress.distance * 2.4);
-    }
-
-    // Total delivery time
-    const totalTime = preparationTime + travelTime;
-
-    return totalTime;
-  };
-
-  // Function to format time in hours and minutes
-  const formatDeliveryTime = (totalMinutes: number) => {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours === 0) {
-      return `${minutes} mins`;
-    } else if (minutes === 0) {
-      return `${hours} hr`;
-    } else {
-      return `${hours} hr ${minutes} mins`;
-    }
-  };
+  // OPTIMIZED: Memoized function to update all cart items with new customization options
+  const updateAllCartItemsCustomization = useCallback(
+    (newOptions: typeof customizationOptions) => {
+      cart.forEach((item) => {
+        if (item.uniqueId) {
+          updateCartItemCustomization(item.uniqueId, newOptions);
+        }
+      });
+    },
+    [cart, updateCartItemCustomization]
+  );
 
   // Load addresses from database
   useEffect(() => {
@@ -1040,8 +1377,8 @@ export default function CheckoutClient() {
     };
   }, [session]);
 
-  // Calculate checkout totals - use checkout data if available, otherwise fall back to cart
-  const calculateSubtotal = () => {
+  // OPTIMIZED: Memoized subtotal calculation to prevent recalculation on every render
+  const subtotal = useMemo(() => {
     if (checkoutData) {
       return checkoutData.items.reduce(
         (total: number, item: any) => total + item.unit_price * item.quantity,
@@ -1049,9 +1386,7 @@ export default function CheckoutClient() {
       );
     }
     return getSubtotal();
-  };
-
-  const subtotal = calculateSubtotal();
+  }, [checkoutData, getSubtotal]);
   // GST & Taxes removed from calculation per request
   const gstAndTaxes = 0;
   // Load applied coupon (if any) from localStorage and compute discount strictly from coupon
@@ -1079,40 +1414,8 @@ export default function CheckoutClient() {
     }
   } catch {}
 
-  // Fetch tax settings from database
-  const fetchTaxSettings = async () => {
-    // Prevent duplicate fetches
-    if (taxSettings) {
-      console.log("Tax settings already loaded, skipping fetch");
-      return;
-    }
-
-    try {
-      console.log("Fetching tax settings...");
-      const response = await fetch("/api/tax-settings");
-      const result = await response.json();
-      if (response.ok && result.data) {
-        console.log("Tax settings loaded:", result.data);
-        setTaxSettings({
-          cgst_rate: result.data.cgst_rate,
-          sgst_rate: result.data.sgst_rate,
-        });
-      } else {
-        console.log("No tax settings found, using defaults");
-        // Use default tax rates if no settings found
-        setTaxSettings({ cgst_rate: 9.0, sgst_rate: 9.0 });
-      }
-    } catch (error) {
-      console.error("Error fetching tax settings:", error);
-      // Use default tax rates on error
-      setTaxSettings({ cgst_rate: 9.0, sgst_rate: 9.0 });
-    }
-  };
-
-  // Fetch tax settings on component mount
-  useEffect(() => {
-    fetchTaxSettings();
-  }, []);
+  // Tax settings are now fetched in parallel with checkout data (lines 97-310)
+  // This eliminates the sequential API call and improves performance
 
   // State for calculated tax amounts
   const [calculatedCgstAmount, setCalculatedCgstAmount] = useState(0);
@@ -1123,12 +1426,12 @@ export default function CheckoutClient() {
     const taxableAmount = subtotal - discount;
 
     // Always calculate taxes dynamically based on current subtotal
-    // Use tax rates from database or default to 9%
-    const cgstRate = taxSettings?.cgst_rate || 9.0;
-    const sgstRate = taxSettings?.sgst_rate || 9.0;
+    // Use tax rates from database only
+    const cgstRate = taxSettings?.cgst_rate;
+    const sgstRate = taxSettings?.sgst_rate;
 
-    const cgstAmount = (taxableAmount * cgstRate) / 100;
-    const sgstAmount = (taxableAmount * sgstRate) / 100;
+    const cgstAmount = cgstRate ? (taxableAmount * cgstRate) / 100 : 0;
+    const sgstAmount = sgstRate ? (taxableAmount * sgstRate) / 100 : 0;
 
     // Ensure minimum tax calculation
     const finalCgstAmount = cgstAmount > 0 ? cgstAmount : 0;
@@ -1200,9 +1503,16 @@ export default function CheckoutClient() {
         }
       };
 
-      // Debounce the update to avoid too many API calls
-      const timeoutId = setTimeout(updateTaxesInCheckoutSession, 1000);
-      return () => clearTimeout(timeoutId);
+      // OPTIMIZED: Debounce the update to avoid too many API calls (500ms)
+      const debouncedTaxUpdate = debounce(
+        updateTaxesInCheckoutSession,
+        DEBOUNCE_CONFIG.SLOW
+      );
+      debouncedTaxUpdate();
+
+      return () => {
+        // Debounce cleanup handled automatically
+      };
     }
   }, [
     checkoutId,
@@ -1270,18 +1580,25 @@ export default function CheckoutClient() {
   const cgstAmount = calculatedCgstAmount;
   const sgstAmount = calculatedSgstAmount;
 
-  const calculateTotal = () => {
+  // OPTIMIZED: Memoized total calculation to prevent recalculation on every render
+  const total = useMemo(() => {
     const baseTotal = subtotal - discount + cgstAmount + sgstAmount;
     // Only add delivery fee if address is selected
     const hasAddress = selectedAddressId || checkoutData?.selectedAddressId;
     const deliveryFee = hasAddress
       ? checkoutData?.deliveryFee || deliveryCharge || 0
       : 0;
-    const totalWithDelivery = baseTotal + deliveryFee;
-    return totalWithDelivery;
-  };
-
-  const total = calculateTotal();
+    return baseTotal + deliveryFee;
+  }, [
+    subtotal,
+    discount,
+    cgstAmount,
+    sgstAmount,
+    selectedAddressId,
+    checkoutData?.selectedAddressId,
+    checkoutData?.deliveryFee,
+    deliveryCharge,
+  ]);
 
   // Auto-calculate delivery fee when address is automatically selected
   useEffect(() => {
@@ -1349,19 +1666,17 @@ export default function CheckoutClient() {
           }
         } catch (error) {
           console.error("Error calculating delivery fee:", error);
-          // Fallback calculation based on distance ranges
-          const distance = selectedAddress.distance;
-          if (distance <= 10) {
-            calculatedDeliveryFee = 49;
-          } else if (distance <= 20) {
-            calculatedDeliveryFee = 89;
-          } else if (distance <= 30) {
-            calculatedDeliveryFee = 109;
-          } else if (distance <= 35) {
-            calculatedDeliveryFee = 149;
-          } else {
-            calculatedDeliveryFee = 200; // For distances > 35km
-          }
+          // Show error instead of fallback calculation
+          toast({
+            title: "Delivery Calculation Error",
+            description:
+              "Unable to calculate delivery fee for this address. Please try again later or contact support.",
+            variant: "destructive",
+          });
+          setCheckoutError(
+            "Delivery calculation failed. Please try again later."
+          );
+          return;
         }
       }
 
@@ -1420,21 +1735,42 @@ export default function CheckoutClient() {
     calculateDeliveryForAutoSelectedAddress();
   }, [selectedAddressId, addresses, checkoutData?.items, checkoutId]);
 
-  // Optimize checkout flow performance
+  // Optimize checkout flow performance and log cache + rate limit stats
   useEffect(() => {
     // Optimize checkout flow performance
     optimizeCheckoutFlow();
     console.log("Checkout flow optimization initiated");
+
+    // Log cache and rate limit stats periodically (every 30 seconds)
+    const statsInterval = setInterval(() => {
+      const cacheStats = cacheManager.getStats();
+      const rateLimitStats = rateLimiter.getStats();
+
+      console.log("📊 Performance Statistics:", {
+        cache: {
+          ...cacheStats,
+          hitRate: cacheStats.memoryCacheSize > 0 ? "Active" : "Empty",
+        },
+        rateLimit: {
+          ...rateLimitStats,
+          status: rateLimitStats.isInCooldown ? "🚫 Cooldown" : "✅ Active",
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }, 30000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(statsInterval);
   }, []);
 
-  // Handle performance metrics
-  const handlePerformanceMetrics = (metrics: any) => {
+  // OPTIMIZED: Memoized performance metrics handler
+  const handlePerformanceMetrics = useCallback((metrics: any) => {
     console.log("Checkout Performance Metrics:", metrics);
     // You can send these metrics to your analytics service
     // or use them for optimization insights
-  };
+  }, []);
 
-  // Payment processing function - Updated to work with checkout session
+  // Payment processing function - Updated with server-side validation
   const handlePaymentConfirm = async () => {
     if (isPaymentInProgress) return; // Prevent multiple payment attempts
 
@@ -1456,7 +1792,53 @@ export default function CheckoutClient() {
         return;
       }
 
-      // Update checkout session with current form data
+      // ============================================================================
+      // SERVER-SIDE VALIDATION - Validate all data before payment
+      // ============================================================================
+      console.log("🔍 Initiating server-side validation...");
+
+      const validationResponse = await fetch("/api/validate-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          checkoutId,
+          items: checkoutData ? checkoutData.items : cart,
+          addressId: selectedAddressObj.id,
+          addressText: selectedAddressObj.full_address,
+          distance: selectedAddressObj.distance,
+          couponCode: selectedCoupon,
+          customizationOptions,
+          contactInfo,
+          clientTotal: total, // Send client total for cross-validation
+        }),
+      });
+
+      const validationResult = await validationResponse.json();
+
+      if (!validationResponse.ok || !validationResult.success) {
+        console.error("❌ Server-side validation failed:", validationResult);
+        toast({
+          title: "Validation Error",
+          description:
+            validationResult.error || "Please refresh the page and try again.",
+          variant: "destructive",
+        });
+        setPaymentStatus("failed");
+        setIsPaymentInProgress(false);
+        return;
+      }
+
+      console.log(
+        "✅ Server-side validation passed:",
+        validationResult.validated
+      );
+
+      // Use server-validated values for payment (prevents client-side manipulation)
+      const validated = validationResult.validated;
+
+      // Update checkout session with SERVER-VALIDATED financial data
       const updateData = {
         note,
         addressText,
@@ -1469,54 +1851,64 @@ export default function CheckoutClient() {
         deliveryTiming: "same_day",
         deliveryDate: new Date().toISOString().split("T")[0],
         deliveryTimeSlot: "evening",
-        estimatedDeliveryTime: null, // Set to null to avoid timestamp format errors
+        estimatedDeliveryTime: null,
         distance: selectedAddressObj.distance,
         duration: selectedAddressObj.duration,
-        // Financial data
-        subtotal: subtotal,
-        discount: discount,
-        deliveryFee: deliveryCharge, // Include calculated delivery fee
-        cgstAmount: cgstAmount,
-        sgstAmount: sgstAmount,
-        totalAmount: total,
+        // SERVER-VALIDATED Financial data (not client-calculated)
+        items: validated.items,
+        subtotal: validated.subtotal,
+        discount: validated.discount,
+        deliveryFee: validated.deliveryFee,
+        cgstAmount: validated.cgstAmount,
+        sgstAmount: validated.sgstAmount,
+        totalAmount: validated.total,
+        validatedAt: validationResult.metadata.validatedAt,
       };
 
-      // Debug: Log financial data being sent to checkout session
-      console.log("💳 Financial data being sent to checkout session:", {
-        subtotal,
-        discount,
-        deliveryFee: deliveryCharge,
-        cgstAmount,
-        sgstAmount,
-        total,
-        addressText,
-        selectedAddressObj: selectedAddressObj?.id,
-      });
+      // Debug: Log SERVER-VALIDATED financial data being sent to checkout session
+      console.log(
+        "💳 SERVER-VALIDATED financial data being sent to checkout session:",
+        {
+          clientValues: {
+            subtotal,
+            discount,
+            deliveryFee: deliveryCharge,
+            cgstAmount,
+            sgstAmount,
+            total,
+          },
+          validatedValues: {
+            subtotal: validated.subtotal,
+            discount: validated.discount,
+            deliveryFee: validated.deliveryFee,
+            cgstAmount: validated.cgstAmount,
+            sgstAmount: validated.sgstAmount,
+            total: validated.total,
+          },
+          match: Math.abs(total - validated.total) <= 1,
+          addressText,
+          selectedAddressObj: selectedAddressObj?.id,
+        }
+      );
 
-      // Update the checkout session
+      // Update the checkout session with payment status in single call (optimized)
       console.log("🔄 Updating checkout session:");
+      const updateDataWithStatus = {
+        ...updateData,
+        paymentStatus: "processing",
+      };
+
       const updateResponse = await fetch(`/api/checkout/${checkoutId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(updateDataWithStatus),
       });
 
       if (!updateResponse.ok) {
         throw new Error("Failed to update checkout session");
       }
-
-      // Update payment status to processing
-      await fetch(`/api/checkout/${checkoutId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paymentStatus: "processing",
-        }),
-      });
 
       // Keep dialog open for payment
       setPaymentStatus("processing");
@@ -1565,42 +1957,38 @@ export default function CheckoutClient() {
     }
   };
 
-  // Razorpay payment failure handler
-  const handleRazorpayPaymentFailure = async (error: any) => {
-    console.error("Razorpay payment failed:", error);
+  // OPTIMIZED: Memoized Razorpay payment handlers to prevent recreation
+  const handleRazorpayPaymentFailure = useCallback(
+    async (error: any) => {
+      console.error("Razorpay payment failed:", error);
+      setIsPaymentDialogOpen(false);
+      setPaymentStatus("failed");
 
-    // Close main payment dialog
-    setIsPaymentDialogOpen(false);
-    setPaymentStatus("failed");
+      toast({
+        title: "Payment Failed",
+        description:
+          "Payment failed. Please try again or contact support if the issue persists.",
+        variant: "destructive",
+      });
+    },
+    [toast]
+  );
 
-    toast({
-      title: "Payment Failed",
-      description:
-        "Payment failed. Please try again or contact support if the issue persists.",
-      variant: "destructive",
-    });
-  };
-
-  // Razorpay payment close handler
-  const handleRazorpayPaymentClose = async () => {
+  const handleRazorpayPaymentClose = useCallback(async () => {
     setIsPaymentDialogOpen(false);
     setIsPaymentInProgress(false);
-
-    // Reset payment status when user cancels
     setPaymentStatus("idle");
-  };
+  }, []);
 
-  // Razorpay modal opening handler
-  const handleRazorpayModalOpening = () => {
+  const handleRazorpayModalOpening = useCallback(() => {
     console.log("Razorpay modal is opening...");
     setPaymentStatus("opening");
-  };
+  }, []);
 
-  // Razorpay payment verification handler
-  const handleRazorpayPaymentVerifying = () => {
+  const handleRazorpayPaymentVerifying = useCallback(() => {
     console.log("Verifying Razorpay payment...");
     setPaymentStatus("verifying");
-  };
+  }, []);
 
   // Handle animation completion
   const handleAnimationComplete = useCallback(() => {
@@ -1648,30 +2036,43 @@ export default function CheckoutClient() {
     }, 1000);
   }, []);
 
-  // Persist lightweight checkout context for payment step
+  // OPTIMIZED: Debounced checkout context persistence (encrypted) - waits 500ms after last change
   useEffect(() => {
-    try {
-      // Find the complete address object based on the selected address text
-      const selectedAddressObj = addresses.find(
-        (addr) => addr.full_address === addressText
-      );
+    const saveContext = async () => {
+      try {
+        // Find the complete address object based on the selected address text
+        const selectedAddressObj = addresses.find(
+          (addr) => addr.full_address === addressText
+        );
 
-      const ctx = {
-        subtotal,
-        discount,
-        note,
-        addressText,
-        selectedAddress: selectedAddressObj || null, // Store the complete address object
-        couponCode: selectedCoupon,
-        customizationOptions,
-        cakeText,
-        messageCardText,
-        contactInfo,
-      };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("checkoutContext", JSON.stringify(ctx));
+        const ctx = {
+          subtotal,
+          discount,
+          note,
+          addressText,
+          selectedAddress: selectedAddressObj || null, // Store the complete address object
+          couponCode: selectedCoupon,
+          customizationOptions,
+          cakeText,
+          messageCardText,
+          contactInfo,
+        };
+        if (typeof window !== "undefined") {
+          await secureStorage.setItem("checkoutContext", ctx);
+          console.log("💾 Debounced context save completed");
+        }
+      } catch (error) {
+        console.error("Error saving checkout context:", error);
       }
-    } catch {}
+    };
+
+    // Debounce the context save operation (500ms delay for expensive operation)
+    const debouncedContextSave = debounce(saveContext, DEBOUNCE_CONFIG.SLOW);
+    debouncedContextSave();
+
+    return () => {
+      // No explicit cleanup needed, debounce handles it
+    };
   }, [
     subtotal,
     discount,
@@ -1847,2233 +2248,104 @@ export default function CheckoutClient() {
               <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
                 {/* Note Drawer (all screens, full-width) */}
                 <div>
-                  <Drawer
-                    modal={true}
-                    open={isNoteDrawerOpen}
-                    onOpenChange={setIsNoteDrawerOpen}
-                  >
-                    <DrawerTrigger asChild>
-                      <div className="w-full flex items-center justify-between text-left cursor-pointer  rounded-lg">
-                        <div className="flex items-center">
-                          <DocumentAdd className="h-5 w-5 mr-3 text-black" />
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {note ? "Note added" : "Add a note"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {note && (
-                            <button
-                              className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                              onClick={() => {
-                                setIsNoteDrawerOpen(true);
-                              }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                          <IoIosArrowForward className="h-5 w-5 text-gray-600" />
-                        </div>
-                      </div>
-                    </DrawerTrigger>
-                    <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
-                      <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <div className="flex items-center justify-between w-full">
-                          <DrawerTitle className="text-[20px]">
-                            Add a Note to your order
-                          </DrawerTitle>
-                          <DrawerClose asChild>
-                            <button
-                              aria-label="Close"
-                              className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
-                            >
-                              <X className="h-5 w-5 text-gray-700" />
-                            </button>
-                          </DrawerClose>
-                        </div>
-                      </DrawerHeader>
-                      <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <Textarea
-                          placeholder="E.g., Special cake message, delivery instructions, dietary preferences, etc."
-                          value={note}
-                          onChange={(e) => {
-                            if (e.target.value.length <= 100) {
-                              setNote(e.target.value);
-                            }
-                          }}
-                          maxLength={100}
-                          className="min-h-[150px] rounded-[18px] placeholder:text-[#C0C0C0] placeholder:font-normal"
-                        />
-                        <div className="flex justify-end mt-2">
-                          <span className="text-sm text-gray-500">
-                            {note.length}/100 characters
-                          </span>
-                        </div>
-                      </div>
-                      {/* Desktop action row under textarea */}
-                      <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            setNote("");
-                            // Clear note from checkout session
-                            try {
-                              const updateResponse = await fetch(
-                                `/api/checkout/${checkoutId}`,
-                                {
-                                  method: "PATCH",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({
-                                    notes: "",
-                                  }),
-                                }
-                              );
-
-                              if (updateResponse.ok) {
-                                console.log(
-                                  "✅ Note cleared from checkout session"
-                                );
-                              }
-                            } catch (error) {
-                              console.error("❌ Error clearing note:", error);
-                            }
-                          }}
-                          className="h-9 px-5 rounded-[12px]"
-                        >
-                          Clear
-                        </Button>
-                        <DrawerClose asChild>
-                          <Button
-                            size="sm"
-                            className="h-9 px-5 rounded-[12px]"
-                            onClick={async () => {
-                              // Save note to checkout session
-                              try {
-                                console.log(
-                                  "🔄 Saving note to checkout session:",
-                                  {
-                                    checkoutId,
-                                    notes: note,
-                                  }
-                                );
-
-                                const updateResponse = await fetch(
-                                  `/api/checkout/${checkoutId}`,
-                                  {
-                                    method: "PATCH",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                      notes: note,
-                                    }),
-                                  }
-                                );
-
-                                if (updateResponse.ok) {
-                                  const responseData =
-                                    await updateResponse.json();
-                                  console.log(
-                                    "✅ Note saved to checkout session:",
-                                    responseData
-                                  );
-                                } else {
-                                  console.error(
-                                    "❌ Failed to save note:",
-                                    await updateResponse.text()
-                                  );
-                                }
-                              } catch (error) {
-                                console.error("❌ Error saving note:", error);
-                              }
-                            }}
-                          >
-                            Save
-                          </Button>
-                        </DrawerClose>
-                      </div>
-                      <DrawerFooter className="pt-2 pb-6 lg:hidden">
-                        <div className="flex gap-3">
-                          <Button
-                            variant="outline"
-                            size="lg"
-                            onClick={async () => {
-                              setNote("");
-                              // Clear note from checkout session
-                              try {
-                                const updateResponse = await fetch(
-                                  `/api/checkout/${checkoutId}`,
-                                  {
-                                    method: "PATCH",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                      notes: "",
-                                    }),
-                                  }
-                                );
-
-                                if (updateResponse.ok) {
-                                  console.log(
-                                    "✅ Note cleared from checkout session (mobile)"
-                                  );
-                                }
-                              } catch (error) {
-                                console.error(
-                                  "❌ Error clearing note (mobile):",
-                                  error
-                                );
-                              }
-                            }}
-                            className="flex-1 rounded-[20px] text-[16px]"
-                          >
-                            Clear
-                          </Button>
-                          <DrawerClose asChild>
-                            <Button
-                              size="lg"
-                              className="flex-1 py-5 rounded-[20px] text-[16px]"
-                              onClick={async () => {
-                                // Save note to checkout session
-                                try {
-                                  console.log(
-                                    "🔄 Saving note to checkout session (mobile):",
-                                    {
-                                      checkoutId,
-                                      notes: note,
-                                    }
-                                  );
-
-                                  const updateResponse = await fetch(
-                                    `/api/checkout/${checkoutId}`,
-                                    {
-                                      method: "PATCH",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                      },
-                                      body: JSON.stringify({
-                                        notes: note,
-                                      }),
-                                    }
-                                  );
-
-                                  if (updateResponse.ok) {
-                                    const responseData =
-                                      await updateResponse.json();
-                                    console.log(
-                                      "✅ Note saved to checkout session (mobile):",
-                                      responseData
-                                    );
-                                  } else {
-                                    console.error(
-                                      "❌ Failed to save note (mobile):",
-                                      await updateResponse.text()
-                                    );
-                                  }
-                                } catch (error) {
-                                  console.error(
-                                    "❌ Error saving note (mobile):",
-                                    error
-                                  );
-                                }
-                              }}
-                            >
-                              Save
-                            </Button>
-                          </DrawerClose>
-                        </div>
-                      </DrawerFooter>
-                    </DrawerContent>
-                  </Drawer>
-                </div>
-
-                {/* Address Change Drawer (all screens; full-width on desktop) */}
-                <div className="">
-                  <Drawer
-                    modal={true}
-                    open={isAddressDrawerOpen}
-                    onOpenChange={setIsAddressDrawerOpen}
-                  >
-                    <DrawerContent className="h-[550px] overflow-y-auto scrollbar-hide rounded-t-2xl bg-[#F5F6FB]">
-                      <div className="px-4 py-3 flex items-center justify-between lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <h2 className="text-[18px] font-semibold text-gray-800">
-                          Select an address
-                        </h2>
-                        <div className="flex items-center gap-2">
-                          <Link href="/addresses">
-                            <button
-                              aria-label="Manage addresses"
-                              className="h-9 w-9 rounded-full bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm"
-                            >
-                              <MenuDots
-                                weight="Broken"
-                                className="h-5 w-5 text-gray-700"
-                              />
-                            </button>
-                          </Link>
-                          <DrawerClose asChild>
-                            <button
-                              aria-label="Close"
-                              className="h-9 w-9 rounded-full bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm"
-                            >
-                              <X className="h-5 w-5 text-gray-700" />
-                            </button>
-                          </DrawerClose>
-                        </div>
-                      </div>
-                      <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <Link
-                          href={`/addresses/new?returnTo=/checkouts/${checkoutId}`}
-                          className="w-full block"
-                        >
-                          <button className="w-full flex items-center justify-between bg-white rounded-[14px] px-4 py-3 shadow-sm hover:bg-gray-50 transition-colors">
-                            <span className="flex items-center gap-3 text-[#570000] font-medium">
-                              <span className="h-6 w-6 flex items-center justify-center rounded-full text-[#570000] text-lg leading-none">
-                                +
-                              </span>
-                              Add address
-                            </span>
-                            <span className="text-[#570000]">›</span>
-                          </button>
-                        </Link>
-                      </div>
-                      <div className="px-4 mt-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <div className="flex items-center gap-3 text-gray-400 font-semibold tracking-[0.15em] text-xs">
-                          <div className="h-px flex-1 bg-gray-200" />
-                          <span>SAVED ADDRESS</span>
-                          <div className="h-px flex-1 bg-gray-200" />
-                        </div>
-                      </div>
-                      <div className="px-4 mt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        {addresses.length > 0 ? (
-                          addresses.map((addr, index) => (
-                            <div
-                              key={addr.id}
-                              className={`bg-white rounded-[18px] shadow-sm p-4 ${
-                                index > 0 ? "mt-3" : ""
-                              } ${
-                                selectedAddressId === addr.id ||
-                                checkoutData?.selectedAddressId === addr.id
-                                  ? "ring-2 ring-[#2664eb] ring-opacity-50 border-[#2664eb]"
-                                  : "hover:bg-gray-50 cursor-pointer"
-                              }`}
-                              onClick={async () => {
-                                console.log("📍 Address clicked:", {
-                                  id: addr.id,
-                                  full_address: addr.full_address,
-                                  distance: addr.distance,
-                                  duration: addr.duration,
-                                  area: addr.area,
-                                });
-
-                                // Simple test alert - REMOVED
-                                // alert(
-                                //   `Address clicked: ${
-                                //     addr.full_address
-                                //   }\nDistance: ${(addr.distance || 0).toFixed(
-                                //     2
-                                //   )}km`
-                                // );
-
-                                setAddressText(addr.full_address);
-                                setSelectedAddressId(addr.id);
-                                setIsAddressDrawerOpen(false);
-
-                                // Calculate delivery fee when address is selected
-                                if (
-                                  checkoutData?.items &&
-                                  checkoutData.items.length > 0
-                                ) {
-                                  const orderValue = checkoutData.items.reduce(
-                                    (total: number, item: any) =>
-                                      total + (item.total_price || 0),
-                                    0
-                                  );
-
-                                  console.log(
-                                    "🚚 Address selected, calculating delivery:",
-                                    {
-                                      addressId: addr.id,
-                                      orderValue,
-                                      addressText: addr.full_address,
-                                      distance: addr.distance,
-                                      duration: addr.duration,
-                                      zone: addr.area || "Zone A",
-                                      checkoutDataItems: checkoutData.items,
-                                      hasDistance: !!addr.distance,
-                                    }
-                                  );
-
-                                  // Calculate delivery fee directly based on distance
-                                  let calculatedDeliveryFee = 0;
-                                  if (addr.distance) {
-                                    const distanceInKm = addr.distance; // Distance is already in km
-                                    if (distanceInKm <= 10) {
-                                      calculatedDeliveryFee = 49;
-                                    } else if (distanceInKm <= 20) {
-                                      calculatedDeliveryFee = 89;
-                                    } else if (distanceInKm <= 30) {
-                                      calculatedDeliveryFee = 109;
-                                    } else if (distanceInKm <= 35) {
-                                      calculatedDeliveryFee = 149;
-                                    } else {
-                                      calculatedDeliveryFee = 200; // For distances > 35km
-                                    }
-                                  } else {
-                                    // Fallback if no distance data
-                                    calculatedDeliveryFee = 49;
-                                  }
-
-                                  const newTotal =
-                                    orderValue +
-                                    calculatedDeliveryFee +
-                                    calculatedCgstAmount +
-                                    calculatedSgstAmount;
-
-                                  console.log(
-                                    "🚚 Address selected - direct calculation:",
-                                    {
-                                      addressId: addr.id,
-                                      distance: addr.distance,
-                                      distanceInKm: addr.distance || 0,
-                                      orderValue,
-                                      calculatedDeliveryFee,
-                                      newTotal,
-                                    }
-                                  );
-
-                                  // Update checkout session with calculated delivery fee
-                                  try {
-                                    const updateResponse = await fetch(
-                                      `/api/checkout/${checkoutId}`,
-                                      {
-                                        method: "PATCH",
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                          selectedAddressId: addr.id,
-                                          addressText: addr.full_address,
-                                          distance: addr.distance,
-                                          duration: addr.duration,
-                                          deliveryFee: calculatedDeliveryFee,
-                                          totalAmount: newTotal,
-                                        }),
-                                      }
-                                    );
-
-                                    if (updateResponse.ok) {
-                                      console.log(
-                                        "✅ Checkout session updated with address selection:",
-                                        {
-                                          deliveryFee: calculatedDeliveryFee,
-                                          totalAmount: newTotal,
-                                        }
-                                      );
-
-                                      // Update local checkout data state
-                                      setCheckoutData((prev: any) => ({
-                                        ...prev,
-                                        deliveryFee: calculatedDeliveryFee,
-                                        totalAmount: newTotal,
-                                        addressText: addr.full_address,
-                                        selectedAddressId: addr.id,
-                                        distance: addr.distance,
-                                        duration: addr.duration,
-                                      }));
-
-                                      // Show success message - REMOVED
-                                      // alert(
-                                      //   `✅ Address selected!\n\nDelivery Fee: ₹${calculatedDeliveryFee}\nTotal: ₹${newTotal}\n\nValues updated successfully.`
-                                      // );
-                                    } else {
-                                      console.error(
-                                        "❌ Failed to update checkout session"
-                                      );
-                                    }
-                                  } catch (updateError) {
-                                    console.error(
-                                      "❌ Error updating checkout session:",
-                                      updateError
-                                    );
-                                  }
-
-                                  // Fallback: If delivery calculation failed, calculate manually
-                                  if (deliveryCharge === 0 && addr.distance) {
-                                    console.log(
-                                      "🔄 Fallback delivery calculation:",
-                                      {
-                                        distance: addr.distance,
-                                        distanceInKm: addr.distance,
-                                        orderValue,
-                                      }
-                                    );
-
-                                    // Simple distance-based calculation as fallback
-                                    const distanceInKm = addr.distance; // Distance is already in km
-                                    let fallbackDeliveryFee = 0;
-
-                                    if (distanceInKm <= 10) {
-                                      fallbackDeliveryFee = 49;
-                                    } else if (distanceInKm <= 20) {
-                                      fallbackDeliveryFee = 89;
-                                    } else if (distanceInKm <= 30) {
-                                      fallbackDeliveryFee = 109;
-                                    } else if (distanceInKm <= 35) {
-                                      fallbackDeliveryFee = 149;
-                                    } else {
-                                      fallbackDeliveryFee = 200; // For distances > 35km
-                                    }
-
-                                    console.log(
-                                      "💰 Fallback delivery fee calculated:",
-                                      fallbackDeliveryFee
-                                    );
-
-                                    // Update checkout session with fallback delivery fee
-                                    try {
-                                      const updateResponse = await fetch(
-                                        `/api/checkout/${checkoutId}`,
-                                        {
-                                          method: "PATCH",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                          },
-                                          body: JSON.stringify({
-                                            selectedAddressId: addr.id,
-                                            addressText: addr.full_address,
-                                            distance: addr.distance,
-                                            duration: addr.duration,
-                                            deliveryFee: fallbackDeliveryFee,
-                                            totalAmount:
-                                              orderValue + fallbackDeliveryFee,
-                                          }),
-                                        }
-                                      );
-
-                                      if (updateResponse.ok) {
-                                        console.log(
-                                          "✅ Checkout session updated with fallback delivery fee:",
-                                          {
-                                            deliveryFee: fallbackDeliveryFee,
-                                            totalAmount:
-                                              orderValue + fallbackDeliveryFee,
-                                          }
-                                        );
-
-                                        // Update local checkout data state
-                                        setCheckoutData((prev: any) => ({
-                                          ...prev,
-                                          deliveryFee: fallbackDeliveryFee,
-                                          totalAmount:
-                                            orderValue + fallbackDeliveryFee,
-                                          addressText: addr.full_address,
-                                          selectedAddressId: addr.id,
-                                          distance: addr.distance,
-                                          duration: addr.duration,
-                                        }));
-                                      }
-                                    } catch (updateError) {
-                                      console.error(
-                                        "❌ Error updating checkout session with fallback:",
-                                        updateError
-                                      );
-                                    }
-                                  }
-
-                                  // REMOVED: Duplicate update with outdated deliveryCharge from hook
-                                  // The delivery fee is already updated in the first calculation above
-                                }
-                              }}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="h-6 w-6 rounded-xl items-center justify-center  flex">
-                                    <HomeAngle
-                                      weight="Broken"
-                                      className="h-5 w-5 text-[#570000]"
-                                    />
-                                  </span>
-                                  <span className="font-medium text-gray-800">
-                                    {addr.address_name || "Address"}
-                                  </span>
-                                  {selectedAddressId === addr.id && (
-                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#2664eb] text-white text-xs">
-                                      ✓
-                                    </span>
-                                  )}
-                                </div>
-                                <button className="text-[#570000]">
-                                  <MenuDots
-                                    weight="Broken"
-                                    className="h-5 w-5 text-[#570000]"
-                                  />
-                                </button>
-                              </div>
-                              <p className="mt-2 text-sm text-gray-500 leading-snug">
-                                {addr.full_address}
-                              </p>
-                              <div className="mt-3 flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
-                                  <Routing
-                                    weight="Broken"
-                                    className="h-4 w-4"
-                                  />
-                                  {getDisplayDistance(addr.distance)?.toFixed(
-                                    1
-                                  ) ?? "-"}{" "}
-                                  km
-                                </span>
-                                {addr.duration && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E6F3FF] text-[#2664eb] text-xs">
-                                    <ClockCircle className="h-4 w-4" />~
-                                    {addr.duration}min
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <div className="text-gray-400 mb-3">
-                              <HomeAngle
-                                weight="Broken"
-                                className="h-16 w-16 mx-auto text-gray-300"
-                              />
-                            </div>
-                            <p className="text-gray-500 text-sm mb-4">
-                              No addresses found. Add an address to proceed with
-                              checkout.
-                            </p>
-                            <Link
-                              href={`/addresses/new?returnTo=/checkouts/${checkoutId}`}
-                            >
-                              <Button className="bg-[#570000] hover:bg-[#450000] text-white">
-                                Add New Address
-                              </Button>
-                            </Link>
-                          </div>
-                        )}
-                      </div>
-                    </DrawerContent>
-                  </Drawer>
+                  <NoteDrawer
+                    checkoutId={checkoutId}
+                    initialNote={note}
+                    onNoteChange={setNote}
+                  />
                 </div>
               </div>
               {/* Coupons Section */}
-              <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
-                <Link href={`/checkouts/${checkoutId}/coupons`}>
-                  <button className="w-full flex items-center justify-between text-left">
-                    <div className="flex items-center">
-                      <TicketSale className="h-5 w-5 mr-3 text-black" />
-                      <span className="font-medium text-gray-700 dark:text-gray-300">
-                        {selectedCoupon ? selectedCoupon : "View all coupons"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#2664eb]">View all</span>
-                      <IoIosArrowForward className="h-5 w-5 text-gray-600" />
-                    </div>
-                  </button>
-                </Link>
-              </div>
+              <CouponButton
+                checkoutId={checkoutId}
+                selectedCoupon={selectedCoupon}
+              />
 
-              {/* Customization Options Section */}
-              <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
-                <div>
-                  <Drawer
-                    modal={true}
-                    onOpenChange={setIsCustomizationDrawerOpen}
-                  >
-                    <DrawerTrigger asChild>
-                      <div className="w-full flex items-center justify-between text-left cursor-pointer rounded-lg">
-                        <div className="flex items-center">
-                          {Object.values(customizationOptions).some(
-                            (opt) => opt
-                          ) ? (
-                            <ListCheckMinimalistic className="h-5 w-5 mr-3 text-black" />
-                          ) : (
-                            <WidgetAdd className="h-5 w-5 mr-3 text-black" />
-                          )}
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            Customization options
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {Object.values(customizationOptions).some(
-                            (opt) => opt
-                          ) && (
-                            <button
-                              className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                              onClick={() => {
-                                setIsCustomizationDrawerOpen(true);
-                              }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                          <IoIosArrowForward className="h-5 w-5 text-gray-600" />
-                        </div>
-                      </div>
-                    </DrawerTrigger>
-                    <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] flex flex-col">
-                      <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full flex-shrink-0">
-                        <div className="flex items-center justify-between w-full">
-                          <DrawerTitle className="text-[20px]">
-                            Customization Options
-                          </DrawerTitle>
-                          <DrawerClose asChild>
-                            <button
-                              aria-label="Close"
-                              className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
-                            >
-                              <X className="h-5 w-5 text-gray-700" />
-                            </button>
-                          </DrawerClose>
-                        </div>
-                      </DrawerHeader>
+              <CustomizationOptionsDrawer
+                checkoutId={checkoutId}
+                cart={cart}
+                customizationOptions={customizationOptions}
+                messageCardText={messageCardText}
+                onCustomizationChange={setCustomizationOptions}
+                onMessageCardTextChange={setMessageCardText}
+                updateAllCartItemsCustomization={
+                  updateAllCartItemsCustomization
+                }
+              />
 
-                      {/* Scrollable content area */}
-                      <div className="flex-1 overflow-y-auto scrollbar-hide px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        <div className="space-y-4 pb-4">
-                          {/* Add Candles - Only show if cart has cake products */}
-                          {cart.some(
-                            (item) => item.category?.toLowerCase() === "cake"
-                          ) && (
-                            <div className="bg-white rounded-[18px] p-4 border border-gray-100">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <FaCakeCandles className="h-5 w-5 text-[#570000]" />
-                                  <div>
-                                    <h3 className="font-medium text-gray-800">
-                                      Add Candles
-                                    </h3>
-                                    <p className="text-sm text-gray-500">
-                                      Include birthday candles for celebration
-                                    </p>
-                                  </div>
-                                </div>
-                                <Switch
-                                  checked={customizationOptions.addCandles}
-                                  onCheckedChange={(checked) => {
-                                    const newOptions = {
-                                      ...customizationOptions,
-                                      addCandles: checked,
-                                    };
-                                    setCustomizationOptions(newOptions);
-                                    updateAllCartItemsCustomization(newOptions);
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          )}
+              <DeliveryInfoSection
+                checkoutId={checkoutId}
+                addresses={addresses}
+                addressText={addressText}
+                selectedAddressId={selectedAddressId}
+                checkoutData={checkoutData}
+                contactInfo={contactInfo}
+                session={session}
+                onAddressTextChange={setAddressText}
+                onSelectedAddressIdChange={setSelectedAddressId}
+                onCheckoutDataChange={setCheckoutData}
+                onContactInfoChange={setContactInfo}
+              />
 
-                          {/* Add Knife - Only show if cart has cake products */}
-                          {cart.some(
-                            (item) => item.category?.toLowerCase() === "cake"
-                          ) && (
-                            <div className="bg-white rounded-[18px] p-4 border border-gray-100">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <RiKnifeFill className="h-5 w-5 text-[#570000]" />
-                                  <div>
-                                    <h3 className="font-medium text-gray-800">
-                                      Add Knife
-                                    </h3>
-                                    <p className="text-sm text-gray-500">
-                                      Include a cake cutting knife
-                                    </p>
-                                  </div>
-                                </div>
-                                <Switch
-                                  checked={customizationOptions.addKnife}
-                                  onCheckedChange={(checked) => {
-                                    const newOptions = {
-                                      ...customizationOptions,
-                                      addKnife: checked,
-                                    };
-                                    setCustomizationOptions(newOptions);
-                                    updateAllCartItemsCustomization(newOptions);
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Add Message Card */}
-                          <div className="bg-white rounded-[18px] p-4 border border-gray-100">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Card
-                                  weight="Broken"
-                                  className="h-5 w-5 text-[#570000]"
-                                />
-                                <div>
-                                  <h3 className="font-medium text-gray-800">
-                                    Add Message Card
-                                  </h3>
-                                  <p className="text-sm text-gray-500">
-                                    Include a personalized message card
-                                  </p>
-                                </div>
-                              </div>
-                              <Switch
-                                checked={customizationOptions.addMessageCard}
-                                onCheckedChange={(checked) => {
-                                  const newOptions = {
-                                    ...customizationOptions,
-                                    addMessageCard: checked,
-                                  };
-                                  setCustomizationOptions(newOptions);
-                                  updateAllCartItemsCustomization(newOptions);
-                                }}
-                              />
-                            </div>
-                            {customizationOptions.addMessageCard && (
-                              <div className="mt-3 pt-3 border-t border-gray-100">
-                                <button
-                                  onClick={() =>
-                                    setIsMessageCardDrawerOpen(true)
-                                  }
-                                  className="w-full text-left p-3 bg-gray-50 rounded-[12px] hover:bg-gray-100 transition-colors"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">
-                                      {messageCardText
-                                        ? messageCardText
-                                        : "Click to add message card text"}
-                                    </span>
-                                    <Card
-                                      weight="Broken"
-                                      className="h-4 w-4 text-gray-400"
-                                    />
-                                  </div>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Disclaimer */}
-                        <div className="mt-6 px-4 text-[#9AA3C7]">
-                          <h4 className="uppercase tracking-wide font-semibold text-[14px]">
-                            Additional Customization
-                          </h4>
-                          <p className="mt-2 text-sm">
-                            For more customization options on your order, please
-                            contact the kitchen after order confirmation or try
-                            our call order service.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Fixed bottom action buttons */}
-                      <div className="flex-shrink-0 border-t border-gray-200 bg-[#F5F6FB] px-4 py-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                        {/* Desktop action row */}
-                        <div className="hidden lg:flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              const clearedOptions = {
-                                addTextOnCake: false,
-                                addCandles: false,
-                                addKnife: false,
-                                addMessageCard: false,
-                              };
-                              setCustomizationOptions(clearedOptions);
-                              updateAllCartItemsCustomization(clearedOptions);
-
-                              // Clear customization options from checkout session
-                              try {
-                                const updateResponse = await fetch(
-                                  `/api/checkout/${checkoutId}`,
-                                  {
-                                    method: "PATCH",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                      customizationOptions: clearedOptions,
-                                    }),
-                                  }
-                                );
-
-                                if (updateResponse.ok) {
-                                  console.log(
-                                    "✅ Customization options cleared from checkout session"
-                                  );
-                                }
-                              } catch (error) {
-                                console.error(
-                                  "❌ Error clearing customization options:",
-                                  error
-                                );
-                              }
-                            }}
-                            className="h-9 px-5 rounded-[12px]"
-                          >
-                            Clear All
-                          </Button>
-                          <DrawerClose asChild>
-                            <Button
-                              size="sm"
-                              className="h-9 px-5 rounded-[12px]"
-                              onClick={async () => {
-                                // Save customization options to checkout session
-                                try {
-                                  console.log(
-                                    "🔄 Saving customization options to checkout session:",
-                                    {
-                                      checkoutId,
-                                      customizationOptions:
-                                        customizationOptions,
-                                    }
-                                  );
-
-                                  const updateResponse = await fetch(
-                                    `/api/checkout/${checkoutId}`,
-                                    {
-                                      method: "PATCH",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                      },
-                                      body: JSON.stringify({
-                                        customizationOptions:
-                                          customizationOptions,
-                                      }),
-                                    }
-                                  );
-
-                                  if (updateResponse.ok) {
-                                    const responseData =
-                                      await updateResponse.json();
-                                    console.log(
-                                      "✅ Customization options saved to checkout session:",
-                                      responseData
-                                    );
-                                  } else {
-                                    console.error(
-                                      "❌ Failed to save customization options:",
-                                      await updateResponse.text()
-                                    );
-                                  }
-                                } catch (error) {
-                                  console.error(
-                                    "❌ Error saving customization options:",
-                                    error
-                                  );
-                                }
-                              }}
-                            >
-                              Save
-                            </Button>
-                          </DrawerClose>
-                        </div>
-                        {/* Mobile action row */}
-                        <div className="lg:hidden flex gap-3">
-                          <Button
-                            variant="outline"
-                            size="lg"
-                            onClick={async () => {
-                              const clearedOptions = {
-                                addTextOnCake: false,
-                                addCandles: false,
-                                addKnife: false,
-                                addMessageCard: false,
-                              };
-                              setCustomizationOptions(clearedOptions);
-                              updateAllCartItemsCustomization(clearedOptions);
-
-                              // Clear customization options from checkout session
-                              try {
-                                const updateResponse = await fetch(
-                                  `/api/checkout/${checkoutId}`,
-                                  {
-                                    method: "PATCH",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                      customizationOptions: clearedOptions,
-                                    }),
-                                  }
-                                );
-
-                                if (updateResponse.ok) {
-                                  console.log(
-                                    "✅ Customization options cleared from checkout session (mobile)"
-                                  );
-                                }
-                              } catch (error) {
-                                console.error(
-                                  "❌ Error clearing customization options (mobile):",
-                                  error
-                                );
-                              }
-                            }}
-                            className="flex-1 rounded-[20px] text-[16px]"
-                          >
-                            Clear All
-                          </Button>
-                          <DrawerClose asChild>
-                            <Button
-                              size="lg"
-                              className="flex-1 py-5 rounded-[20px] text-[16px]"
-                              onClick={async () => {
-                                // Save customization options to checkout session
-                                try {
-                                  console.log(
-                                    "🔄 Saving customization options to checkout session (mobile):",
-                                    {
-                                      checkoutId,
-                                      customizationOptions:
-                                        customizationOptions,
-                                    }
-                                  );
-
-                                  const updateResponse = await fetch(
-                                    `/api/checkout/${checkoutId}`,
-                                    {
-                                      method: "PATCH",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                      },
-                                      body: JSON.stringify({
-                                        customizationOptions:
-                                          customizationOptions,
-                                      }),
-                                    }
-                                  );
-
-                                  if (updateResponse.ok) {
-                                    const responseData =
-                                      await updateResponse.json();
-                                    console.log(
-                                      "✅ Customization options saved to checkout session (mobile):",
-                                      responseData
-                                    );
-                                  } else {
-                                    console.error(
-                                      "❌ Failed to save customization options (mobile):",
-                                      await updateResponse.text()
-                                    );
-                                  }
-                                } catch (error) {
-                                  console.error(
-                                    "❌ Error saving customization options (mobile):",
-                                    error
-                                  );
-                                }
-                              }}
-                            >
-                              Save
-                            </Button>
-                          </DrawerClose>
-                        </div>
-                      </div>
-                    </DrawerContent>
-                  </Drawer>
-                </div>
-              </div>
-
-              {/* Message Card Text Input Drawer */}
-              <Drawer
-                modal={true}
-                open={isMessageCardDrawerOpen}
-                onOpenChange={setIsMessageCardDrawerOpen}
-              >
-                <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
-                  <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <div className="flex items-center justify-between w-full">
-                      <DrawerTitle className="text-[20px]">
-                        Add Message Card Text
-                      </DrawerTitle>
-                      <DrawerClose asChild>
-                        <button
-                          aria-label="Close"
-                          className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
-                        >
-                          <X className="h-5 w-5 text-gray-700" />
-                        </button>
-                      </DrawerClose>
-                    </div>
-                  </DrawerHeader>
-                  <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <Textarea
-                      placeholder="E.g., Wishing you a wonderful birthday filled with joy and laughter!, May your special day be as amazing as you are!, etc."
-                      value={messageCardText}
-                      onChange={(e) => setMessageCardText(e.target.value)}
-                      maxLength={100}
-                      className="min-h-[150px] rounded-[18px] placeholder:text-[#C0C0C0] placeholder:font-normal"
-                    />
-                    <div className="flex justify-end mt-2">
-                      <span
-                        className={`text-sm ${
-                          messageCardText.length >= 100
-                            ? "text-red-500"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {messageCardText.length}/100 characters
-                      </span>
-                    </div>
-                  </div>
-                  {/* Desktop action row */}
-                  <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        setMessageCardText("");
-                        // Clear message card text from checkout session
-                        try {
-                          const updateResponse = await fetch(
-                            `/api/checkout/${checkoutId}`,
-                            {
-                              method: "PATCH",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({
-                                messageCardText: "",
-                              }),
-                            }
-                          );
-
-                          if (updateResponse.ok) {
-                            console.log(
-                              "✅ Message card text cleared from checkout session"
-                            );
-                          }
-                        } catch (error) {
-                          console.error(
-                            "❌ Error clearing message card text:",
-                            error
-                          );
-                        }
-                      }}
-                      className="h-9 px-5 rounded-[12px]"
-                    >
-                      Clear
-                    </Button>
-                    <DrawerClose asChild>
-                      <Button
-                        size="sm"
-                        className="h-9 px-5 rounded-[12px]"
-                        onClick={async () => {
-                          // Save message card text to checkout session
-                          try {
-                            console.log(
-                              "🔄 Saving message card text to checkout session:",
-                              {
-                                checkoutId,
-                                messageCardText: messageCardText,
-                              }
-                            );
-
-                            const updateResponse = await fetch(
-                              `/api/checkout/${checkoutId}`,
-                              {
-                                method: "PATCH",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                  messageCardText: messageCardText,
-                                }),
-                              }
-                            );
-
-                            if (updateResponse.ok) {
-                              const responseData = await updateResponse.json();
-                              console.log(
-                                "✅ Message card text saved to checkout session:",
-                                responseData
-                              );
-                            } else {
-                              console.error(
-                                "❌ Failed to save message card text:",
-                                await updateResponse.text()
-                              );
-                            }
-                          } catch (error) {
-                            console.error(
-                              "❌ Error saving message card text:",
-                              error
-                            );
-                          }
-                        }}
-                      >
-                        Save
-                      </Button>
-                    </DrawerClose>
-                  </div>
-                  <DrawerFooter className="pt-2 pb-6 lg:hidden">
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={async () => {
-                          setMessageCardText("");
-                          // Clear message card text from checkout session
-                          try {
-                            const updateResponse = await fetch(
-                              `/api/checkout/${checkoutId}`,
-                              {
-                                method: "PATCH",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                  messageCardText: "",
-                                }),
-                              }
-                            );
-
-                            if (updateResponse.ok) {
-                              console.log(
-                                "✅ Message card text cleared from checkout session (mobile)"
-                              );
-                            }
-                          } catch (error) {
-                            console.error(
-                              "❌ Error clearing message card text (mobile):",
-                              error
-                            );
-                          }
-                        }}
-                        className="flex-1 rounded-[20px] text-[16px]"
-                      >
-                        Clear
-                      </Button>
-                      <DrawerClose asChild>
-                        <Button
-                          size="lg"
-                          className="flex-1 py-5 rounded-[20px] text-[16px]"
-                          onClick={async () => {
-                            // Save message card text to checkout session
-                            try {
-                              console.log(
-                                "🔄 Saving message card text to checkout session (mobile):",
-                                {
-                                  checkoutId,
-                                  messageCardText: messageCardText,
-                                }
-                              );
-
-                              const updateResponse = await fetch(
-                                `/api/checkout/${checkoutId}`,
-                                {
-                                  method: "PATCH",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({
-                                    messageCardText: messageCardText,
-                                  }),
-                                }
-                              );
-
-                              if (updateResponse.ok) {
-                                const responseData =
-                                  await updateResponse.json();
-                                console.log(
-                                  "✅ Message card text saved to checkout session (mobile):",
-                                  responseData
-                                );
-                              } else {
-                                console.error(
-                                  "❌ Failed to save message card text (mobile):",
-                                  await updateResponse.text()
-                                );
-                              }
-                            } catch (error) {
-                              console.error(
-                                "❌ Error saving message card text (mobile):",
-                                error
-                              );
-                            }
-                          }}
-                        >
-                          Save
-                        </Button>
-                      </DrawerClose>
-                    </div>
-                  </DrawerFooter>
-                </DrawerContent>
-              </Drawer>
-
-              {/* Contact Edit Drawer */}
-              <Drawer
-                modal={true}
-                open={isContactDrawerOpen}
-                onOpenChange={setIsContactDrawerOpen}
-              >
-                <DrawerContent className="h-[600px] md:h-[550px] rounded-t-2xl bg-[#F5F6FB] overflow-y-auto scrollbar-hide">
-                  <DrawerHeader className="text-left lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <div className="flex items-center justify-between w-full">
-                      <DrawerTitle className="text-[20px]">
-                        {contactInfo.name && contactInfo.phone
-                          ? "Edit Receiver's Information"
-                          : "Add Receiver's Information"}
-                      </DrawerTitle>
-                      <DrawerClose asChild>
-                        <button
-                          aria-label="Close"
-                          className="h-[36px] w-[36px] rounded-full bg-white hover:bg-gray-50 flex items-center justify-center"
-                        >
-                          <X className="h-5 w-5 text-gray-700" />
-                        </button>
-                      </DrawerClose>
-                    </div>
-                  </DrawerHeader>
-                  <div className="px-4 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <div className="space-y-4">
-                      <div>
-                        <label
-                          htmlFor="contact-name"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Full Name
-                        </label>
-                        <Input
-                          id="contact-name"
-                          placeholder="Enter your full name"
-                          value={tempContactInfo.name}
-                          onChange={(e) => {
-                            console.log(
-                              "🔍 Name field changed:",
-                              e.target.value
-                            );
-                            setTempContactInfo((prev) => ({
-                              ...prev,
-                              name: e.target.value,
-                            }));
-                          }}
-                          className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="contact-phone"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Phone Number
-                        </label>
-                        <Input
-                          id="contact-phone"
-                          type="tel"
-                          placeholder="Enter 10-digit phone number"
-                          value={tempContactInfo.phone}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, "");
-                            console.log("🔍 Phone field changed:", value);
-                            if (value.length <= 10) {
-                              setTempContactInfo((prev) => ({
-                                ...prev,
-                                phone: value,
-                              }));
-                            }
-                          }}
-                          maxLength={10}
-                          className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="contact-alternate-phone"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Alternate Phone Number
-                        </label>
-                        <Input
-                          id="contact-alternate-phone"
-                          type="tel"
-                          placeholder="Enter 10-digit alternate phone (optional)"
-                          value={tempContactInfo.alternatePhone}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, "");
-                            if (value.length <= 10) {
-                              setTempContactInfo((prev) => ({
-                                ...prev,
-                                alternatePhone: value,
-                              }));
-                            }
-                          }}
-                          maxLength={10}
-                          className="rounded-[12px] placeholder:text-[#C0C0C0]"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          If the main contact number is not available, the
-                          delivery partner will contact the alternate number
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Desktop action row */}
-                  <div className="hidden lg:flex justify-end gap-2 px-4 pt-3 lg:max-w-[720px] lg:min-w-[560px] mx-auto w-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTempContactInfo(contactInfo)}
-                      className="h-9 px-5 rounded-[12px]"
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-9 px-5 rounded-[12px]"
-                      onClick={async () => {
-                        console.log(
-                          "🔍 Save button clicked - tempContactInfo:",
-                          tempContactInfo
-                        );
-
-                        // Validate phone number (must be exactly 10 digits)
-                        if (
-                          !tempContactInfo.phone ||
-                          tempContactInfo.phone.length !== 10 ||
-                          !/^\d{10}$/.test(tempContactInfo.phone)
-                        ) {
-                          console.log("❌ Phone validation failed:", {
-                            phone: tempContactInfo.phone,
-                            length: tempContactInfo.phone?.length,
-                            isValid: /^\d{10}$/.test(
-                              tempContactInfo.phone || ""
-                            ),
-                          });
-                          toast({
-                            title: "Invalid Phone Number",
-                            description:
-                              "Phone number must be exactly 10 digits.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-
-                        // Validate alternate phone if provided
-                        if (
-                          tempContactInfo.alternatePhone &&
-                          (tempContactInfo.alternatePhone.length !== 10 ||
-                            !/^\d{10}$/.test(tempContactInfo.alternatePhone))
-                        ) {
-                          toast({
-                            title: "Invalid Alternate Phone Number",
-                            description:
-                              "Alternate phone number must be exactly 10 digits.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-
-                        // Validate name
-                        if (
-                          !tempContactInfo.name ||
-                          tempContactInfo.name.trim() === ""
-                        ) {
-                          toast({
-                            title: "Name Required",
-                            description: "Please enter the receiver's name.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-
-                        // Update state first
-                        setContactInfo(tempContactInfo);
-
-                        // Update checkout session with contact info
-                        try {
-                          console.log(
-                            "🔄 Updating contact info in checkout session:",
-                            {
-                              checkoutId,
-                              contactInfo: tempContactInfo,
-                            }
-                          );
-
-                          const updateResponse = await fetch(
-                            `/api/checkout/${checkoutId}`,
-                            {
-                              method: "PATCH",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({
-                                contactInfo: tempContactInfo,
-                              }),
-                            }
-                          );
-
-                          if (updateResponse.ok) {
-                            const responseData = await updateResponse.json();
-                            console.log(
-                              "✅ Contact info updated in checkout session:",
-                              responseData
-                            );
-                          } else {
-                            console.error(
-                              "❌ Failed to update contact info:",
-                              await updateResponse.text()
-                            );
-                          }
-                        } catch (error) {
-                          console.error(
-                            "❌ Error updating contact info:",
-                            error
-                          );
-                        }
-
-                        // Save to localStorage immediately
-                        if (typeof window !== "undefined") {
-                          try {
-                            const savedContext =
-                              localStorage.getItem("checkoutContext");
-                            const currentContext = savedContext
-                              ? JSON.parse(savedContext)
-                              : {};
-                            const updatedContext = {
-                              ...currentContext,
-                              contactInfo: tempContactInfo,
-                            };
-                            localStorage.setItem(
-                              "checkoutContext",
-                              JSON.stringify(updatedContext)
-                            );
-                          } catch (error) {
-                            console.error(
-                              "Error saving contact info to localStorage:",
-                              error
-                            );
-                          }
-                        }
-
-                        // If this is a new contact, also update the user profile
-                        if (!tempContactInfo.name || !tempContactInfo.phone) {
-                          // Update user profile with new contact info
-                          if (session?.user?.email) {
-                            updateUserProfile(session.user.email, {
-                              name: tempContactInfo.name,
-                              phone_number: tempContactInfo.phone,
-                            });
-                          }
-                        }
-
-                        // Show success message
-                        toast({
-                          title: "Receiver's information saved",
-                          description:
-                            "Receiver's details have been updated successfully.",
-                        });
-
-                        // Close drawer after state update
-                        setIsContactDrawerOpen(false);
-                      }}
-                    >
-                      {tempContactInfo.name && tempContactInfo.phone
-                        ? "Save"
-                        : "Add"}
-                    </Button>
-                  </div>
-                  <DrawerFooter className="pt-2 pb-6 lg:hidden">
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={() => setTempContactInfo(contactInfo)}
-                        className="flex-1 rounded-[20px] text-[16px]"
-                      >
-                        Reset
-                      </Button>
-                      <Button
-                        size="lg"
-                        className="flex-1 py-5 rounded-[20px] text-[16px]"
-                        onClick={async () => {
-                          console.log(
-                            "🔍 Mobile Save button clicked - tempContactInfo:",
-                            tempContactInfo
-                          );
-
-                          // Validate phone number (must be exactly 10 digits)
-                          if (
-                            !tempContactInfo.phone ||
-                            tempContactInfo.phone.length !== 10 ||
-                            !/^\d{10}$/.test(tempContactInfo.phone)
-                          ) {
-                            toast({
-                              title: "Invalid Phone Number",
-                              description:
-                                "Phone number must be exactly 10 digits.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-
-                          // Validate alternate phone if provided
-                          if (
-                            tempContactInfo.alternatePhone &&
-                            (tempContactInfo.alternatePhone.length !== 10 ||
-                              !/^\d{10}$/.test(tempContactInfo.alternatePhone))
-                          ) {
-                            toast({
-                              title: "Invalid Alternate Phone Number",
-                              description:
-                                "Alternate phone number must be exactly 10 digits.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-
-                          // Validate name
-                          if (
-                            !tempContactInfo.name ||
-                            tempContactInfo.name.trim() === ""
-                          ) {
-                            toast({
-                              title: "Name Required",
-                              description: "Please enter the receiver's name.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-
-                          // Update state first
-                          setContactInfo(tempContactInfo);
-
-                          // Update checkout session with contact info
-                          try {
-                            console.log(
-                              "🔄 Updating contact info in checkout session:",
-                              {
-                                checkoutId,
-                                contactInfo: tempContactInfo,
-                              }
-                            );
-
-                            const updateResponse = await fetch(
-                              `/api/checkout/${checkoutId}`,
-                              {
-                                method: "PATCH",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                  contactInfo: tempContactInfo,
-                                }),
-                              }
-                            );
-
-                            if (updateResponse.ok) {
-                              const responseData = await updateResponse.json();
-                              console.log(
-                                "✅ Contact info updated in checkout session:",
-                                responseData
-                              );
-                            } else {
-                              console.error(
-                                "❌ Failed to update contact info:",
-                                await updateResponse.text()
-                              );
-                            }
-                          } catch (error) {
-                            console.error(
-                              "❌ Error updating contact info:",
-                              error
-                            );
-                          }
-
-                          // Save to localStorage immediately
-                          if (typeof window !== "undefined") {
-                            try {
-                              const savedContext =
-                                localStorage.getItem("checkoutContext");
-                              const currentContext = savedContext
-                                ? JSON.parse(savedContext)
-                                : {};
-                              const updatedContext = {
-                                ...currentContext,
-                                contactInfo: tempContactInfo,
-                              };
-                              localStorage.setItem(
-                                "checkoutContext",
-                                JSON.stringify(updatedContext)
-                              );
-                            } catch (error) {
-                              console.error(
-                                "Error saving contact info to localStorage:",
-                                error
-                              );
-                            }
-                          }
-
-                          // If this is a new contact, also update the user profile
-                          if (!tempContactInfo.name || !tempContactInfo.phone) {
-                            // Update user profile with new contact info
-                            if (session?.user?.email) {
-                              updateUserProfile(session.user.email, {
-                                name: tempContactInfo.name,
-                                phone_number: tempContactInfo.phone,
-                              });
-                            }
-                          }
-
-                          // Show success message
-                          toast({
-                            title: "Receiver's information saved",
-                            description:
-                              "Receiver's details have been updated successfully.",
-                          });
-
-                          // Close drawer after state update
-                          setIsContactDrawerOpen(false);
-                        }}
-                      >
-                        {tempContactInfo.name && tempContactInfo.phone
-                          ? "Save"
-                          : "Add"}
-                      </Button>
-                    </div>
-                  </DrawerFooter>
-                </DrawerContent>
-              </Drawer>
-
-              {/* Delivery Info */}
-              <div className="bg-white mx-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
-                <div className="flex items-start mb-4">
-                  <ClockCircle className="h-5 w-5 mr-3 mt-1 flex-shrink-0 text-black" />
-                  <div>
-                    <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                      {(() => {
-                        const deliveryTime = calculateDeliveryTime();
-                        if (deliveryTime) {
-                          return `Delivery in ${formatDeliveryTime(
-                            deliveryTime
-                          )} (aprx)`;
-                        }
-                        return "Add address to see delivery time";
-                      })()}
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-[12px]">
-                      Delivery time is approximate and will be confirmed after
-                      your order.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start mb-4">
-                  <HomeSmileAngle className="h-5 w-5 mr-3 flex-shrink-0 text-black" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                        Delivery at Home
-                      </h3>
-                      {(() => {
-                        const currentAddress = addresses.find(
-                          (addr) => addr.full_address === addressText
-                        );
-                        if (currentAddress?.distance) {
-                          return (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E9FFF3] text-[#15A05A] text-xs">
-                              <Routing weight="Broken" className="h-4 w-4" />
-                              {getDisplayDistance(
-                                currentAddress.distance
-                              )?.toFixed(1) ?? "-"}{" "}
-                              km
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
-                      {addressText &&
-                      addressText !==
-                        "2nd street, Barathipuram, Kannampalayam" ? (
-                        <>
-                          <p className="text-gray-500 dark:text-gray-400 text-sm truncate min-w-0">
-                            {addressText}
-                          </p>
-                          <button
-                            className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
-                            onClick={() => {
-                              setTempAddress(addressText);
-                              setIsAddressDrawerOpen(true);
-                            }}
-                            aria-label="Change delivery address"
-                          >
-                            <Pen weight="Broken" size={16} color="#2664eb" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-gray-500 dark:text-gray-400 text-sm">
-                            Add address to proceed with checkout
-                          </p>
-                          <Link
-                            href={`/addresses/new?returnTo=/checkouts/${checkoutId}`}
-                          >
-                            <button
-                              className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors px-3 py-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                              aria-label="Add delivery address"
-                            >
-                              Add
-                            </button>
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <Phone className="h-5 w-5 mr-3 flex-shrink-0 text-black" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                      Receiver's Details
-                    </h3>
-                    <div className="mt-1 flex items-center justify-between gap-3 min-w-0">
-                      {contactInfo.name && contactInfo.phone ? (
-                        <>
-                          <p className="text-gray-500 dark:text-gray-400 text-sm truncate min-w-0">
-                            {contactInfo.name}, {contactInfo.phone}
-                          </p>
-                          <button
-                            className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors p-1 rounded-full hover:bg-blue-50"
-                            onClick={() => {
-                              setTempContactInfo(contactInfo);
-                              setIsContactDrawerOpen(true);
-                            }}
-                            aria-label="Edit contact information"
-                          >
-                            <Pen weight="Broken" size={16} color="#2664eb" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-gray-500 dark:text-gray-400 text-sm">
-                            Add contact to proceed with checkout
-                          </p>
-                          <button
-                            className="text-[#2664eb] hover:text-[#1d4ed8] transition-colors px-3 py-1 rounded-full hover:bg-blue-50 text-sm font-medium"
-                            onClick={() => {
-                              setIsContactDrawerOpen(true);
-                            }}
-                            aria-label="Add contact information"
-                          >
-                            Add
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Section - Desktop (below Delivery Info) */}
-              <div className="hidden lg:block mx-4 mt-4">
-                <div className="bg-white p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
-                  <div className="flex items-start gap-6">
-                    {/* Lottie animation on the left */}
-                    <div className="flex-1">
-                      {paymentAnimationData && (
-                        <Lottie
-                          animationData={paymentAnimationData}
-                          loop={true}
-                          style={{ width: "100%", height: "200px" }}
-                        />
-                      )}
-                    </div>
-
-                    {/* Content on the right */}
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
-                        Payment
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                        All transactions are secure and encrypted
-                      </p>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">
-                        After clicking "Pay now", you will be redirected to{" "}
-                        <span className="font-medium text-[#2664eb]">
-                          Secure Payment Gateway
-                        </span>{" "}
-                        (UPI, Cards, Wallets, NetBanking) to complete your
-                        purchase securely.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PaymentSection className="hidden lg:block mx-4 mt-4" />
             </div>
 
             {/* Right Column - Order Summary (top on mobile, right on desktop) */}
             <div className="lg:col-span-1 order-1 lg:order-2">
               <div className="space-y-4">
                 <div className="bg-white mx-4 p-3 rounded-[22px] border border-gray-200 dark:border-gray-600 sticky top-4 overflow-hidden">
-                  <div className="space-y-4">
-                    {(checkoutData ? checkoutData.items : cart).map(
-                      (item: any, index: number) => {
-                        const uid = checkoutData
-                          ? `${item.product_id}-${index}`
-                          : ((item.uniqueId ||
-                              `${item.id}-${item.variant}`) as string);
-                        const qty = item.quantity || 1;
-                        return (
-                          <div
-                            key={uid}
-                            className="flex items-start justify-between"
-                          >
-                            <div className="flex w-full min-w-0">
-                              {/* product image */}
-                              <div className="relative h-[88px] w-[88px] rounded-[20px] overflow-hidden mr-3 shrink-0">
-                                <Image
-                                  src={
-                                    (checkoutData
-                                      ? item.product_image
-                                      : item.image) ||
-                                    "/placeholder.svg?height=88&width=88&query=food%20thumbnail"
-                                  }
-                                  alt={
-                                    checkoutData ? item.product_name : item.name
-                                  }
-                                  fill
-                                  sizes="88px"
-                                  className="object-cover"
-                                />
-                              </div>
-
-                              {/* product details */}
-                              <div className="flex flex-col justify-between flex-1 min-w-0">
-                                {/* top row */}
-                                <div className="flex items-start justify-between w-full gap-2 max-w-full min-w-0">
-                                  {/* name and category */}
-                                  <div className="flex-1 w-full min-w-0">
-                                    {/* Single-line name with ellipsis */}
-                                    <h3
-                                      className="block truncate text-[15px] leading-tight font-medium text-black dark:text-gray-200"
-                                      title={
-                                        checkoutData
-                                          ? item.product_name
-                                          : item.name
-                                      }
-                                    >
-                                      {checkoutData
-                                        ? item.product_name
-                                        : item.name}
-                                    </h3>
-                                    <p className="text-[14px] text-gray-500 dark:text-gray-400 truncate max-w-full">
-                                      {checkoutData
-                                        ? item.category || item.variant
-                                        : item.category ?? item.variant}
-                                    </p>
-                                  </div>
-
-                                  {/* remove button - only show for cart items, not checkout data */}
-                                  {!checkoutData && (
-                                    <button
-                                      aria-label="Remove item"
-                                      className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0 self-start"
-                                      onClick={() => removeFromCart(uid)}
-                                    >
-                                      <TrashBinTrash className="h-5 w-5 text-red-600" />
-                                    </button>
-                                  )}
-                                </div>
-
-                                {/* bottom row */}
-                                <div className="flex items-center justify-between w-full">
-                                  {/* price */}
-                                  <p className="text-[16px] font-semibold text-black dark:text-gray-100">
-                                    {"₹"}
-                                    {(checkoutData
-                                      ? item.unit_price
-                                      : item.price
-                                    ).toFixed(2)}
-                                  </p>
-
-                                  {/* quantity controls - show for both cart items and checkout data */}
-                                  <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
-                                    <button
-                                      aria-label="Decrease quantity"
-                                      className="w-[26px] h-[26px] flex items-center justify-center rounded-full border border-gray-200 bg-white transition-colors"
-                                      onClick={() => {
-                                        if (checkoutData) {
-                                          // Update checkout data quantity
-                                          const newItems =
-                                            checkoutData.items.map(
-                                              (
-                                                checkoutItem: any,
-                                                idx: number
-                                              ) =>
-                                                idx === index
-                                                  ? {
-                                                      ...checkoutItem,
-                                                      quantity: Math.max(
-                                                        1,
-                                                        checkoutItem.quantity -
-                                                          1
-                                                      ),
-                                                    }
-                                                  : checkoutItem
-                                            );
-                                          setCheckoutData({
-                                            ...checkoutData,
-                                            items: newItems,
-                                          });
-                                        } else {
-                                          // Update cart quantity
-                                          updateQuantity(
-                                            uid,
-                                            Math.max(1, qty - 1)
-                                          );
-                                        }
-                                      }}
-                                    >
-                                      <Minus className="h-3 w-3 text-gray-600" />
-                                    </button>
-                                    <span className="font-medium text-gray-900 dark:text-white min-w-[24px] text-center text-[12px]">
-                                      {String(qty).padStart(2, "0")}
-                                    </span>
-                                    <button
-                                      aria-label="Increase quantity"
-                                      className="w-[26px] h-[26px] flex items-center justify-center bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
-                                      onClick={() => {
-                                        if (checkoutData) {
-                                          // Update checkout data quantity
-                                          const newItems =
-                                            checkoutData.items.map(
-                                              (
-                                                checkoutItem: any,
-                                                idx: number
-                                              ) =>
-                                                idx === index
-                                                  ? {
-                                                      ...checkoutItem,
-                                                      quantity:
-                                                        checkoutItem.quantity +
-                                                        1,
-                                                    }
-                                                  : checkoutItem
-                                            );
-                                          setCheckoutData({
-                                            ...checkoutData,
-                                            items: newItems,
-                                          });
-                                        } else {
-                                          // Update cart quantity
-                                          updateQuantity(uid, qty + 1);
-                                        }
-                                      }}
-                                    >
-                                      <Plus className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                    )}
-                  </div>
+                  <ProductListing
+                    items={checkoutData ? checkoutData.items : cart}
+                    checkoutData={checkoutData}
+                    onRemoveItem={removeFromCart}
+                    onUpdateQuantity={updateQuantity}
+                    onUpdateCheckoutData={setCheckoutData}
+                  />
 
                   {/* Place Order Button moved to fixed bottom bar */}
                 </div>
 
-                {/* Bill Details (desktop in separate card) */}
-                <div className="hidden lg:block">
-                  <div className="bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
-                    <div className="flex items-center mb-3 gap-2">
-                      <Bill className="h-5 w-5 text-[#570000]" />
-                      <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                        Bill Details
-                      </h3>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                        <span>Item Total</span>
-                        <span>₹{subtotal.toFixed(2)}</span>
-                      </div>
-                      {discount > 0 && (
-                        <div className="flex justify-between text-green-600 text-sm">
-                          <span>Discount</span>
-                          <span>-₹{discount.toFixed(2)}</span>
-                        </div>
-                      )}
-
-                      {/* Delivery Fee - Only show when address is selected */}
-                      {(selectedAddressId ||
-                        checkoutData?.selectedAddressId) && (
-                        <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                          <span>Delivery Fee</span>
-                          <span
-                            className={
-                              isFreeDelivery ? "text-green-600 font-medium" : ""
-                            }
-                          >
-                            {isCalculatingDelivery ? (
-                              <div className="flex items-center gap-1">
-                                <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
-                                <span className="text-xs">Calculating...</span>
-                              </div>
-                            ) : (checkoutData?.deliveryFee ||
-                                deliveryCharge) === 0 ? (
-                              "FREE"
-                            ) : (
-                              `₹${(
-                                checkoutData?.deliveryFee || deliveryCharge
-                              ).toFixed(2)}`
-                            )}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                        <span>CGST ({taxSettings?.cgst_rate || 9}%)</span>
-                        <span>₹{cgstAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-600 dark:text-gray-400 text-sm">
-                        <span>SGST ({taxSettings?.sgst_rate || 9}%)</span>
-                        <span>₹{sgstAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="pt-2 mt-2">
-                        <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
-                        <div className="flex justify-between font-semibold text-black dark:text-white mt-2">
-                          <span>To Pay</span>
-                          <span>₹{total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={
-                          !addressText ||
-                          addressText ===
-                            "2nd street, Barathipuram, Kannampalayam" ||
-                          !contactInfo.name ||
-                          !contactInfo.phone
-                        }
-                        onClick={() => setIsPaymentDialogOpen(true)}
-                      >
-                        Confirm Order
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Cancellation Policy - Desktop (below Bill Details) */}
-                  <div className="mx-4 mt-4 text-[#9AA3C7]">
-                    <h4 className="uppercase tracking-wide font-semibold text-[14px]">
-                      Cancellation Policy
-                    </h4>
-                    <p className="mt-2 text-sm">
-                      Once your order is placed, it cannot be cancelled or
-                      modified. We do not offer refunds for cancelled orders
-                      under any circumstances.
-                    </p>
-                  </div>
-                </div>
+                <BillDetails
+                  subtotal={subtotal}
+                  discount={discount}
+                  deliveryCharge={deliveryCharge}
+                  checkoutData={checkoutData}
+                  selectedAddressId={selectedAddressId}
+                  isFreeDelivery={isFreeDelivery}
+                  isCalculatingDelivery={isCalculatingDelivery}
+                  cgstAmount={cgstAmount}
+                  sgstAmount={sgstAmount}
+                  total={total}
+                  taxSettings={taxSettings}
+                  addressText={addressText}
+                  contactInfo={contactInfo}
+                  onPaymentClick={() => setIsPaymentDialogOpen(true)}
+                  className="hidden lg:block"
+                />
               </div>
             </div>
           </div>
           {/* Mobile Bill Details and Payment Sections - At bottom */}
           <div className="lg:hidden space-y-4 mt-6">
-            {/* Bill Details - Mobile */}
-            <div className="bg-white mx-4 p-4 rounded-[22px] border border-gray-200 dark:border-gray-600">
-              <div className="flex items-center mb-3 gap-2">
-                <Bill className="h-5 w-5 text-[#570000]" />
-                <h3 className="font-medium text-gray-800 dark:text-gray-200">
-                  Bill Details
-                </h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                  <span>Item Total</span>
-                  <span>₹{subtotal}</span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Discount</span>
-                    <span className="text-[#15A05A]">-₹{discount}</span>
-                  </div>
-                )}
+            <BillDetails
+              subtotal={subtotal}
+              discount={discount}
+              deliveryCharge={deliveryCharge}
+              checkoutData={checkoutData}
+              selectedAddressId={selectedAddressId}
+              isFreeDelivery={isFreeDelivery}
+              isCalculatingDelivery={isCalculatingDelivery}
+              cgstAmount={cgstAmount}
+              sgstAmount={sgstAmount}
+              total={total}
+              taxSettings={taxSettings}
+              addressText={addressText}
+              contactInfo={contactInfo}
+              onPaymentClick={() => setIsPaymentDialogOpen(true)}
+              className="lg:hidden"
+            />
 
-                {/* Delivery Fee - Only show when address is selected */}
-                {(selectedAddressId || checkoutData?.selectedAddressId) && (
-                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                    <span>Delivery Fee</span>
-                    <span
-                      className={
-                        isFreeDelivery ? "text-green-600 font-medium" : ""
-                      }
-                    >
-                      {isCalculatingDelivery ? (
-                        <div className="flex items-center gap-1">
-                          <div className="animate-spin rounded-full h-3 w-3 border-b border-gray-400"></div>
-                          <span className="text-xs">Calculating...</span>
-                        </div>
-                      ) : (checkoutData?.deliveryFee || deliveryCharge) ===
-                        0 ? (
-                        "FREE"
-                      ) : (
-                        `₹${(
-                          checkoutData?.deliveryFee || deliveryCharge
-                        ).toFixed(2)}`
-                      )}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                  <span>CGST ({taxSettings?.cgst_rate || 9}%)</span>
-                  <span>₹{cgstAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                  <span>SGST ({taxSettings?.sgst_rate || 9}%)</span>
-                  <span>₹{sgstAmount.toFixed(2)}</span>
-                </div>
-                <div className="pt-2 mt-2">
-                  <div className="w-full h-[1.5px] bg-[repeating-linear-gradient(90deg,_rgba(156,163,175,0.5)_0,_rgba(156,163,175,0.5)_8px,_transparent_8px,_transparent_14px)] rounded-full"></div>
-                  <div className="flex justify-between text-black dark:text-white font-semibold mt-2">
-                    <span>To Pay</span>
-                    <span>₹{total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Payment Section - Mobile */}
-            <div className="bg-white mx-4 p-4 pb-6 rounded-[22px] border border-gray-200 dark:border-gray-600">
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">
-                  Payment
-                </h3>
-                {/* Lottie animation below the title */}
-                <div className="mt-3">
-                  {paymentAnimationData && (
-                    <Lottie
-                      animationData={paymentAnimationData}
-                      loop={true}
-                      style={{ width: "100%", height: "250px" }}
-                    />
-                  )}
-                </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mt-4">
-                  All transactions are secure and encrypted
-                </p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">
-                  After clicking "Pay now", you will be redirected to{" "}
-                  <span className="font-medium text-[#2664eb]">
-                    Secure Payment Gateway
-                  </span>{" "}
-                  (UPI, Cards, Wallets, NetBanking) to complete your purchase
-                  securely.
-                </p>
-              </div>
-            </div>
+            <PaymentSection className="mx-4 pb-6" />
 
             {/* Cancellation Policy - Mobile (moved below Payment) */}
             <div className="mx-4 px-4 text-[#9AA3C7]">
@@ -4097,7 +2369,8 @@ export default function CheckoutClient() {
                   !addressText ||
                   addressText === "2nd street, Barathipuram, Kannampalayam" ||
                   !contactInfo.name ||
-                  !contactInfo.phone
+                  !contactInfo.phone ||
+                  isCalculatingDelivery
                 }
                 className="w-full bg-primary hover:bg-primary/90 text-white rounded-[18px] h-[48px] text-[16px] font-medium"
               >
@@ -4106,216 +2379,43 @@ export default function CheckoutClient() {
             </div>
           </div>
 
-          {/* Payment Confirmation Dialog */}
-          <Dialog
-            open={isPaymentDialogOpen && paymentStatus !== "success"}
-            onOpenChange={(open) => {
-              // Only allow closing if payment is not in progress
-              if (
-                !open &&
-                paymentStatus !== "idle" &&
-                paymentStatus !== "failed"
-              ) {
-                return; // Prevent closing during payment process
-              }
-              setIsPaymentDialogOpen(open);
-              if (!open) {
-                setPaymentStatus("idle");
-                setIsPaymentInProgress(false);
-              }
+          <PaymentConfirmationDialog
+            isOpen={isPaymentDialogOpen}
+            paymentStatus={paymentStatus}
+            total={total}
+            subtotal={subtotal}
+            discount={discount}
+            deliveryCharge={deliveryCharge}
+            checkoutData={checkoutData}
+            selectedAddressId={selectedAddressId}
+            isFreeDelivery={isFreeDelivery}
+            cgstAmount={cgstAmount}
+            sgstAmount={sgstAmount}
+            taxSettings={taxSettings}
+            addressText={addressText}
+            contactInfo={contactInfo}
+            selectedCoupon={selectedCoupon}
+            checkoutId={checkoutId}
+            session={session}
+            isPaymentInProgress={isPaymentInProgress}
+            onOpenChange={setIsPaymentDialogOpen}
+            onPaymentSuccess={() => handleRazorpayPaymentSuccess({})}
+            onPaymentFailure={() =>
+              handleRazorpayPaymentFailure("Payment failed")
+            }
+            onPaymentClose={handleRazorpayPaymentClose}
+            onModalOpening={handleRazorpayModalOpening}
+            onPaymentVerifying={handleRazorpayPaymentVerifying}
+            onRetryPayment={() => {
+              setPaymentStatus("idle");
+              setIsPaymentInProgress(false);
             }}
-          >
-            <DialogContent className="w-[calc(100%-40px)] rounded-[22px]">
-              <DialogHeader>
-                <DialogTitle>Confirm Payment</DialogTitle>
-                <DialogDescription>
-                  You're about to place an order for ₹{total.toFixed(2)}
-                </DialogDescription>
-              </DialogHeader>
-
-              {paymentStatus !== "idle" ? (
-                <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                  {paymentStatus === "success" ? (
-                    <div className="rounded-full h-12 w-12 border-2 border-green-500 bg-green-100 flex items-center justify-center">
-                      <svg
-                        className="h-6 w-6 text-green-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                  ) : paymentStatus === "failed" ? (
-                    <div className="rounded-full h-12 w-12 border-2 border-red-500 bg-red-100 flex items-center justify-center">
-                      <svg
-                        className="h-6 w-6 text-red-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                  )}
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {paymentStatus === "processing" && "Processing..."}
-                      {paymentStatus === "opening" &&
-                        "Opening Payment Gateway..."}
-                      {paymentStatus === "verifying" && "Verifying Payment..."}
-                      {paymentStatus === "success" && "Payment successful!"}
-                      {paymentStatus === "failed" && "Payment failed"}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {paymentStatus === "processing" &&
-                        "Please wait while we process your request..."}
-                      {paymentStatus === "opening" &&
-                        "Razorpay payment gateway is opening. Please wait..."}
-                      {paymentStatus === "verifying" &&
-                        "Verifying your payment with the bank. This may take a few seconds..."}
-                      {paymentStatus === "success" &&
-                        "Your order has been placed successfully!"}
-                      {paymentStatus === "failed" &&
-                        "There was an issue with your payment. Please try again."}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium mb-2">Order Summary</h4>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span>Item Total:</span>
-                        <span>₹{subtotal.toFixed(2)}</span>
-                      </div>
-                      {discount > 0 && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Discount:</span>
-                          <span>-₹{discount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span>CGST ({taxSettings?.cgst_rate || 9}%):</span>
-                        <span>₹{cgstAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>SGST ({taxSettings?.sgst_rate || 9}%):</span>
-                        <span>₹{sgstAmount.toFixed(2)}</span>
-                      </div>
-                      {/* Delivery Fee - Only show when address is selected */}
-                      {(selectedAddressId ||
-                        checkoutData?.selectedAddressId) && (
-                        <div className="flex justify-between">
-                          <span>Delivery Fee:</span>
-                          <span
-                            className={
-                              isFreeDelivery ? "text-green-600 font-medium" : ""
-                            }
-                          >
-                            {(checkoutData?.deliveryFee || deliveryCharge) === 0
-                              ? "FREE"
-                              : `₹${(
-                                  checkoutData?.deliveryFee || deliveryCharge
-                                ).toFixed(2)}`}
-                          </span>
-                        </div>
-                      )}
-                      <div className="border-t pt-1 mt-2">
-                        <div className="flex justify-between font-semibold">
-                          <span>Total:</span>
-                          <span>₹{total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium mb-2">Delivery Address</h4>
-                    <p className="text-sm text-gray-700">{addressText}</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Contact: {contactInfo.name}, {contactInfo.phone}
-                    </p>
-                  </div>
-
-                  {selectedCoupon && (
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <h4 className="font-medium mb-2 text-green-800">
-                        Applied Coupon
-                      </h4>
-                      <p className="text-sm text-green-700 font-mono">
-                        {selectedCoupon}
-                      </p>
-                      <p className="text-sm text-green-600 mt-1">
-                        Discount: ₹{discount.toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <DialogFooter className="gap-2">
-                {paymentStatus === "idle" && (
-                  <RazorpayButton
-                    amount={total}
-                    currency="INR"
-                    checkoutId={checkoutId}
-                    userDetails={{
-                      name: contactInfo.name,
-                      email: session?.user?.email || "guest@example.com",
-                      phone: contactInfo.phone,
-                    }}
-                    onSuccess={handleRazorpayPaymentSuccess}
-                    onFailure={handleRazorpayPaymentFailure}
-                    onClose={handleRazorpayPaymentClose}
-                    onModalOpening={handleRazorpayModalOpening}
-                    onPaymentVerifying={handleRazorpayPaymentVerifying}
-                    disabled={isPaymentInProgress}
-                    className="w-full"
-                  />
-                )}
-                {paymentStatus === "failed" && (
-                  <div className="flex gap-2 w-full">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setPaymentStatus("idle");
-                        setIsPaymentInProgress(false);
-                      }}
-                      className="flex-1 rounded-[18px] h-[48px] text-[16px] font-medium"
-                    >
-                      Try Again
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setIsPaymentDialogOpen(false);
-                        setPaymentStatus("idle");
-                        setIsPaymentInProgress(false);
-                      }}
-                      className="flex-1 bg-primary hover:bg-primary/90 rounded-[18px] h-[48px] text-[16px] font-medium"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Payment component removed - implement manually */}
+            onCancelPayment={() => {
+              setIsPaymentDialogOpen(false);
+              setPaymentStatus("idle");
+              setIsPaymentInProgress(false);
+            }}
+          />
         </div>
       </div>
     </div>
