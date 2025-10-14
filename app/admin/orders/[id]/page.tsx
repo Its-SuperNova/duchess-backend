@@ -105,6 +105,11 @@ interface Order {
   payment_method: string;
   notes?: string;
   specialInstructions?: string;
+  // Customization options
+  is_knife?: boolean;
+  is_candle?: boolean;
+  is_text_on_card?: boolean;
+  text_on_card?: string;
   // Legacy fields for backward compatibility
   address_text?: string;
   note?: string;
@@ -1598,6 +1603,226 @@ export default function OrderDetailPage() {
         {/* Customer Information and Order Summary - Moved here */}
         <div className="flex flex-col md:flex-row w-full gap-6 col-span-2"></div>
       </div>
+
+      {/* Notes and Special Instructions Section */}
+      {(order.notes ||
+        order.specialInstructions ||
+        order.note ||
+        order.is_knife ||
+        order.is_candle ||
+        order.is_text_on_card ||
+        order.text_on_card ||
+        order.coupon_code) && (
+        <Card className="bg-white rounded-[24px] border-none w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+              Order Notes & Special Instructions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Order Notes */}
+            {(order.notes || order.note) && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Order Notes
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg border">
+                  <p className="text-sm whitespace-pre-wrap">
+                    {order.notes || order.note}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Special Instructions */}
+            {order.specialInstructions && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                  Special Instructions
+                </div>
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm whitespace-pre-wrap">
+                    {order.specialInstructions}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Customization Options */}
+            {(order.is_knife || order.is_candle || order.is_text_on_card) && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                    />
+                  </svg>
+                  Customization Options
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="space-y-2">
+                    {order.is_knife && (
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="h-4 w-4 text-green-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium text-green-800">
+                          Knife requested
+                        </span>
+                      </div>
+                    )}
+                    {order.is_candle && (
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="h-4 w-4 text-green-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium text-green-800">
+                          Candles requested
+                        </span>
+                      </div>
+                    )}
+                    {order.is_text_on_card && (
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="h-4 w-4 text-green-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium text-green-800">
+                          Message card requested
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Message Card Text */}
+            {order.text_on_card && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                    />
+                  </svg>
+                  Message Card Text
+                </div>
+                <div className="p-4 bg-pink-50 rounded-lg border border-pink-200">
+                  <p className="text-sm whitespace-pre-wrap font-medium text-pink-800">
+                    "{order.text_on_card}"
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Coupon Applied */}
+            {order.coupon_code && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                    />
+                  </svg>
+                  Coupon Applied
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm font-medium text-green-800">
+                    Coupon Code: {order.coupon_code}
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

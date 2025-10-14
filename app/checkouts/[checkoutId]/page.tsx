@@ -833,6 +833,12 @@ export default function CheckoutClient() {
         setTaxSettings({ cgst_rate: 0.0, sgst_rate: 0.0 });
       } finally {
         setCheckoutLoading(false);
+        // Mark checkout data and tax settings as loaded
+        setLoadingStates((prev) => ({
+          ...prev,
+          checkoutData: false,
+          taxSettings: false,
+        }));
       }
     };
 
@@ -915,6 +921,12 @@ export default function CheckoutClient() {
           console.log("✅ All encrypted checkout data loaded in parallel");
         } catch (error) {
           console.error("Error loading encrypted checkout data:", error);
+        } finally {
+          // Mark localStorage data as loaded
+          setLoadingStates((prev) => ({
+            ...prev,
+            localStorage: false,
+          }));
         }
       }
     };
@@ -934,6 +946,36 @@ export default function CheckoutClient() {
     cgst_rate: number;
     sgst_rate: number;
   } | null>(null);
+
+  // OPTIMIZED: Comprehensive loading state for all critical data
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [loadingStates, setLoadingStates] = useState({
+    checkoutData: true,
+    taxSettings: true,
+    addresses: true,
+    localStorage: true,
+  });
+
+  // Check if all critical data is loaded and log progress
+  useEffect(() => {
+    const loadedCount = Object.values(loadingStates).filter(
+      (state) => !state
+    ).length;
+    const totalCount = Object.keys(loadingStates).length;
+    const allLoaded = loadedCount === totalCount;
+
+    console.log(`📊 Loading Progress: ${loadedCount}/${totalCount}`, {
+      checkoutData: loadingStates.checkoutData ? "⏳ Loading..." : "✅ Loaded",
+      taxSettings: loadingStates.taxSettings ? "⏳ Loading..." : "✅ Loaded",
+      addresses: loadingStates.addresses ? "⏳ Loading..." : "✅ Loaded",
+      localStorage: loadingStates.localStorage ? "⏳ Loading..." : "✅ Loaded",
+    });
+
+    if (allLoaded && isInitializing) {
+      console.log("✅ All critical data loaded - hiding skeleton");
+      setIsInitializing(false);
+    }
+  }, [loadingStates, isInitializing]);
 
   // Customization options state
   const [customizationOptions, setCustomizationOptions] = useState({
@@ -1292,6 +1334,11 @@ export default function CheckoutClient() {
         }
       } finally {
         setLoadingAddresses(false);
+        // Mark addresses as loaded
+        setLoadingStates((prev) => ({
+          ...prev,
+          addresses: false,
+        }));
       }
     };
     load();
@@ -1929,9 +1976,39 @@ export default function CheckoutClient() {
 
   // Razorpay payment success handler
   const handleRazorpayPaymentSuccess = async (paymentData: any) => {
-    console.log("Razorpay payment success:", paymentData);
+    console.log("🎉 Razorpay payment success handler called");
+    console.log("📦 Payment Data Received:", {
+      hasPaymentData: !!paymentData,
+      orderId: paymentData?.orderId,
+      paymentId: paymentData?.paymentId,
+      signature: paymentData?.signature,
+      fullData: paymentData,
+    });
 
     try {
+      // Validate that we have orderId
+      if (!paymentData || !paymentData.orderId) {
+        console.error("❌ ERROR: Payment successful but orderId is missing!", {
+          paymentData,
+          typeOfPaymentData: typeof paymentData,
+        });
+
+        toast({
+          title: "Order ID Missing",
+          description:
+            "Payment was successful but order details are missing. Please check your orders page or contact support.",
+          variant: "destructive",
+        });
+
+        // Still try to redirect to orders page
+        setTimeout(() => {
+          router.push("/orders");
+        }, 2000);
+        return;
+      }
+
+      console.log("✅ Valid orderId found:", paymentData.orderId);
+
       // Close main payment dialog
       setIsPaymentDialogOpen(false);
       setPaymentStatus("success");
@@ -1939,7 +2016,7 @@ export default function CheckoutClient() {
       // Clear cart and show success overlay
       clearCart();
       setShowSuccessOverlay(true);
-      setSuccessOrderId(paymentData?.orderId);
+      setSuccessOrderId(paymentData.orderId);
 
       toast({
         title: "Payment Successful!",
@@ -1947,9 +2024,12 @@ export default function CheckoutClient() {
         variant: "default",
       });
 
-      // Redirect to confirmation page
+      // Redirect to confirmation page with orderId
+      console.log(
+        `🔄 Redirecting to: /confirmation?orderId=${paymentData.orderId}`
+      );
       setTimeout(() => {
-        router.push(`/confirmation?orderId=${paymentData?.orderId}`);
+        router.push(`/confirmation?orderId=${paymentData.orderId}`);
       }, 1000);
     } catch (error) {
       console.error("Error handling payment success:", error);
@@ -2086,8 +2166,8 @@ export default function CheckoutClient() {
     contactInfo,
   ]);
 
-  // Show skeleton loader while cart or checkout is loading
-  if (cartLoading || checkoutLoading) {
+  // OPTIMIZED: Show skeleton loader until ALL critical data is loaded
+  if (cartLoading || checkoutLoading || isInitializing) {
     return <CheckoutSkeleton />;
   }
 
@@ -2399,10 +2479,8 @@ export default function CheckoutClient() {
             session={session}
             isPaymentInProgress={isPaymentInProgress}
             onOpenChange={setIsPaymentDialogOpen}
-            onPaymentSuccess={() => handleRazorpayPaymentSuccess({})}
-            onPaymentFailure={() =>
-              handleRazorpayPaymentFailure("Payment failed")
-            }
+            onPaymentSuccess={handleRazorpayPaymentSuccess}
+            onPaymentFailure={handleRazorpayPaymentFailure}
             onPaymentClose={handleRazorpayPaymentClose}
             onModalOpening={handleRazorpayModalOpening}
             onPaymentVerifying={handleRazorpayPaymentVerifying}

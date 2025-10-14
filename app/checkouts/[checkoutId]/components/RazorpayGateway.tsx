@@ -93,7 +93,26 @@ export default function RazorpayGateway({
 
             const verifyData = await verifyRes.json();
 
+            console.log("🔍 VERIFY API RESPONSE:", {
+              success: verifyData.success,
+              orderId: verifyData.orderId,
+              hasOrderId: !!verifyData.orderId,
+              typeOfOrderId: typeof verifyData.orderId,
+              fullResponse: verifyData,
+            });
+
             if (verifyData.success) {
+              // Validate orderId exists
+              if (!verifyData.orderId) {
+                console.error(
+                  "❌ CRITICAL: Verify API returned success but NO orderId!",
+                  verifyData
+                );
+                throw new Error("Order ID not returned from verification");
+              }
+
+              console.log("✅ Order ID confirmed:", verifyData.orderId);
+
               // Debug: Log delivery fee data before redirect
               console.log("🔍 Delivery Fee Debug - Payment Success:", {
                 orderId: verifyData.orderId,
@@ -108,14 +127,21 @@ export default function RazorpayGateway({
                 variant: "default",
               });
 
+              // Prepare payment data for callback
+              const paymentData = {
+                orderId: verifyData.orderId,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                deliveryFeeData: verifyData.deliveryFeeData,
+              };
+
+              console.log("📤 Calling onSuccess callback with:", paymentData);
+
               // Call success callback with order data
               if (onSuccess) {
-                onSuccess({
-                  orderId: verifyData.orderId,
-                  paymentId: response.razorpay_payment_id,
-                  signature: response.razorpay_signature,
-                  deliveryFeeData: verifyData.deliveryFeeData,
-                });
+                onSuccess(paymentData);
+              } else {
+                console.warn("⚠️ onSuccess callback is not defined!");
               }
             } else {
               throw new Error(

@@ -34,8 +34,8 @@ interface PaymentConfirmationDialogProps {
   session?: any;
   isPaymentInProgress: boolean;
   onOpenChange: (open: boolean) => void;
-  onPaymentSuccess: () => void;
-  onPaymentFailure: () => void;
+  onPaymentSuccess: (paymentData: any) => void;
+  onPaymentFailure: (error: any) => void;
   onPaymentClose: () => void;
   onModalOpening: () => void;
   onPaymentVerifying: () => void;
