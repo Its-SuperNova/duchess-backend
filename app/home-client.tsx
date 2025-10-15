@@ -7,6 +7,7 @@ import ProductCard from "@/components/productcard";
 import { ProcessedProduct } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import CouponPopupDialog from "@/components/coupon-popup-dialog";
 
 // Skeleton loader for products
 const ProductSkeleton = () => (
@@ -118,6 +119,9 @@ export default function HomeClient({
 
   return (
     <div className="w-full overflow-x-hidden bg-white dark:bg-gray-900">
+      {/* Coupon Popup Dialog */}
+      <CouponPopupDialog />
+
       {/* Hero section */}
       <Hero />
 
