@@ -1,12 +1,45 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import { upsertUser } from "./lib/auth-utils";
+import Credentials from "next-auth/providers/credentials";
+import { upsertUser, getUserByEmail } from "./lib/auth-utils";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
+    Credentials({
+      id: "otp",
+      name: "OTP",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        sessionToken: { label: "Session Token", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.sessionToken) {
+          return null;
+        }
+
+        try {
+          // Get user from database
+          const user = await getUserByEmail(credentials.email as string);
+
+          if (user) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+            };
+          }
+
+          return null;
+        } catch (error) {
+          console.error("Error in OTP authorize:", error);
+          return null;
+        }
+      },
     }),
   ],
   trustHost: true,

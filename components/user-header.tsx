@@ -168,6 +168,12 @@ export default function UserHeader() {
                     alt={session.user.name || "Profile"}
                     className="h-full w-full object-cover"
                   />
+                ) : session?.user?.name ? (
+                  <div className="h-full w-full bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-primary font-semibold text-sm">
+                      {session.user.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 ) : (
                   <User className="h-5 w-5" />
                 )}

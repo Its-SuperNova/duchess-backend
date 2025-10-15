@@ -5,6 +5,7 @@ import "./globals.css";
 import LayoutWrapper from "./layout-wrapper";
 import AuthSessionProvider from "@/components/providers/session-provider";
 import ErrorBoundary from "@/components/error-boundary";
+import { OTPAuthProvider } from "@/context/otp-auth-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,7 +26,9 @@ export default function RootLayout({
       <body className={`${inter.className} overflow-x-hidden`}>
         <ErrorBoundary>
           <AuthSessionProvider>
-            <LayoutWrapper>{children}</LayoutWrapper>
+            <OTPAuthProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </OTPAuthProvider>
           </AuthSessionProvider>
         </ErrorBoundary>
       </body>
