@@ -446,6 +446,11 @@ export default function CouponButton({
 
     fetchData();
   }, [checkoutId]);
+  // Don't render the component if no coupons are applicable and not loading
+  if (!loading && !featuredCoupon && !appliedCoupon && !hasExistingDiscounts) {
+    return null;
+  }
+
   return (
     <>
       <div className="bg-white mx-4 rounded-2xl border border-gray-200 dark:border-gray-600 overflow-hidden">
