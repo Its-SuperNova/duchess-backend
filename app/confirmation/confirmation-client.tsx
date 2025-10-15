@@ -16,6 +16,10 @@ interface OrderItem {
   quantity: number;
   product_image: string | null;
   variant: string;
+  // Discount information (if coupon was applied)
+  original_price?: number | null;
+  discount_amount?: number | null;
+  coupon_applied?: string | null;
 }
 
 interface Order {
@@ -387,19 +391,64 @@ export default function ConfirmationClient() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between">
-                    <h3 className="font-medium">{item.product_name}</h3>
-                    <p className="font-medium">
-                      {formatCurrency(item.unit_price * item.quantity)}
-                    </p>
+                    <div>
+                      <h3 className="font-medium">{item.product_name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {item.original_price &&
+                        item.discount_amount &&
+                        item.discount_amount > 0 ? (
+                          <>
+                            <span className="line-through text-gray-400">
+                              {formatCurrency(item.original_price)}
+                            </span>
+                            <span className="text-green-600 ml-2 font-medium">
+                              {formatCurrency(item.unit_price)}
+                            </span>
+                            <span className="text-gray-500">
+                              {" "}
+                              x {item.quantity}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {formatCurrency(item.unit_price)} x {item.quantity}
+                          </>
+                        )}
+                      </p>
+                      {item.variant && (
+                        <p className="text-sm text-gray-500">
+                          Variant: {item.variant}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      {/* Show discounted price if discount was applied */}
+                      {item.original_price &&
+                      item.discount_amount &&
+                      item.discount_amount > 0 ? (
+                        <div className="space-y-1">
+                          <p className="font-medium text-green-600 text-lg">
+                            {formatCurrency(item.unit_price * item.quantity)}
+                          </p>
+                          <p className="text-sm text-gray-500 line-through">
+                            {formatCurrency(
+                              item.original_price * item.quantity
+                            )}
+                          </p>
+                          <p className="text-xs text-green-600 font-medium">
+                            Saved{" "}
+                            {formatCurrency(
+                              item.discount_amount * item.quantity
+                            )}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="font-medium text-lg">
+                          {formatCurrency(item.unit_price * item.quantity)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-500">
-                    {formatCurrency(item.unit_price)} x {item.quantity}
-                  </p>
-                  {item.variant && (
-                    <p className="text-sm text-gray-500">
-                      Variant: {item.variant}
-                    </p>
-                  )}
                 </div>
               </div>
             ))}
@@ -467,26 +516,11 @@ export default function ConfirmationClient() {
           </div>
         </div>
 
-        {/* Delivery & Coupon Section */}
-        {(order.delivery_address_text || order.coupon_code) && (
-          <div className="bg-white rounded-[20px] p-6 shadow-sm space-y-4">
-            {order.delivery_address_text && (
-              <div>
-                <h3 className="font-medium mb-2">Delivery Address</h3>
-                <p className="text-gray-600">{order.delivery_address_text}</p>
-              </div>
-            )}
-
-            {order.coupon_code && (
-              <div>
-                <h3 className="font-medium mb-2 text-green-800">
-                  Applied Coupon
-                </h3>
-                <p className="text-green-700 font-mono bg-green-50 px-3 py-2 rounded-lg inline-block">
-                  {order.coupon_code}
-                </p>
-              </div>
-            )}
+        {/* Delivery Address Section */}
+        {order.delivery_address_text && (
+          <div className="bg-white rounded-[20px] p-6 shadow-sm">
+            <h3 className="font-medium mb-2">Delivery Address</h3>
+            <p className="text-gray-600">{order.delivery_address_text}</p>
           </div>
         )}
 

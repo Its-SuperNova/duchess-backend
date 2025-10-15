@@ -264,6 +264,10 @@ declare global {
           quantity: number;
           unit_price: number;
           total_price: number;
+          // Discount information (if coupon was applied)
+          original_price: number | null;
+          discount_amount: number | null;
+          coupon_applied: string | null;
           // Product variant/customization
           variant: string | null;
           customization_options: any;

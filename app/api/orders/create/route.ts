@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 import { getAreaFromPincode } from "@/lib/pincode-areas";
 import { CheckoutStore } from "@/lib/checkout-store";
+import { trackCouponUsage } from "@/lib/coupon-usage-tracker";
 import { calculateTaxAmounts } from "@/lib/pricing-utils";
 
 export async function GET() {
@@ -188,6 +189,17 @@ export async function POST(request: NextRequest) {
     if (items && items.length > 0) {
       // Use items from request body (for dummy payment flow)
       console.log("Using items from request body:", items);
+      console.log(
+        "🔍 ORDER CREATION: Items from request body with discount fields:",
+        items.map((item: any) => ({
+          product_id: item.product_id,
+          unit_price: item.unit_price,
+          price: item.price,
+          original_price: item.original_price,
+          discount_amount: item.discount_amount,
+          coupon_applied: item.coupon_applied,
+        }))
+      );
       cartItems = items;
     } else {
       // Fallback to database cart items
@@ -399,51 +411,98 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Attempting to insert order items...");
+    console.log(
+      "🔍 ORDER CREATION: Cart items received:",
+      JSON.stringify(cartItems, null, 2)
+    );
 
     // Enhanced order items with new schema
-    const orderItemsPayload = cartItems.map((item: any) => ({
-      order_id: order.id,
-      product_id: item.product_id,
+    const orderItemsPayload = cartItems.map((item: any) => {
+      console.log(`🔍 ORDER CREATION: Processing cart item:`, {
+        product_id: item.product_id,
+        unit_price: item.unit_price,
+        price: item.price,
+        original_price: item.original_price,
+        discount_amount: item.discount_amount,
+        coupon_applied: item.coupon_applied,
+      });
 
-      // Product information (snapshot at time of order)
-      product_name: item.product_name,
-      product_image: item.product_image || null,
-      product_description: item.product_description || null,
-      category: item.category || null,
+      return {
+        order_id: order.id,
+        product_id: item.product_id,
 
-      // Quantity and pricing
-      quantity: item.quantity,
-      unit_price: item.price || item.unit_price || 0,
-      total_price: (item.price || item.unit_price || 0) * item.quantity,
+        // Product information (snapshot at time of order)
+        product_name: item.product_name,
+        product_image: item.product_image || null,
+        product_description: item.product_description || null,
+        category: item.category || null,
 
-      // Product variant/customization
-      variant: item.variant || null,
-      customization_options:
-        customizationOptions || item.customization_options || {},
+        // Quantity and pricing
+        quantity: item.quantity,
+        unit_price: item.price || item.unit_price || 0,
+        total_price: (item.price || item.unit_price || 0) * item.quantity,
 
-      // Cake-specific customizations
-      cake_text: item.cake_text || null,
-      cake_flavor: item.cake_flavor || null,
-      cake_size: item.cake_size || null,
-      cake_weight: item.cake_weight || null,
+        // Discount information (if coupon was applied)
+        original_price: item.original_price || null,
+        discount_amount: item.discount_amount || null,
+        coupon_applied: item.coupon_applied || null,
 
-      // Additional services for this item (handle both database and request body formats)
-      item_has_knife: item.add_knife || item.item_has_knife || false,
-      item_has_candle: item.add_candles || item.item_has_candle || false,
-      item_has_message_card:
-        item.add_message_card || item.item_has_message_card || false,
-      item_message_card_text:
-        item.gift_card_text || item.item_message_card_text || null,
+        // Product variant/customization
+        variant: item.variant || null,
+        customization_options:
+          customizationOptions || item.customization_options || {},
 
-      // Item status tracking
-      item_status: "pending",
-      preparation_notes: null,
-    }));
+        // Cake-specific customizations
+        cake_text: item.cake_text || null,
+        cake_flavor: item.cake_flavor || null,
+        cake_size: item.cake_size || null,
+        cake_weight: item.cake_weight || null,
+
+        // Additional services for this item (handle both database and request body formats)
+        item_has_knife: item.add_knife || item.item_has_knife || false,
+        item_has_candle: item.add_candles || item.item_has_candle || false,
+        item_has_message_card:
+          item.add_message_card || item.item_has_message_card || false,
+        item_message_card_text:
+          item.gift_card_text || item.item_message_card_text || null,
+
+        // Item status tracking
+        item_status: "pending",
+        preparation_notes: null,
+      };
+    });
+
+    console.log(
+      "📦 ORDER CREATION: Order items payload to insert:",
+      JSON.stringify(orderItemsPayload, null, 2)
+    );
 
     console.log("Order items payload:", orderItemsPayload);
-    const { error: orderItemsError } = await supabase
+    const { data: insertedItems, error: orderItemsError } = await supabase
       .from("order_items")
-      .insert(orderItemsPayload);
+      .insert(orderItemsPayload)
+      .select();
+
+    if (orderItemsError) {
+      console.error(
+        "❌ ORDER CREATION: Failed to insert order items:",
+        orderItemsError
+      );
+    } else {
+      console.log(
+        "✅ ORDER CREATION: Order items inserted successfully:",
+        insertedItems
+      );
+      console.log(
+        "✅ ORDER CREATION: Discount fields in inserted items:",
+        insertedItems?.map((item) => ({
+          product_id: item.product_id,
+          original_price: item.original_price,
+          discount_amount: item.discount_amount,
+          coupon_applied: item.coupon_applied,
+        }))
+      );
+    }
 
     if (orderItemsError) {
       console.error("Failed to insert order items:", orderItemsError);
@@ -456,6 +515,36 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Order and items created successfully");
+
+    // Track coupon usage if coupon was applied
+    if (finalIsCoupon && sanitizedCouponCode && discountAmount > 0) {
+      console.log("🎫 Tracking coupon usage for completed order:", {
+        couponCode: sanitizedCouponCode,
+        orderId: order.id,
+        userId: user.id,
+        discountAmount,
+      });
+
+      const couponTrackingResult = await trackCouponUsage(
+        sanitizedCouponCode,
+        order.id,
+        user.id,
+        discountAmount
+      );
+
+      if (couponTrackingResult.success) {
+        console.log(
+          "✅ Coupon usage tracked successfully:",
+          couponTrackingResult.data
+        );
+      } else {
+        console.warn(
+          "⚠️ Failed to track coupon usage:",
+          couponTrackingResult.error
+        );
+        // Don't fail the order creation if coupon tracking fails
+      }
+    }
 
     // Clear cart after successful order creation
     const { error: clearCartError } = await supabase

@@ -77,6 +77,14 @@ export async function POST(request: NextRequest) {
     let validatedSubtotal = 0;
     const validatedItems = [];
 
+    console.log(
+      "🔍 VALIDATION: Starting item validation with discount preservation"
+    );
+    console.log(
+      "📦 VALIDATION: Received items from client:",
+      JSON.stringify(items, null, 2)
+    );
+
     for (const item of items) {
       const productId = item.product_id || item.id;
       const dbProduct = productPriceMap.get(productId);
@@ -88,20 +96,59 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Use database price, not client-provided price
-      const validatedPrice = dbProduct.price;
+      // Use database price as base, but preserve discount information
+      const dbPrice = dbProduct.price;
       const quantity = item.quantity || 1;
-      const itemTotal = validatedPrice * quantity;
 
-      validatedSubtotal += itemTotal;
-      validatedItems.push({
+      console.log(`🔍 VALIDATION: Processing item ${productId}:`, {
+        dbPrice,
+        clientUnitPrice: item.unit_price,
+        originalPrice: item.original_price,
+        discountAmount: item.discount_amount,
+        couponApplied: item.coupon_applied,
+      });
+
+      // If item has discount information, use the discounted price
+      // Otherwise, use the database price
+      const finalUnitPrice =
+        item.original_price && item.discount_amount
+          ? item.unit_price // Use the discounted price from client
+          : dbPrice; // Use database price for non-discounted items
+
+      const itemTotal = finalUnitPrice * quantity;
+
+      // For subtotal calculation, use original prices (before discount)
+      // This ensures coupon validation works correctly
+      const originalPrice = item.original_price || dbPrice;
+      validatedSubtotal += originalPrice * quantity;
+
+      const validatedItem = {
         product_id: productId,
         product_name: dbProduct.name,
-        unit_price: validatedPrice,
+        unit_price: finalUnitPrice,
         quantity: quantity,
         total_price: itemTotal,
-      });
+        // Preserve discount information from client
+        original_price: item.original_price || null,
+        discount_amount: item.discount_amount || null,
+        coupon_applied: item.coupon_applied || null,
+        // Preserve other item fields
+        product_image: item.product_image || null,
+        variant: item.variant || null,
+        category: item.category || null,
+      };
+
+      console.log(`✅ VALIDATION: Validated item ${productId}:`, validatedItem);
+      validatedItems.push(validatedItem);
     }
+
+    console.log(
+      "✅ VALIDATION: All items validated with discount info preserved"
+    );
+    console.log(
+      "📦 VALIDATION: Validated items array:",
+      JSON.stringify(validatedItems, null, 2)
+    );
 
     console.log("✅ Server-side subtotal validation:", {
       clientSubtotal: items.reduce(

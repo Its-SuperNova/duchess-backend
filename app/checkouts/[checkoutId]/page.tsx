@@ -573,6 +573,8 @@ export default function CheckoutClient() {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [selectedCoupon, setSelectedCoupon] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Checkout session data
   const [checkoutData, setCheckoutData] = useState<any>(null);
@@ -597,7 +599,7 @@ export default function CheckoutClient() {
         console.log("⏱️ Starting parallel API calls...");
 
         // Parallel API calls with smart caching - Execute all independent requests simultaneously
-        const [data, taxResult] = await Promise.all([
+        const [data, taxResult, categoriesResult] = await Promise.all([
           cacheManager.fetchWithCache<any>(
             `/api/checkout/${checkoutId}`,
             undefined,
@@ -608,6 +610,11 @@ export default function CheckoutClient() {
             undefined,
             CACHE_CONFIG.LONG_TTL
           ), // Tax settings are static
+          cacheManager.fetchWithCache<any>(
+            "/api/categories",
+            undefined,
+            CACHE_CONFIG.LONG_TTL
+          ), // Categories are relatively static
         ]);
 
         const parallelTime = performance.now() - startTime;
@@ -648,6 +655,11 @@ export default function CheckoutClient() {
         }
 
         setCheckoutData(data.checkout);
+
+        // Set categories from API response
+        if (categoriesResult.success && categoriesResult.categories) {
+          setCategories(categoriesResult.categories);
+        }
 
         // Set selected address ID from checkout data
         if (data.checkout.selectedAddressId) {
@@ -1990,6 +2002,18 @@ export default function CheckoutClient() {
         validatedAt: validationResult.metadata.validatedAt,
       };
 
+      // Debug: Log discount fields in validated items
+      console.log(
+        "🔍 CHECKOUT: Validated items with discount info:",
+        validated.items.map((item: any) => ({
+          product_id: item.product_id,
+          unit_price: item.unit_price,
+          original_price: item.original_price,
+          discount_amount: item.discount_amount,
+          coupon_applied: item.coupon_applied,
+        }))
+      );
+
       // Debug: Log SERVER-VALIDATED financial data being sent to checkout session
       console.log(
         "💳 SERVER-VALIDATED financial data being sent to checkout session:",
@@ -2418,6 +2442,9 @@ export default function CheckoutClient() {
               <CouponButton
                 checkoutId={checkoutId}
                 selectedCoupon={selectedCoupon}
+                onCouponApplied={setAppliedCoupon}
+                onCheckoutDataUpdate={setCheckoutData}
+                checkoutData={checkoutData}
               />
 
               <CustomizationOptionsDrawer
@@ -2452,13 +2479,15 @@ export default function CheckoutClient() {
             {/* Right Column - Order Summary (top on mobile, right on desktop) */}
             <div className="lg:col-span-1 order-1 lg:order-2">
               <div className="space-y-4">
-                <div className="bg-white mx-4 p-3 rounded-[22px] border border-gray-200 dark:border-gray-600 sticky top-4 overflow-hidden">
+                <div className="bg-white mx-4 p-3 rounded-[22px] border border-gray-200 dark:border-gray-600 overflow-hidden">
                   <ProductListing
                     items={checkoutData ? checkoutData.items : cart}
                     checkoutData={checkoutData}
                     onRemoveItem={removeFromCart}
                     onUpdateQuantity={updateQuantity}
                     onUpdateCheckoutData={setCheckoutData}
+                    appliedCoupon={appliedCoupon}
+                    categories={categories}
                   />
 
                   {/* Place Order Button moved to fixed bottom bar */}

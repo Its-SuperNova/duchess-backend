@@ -298,6 +298,22 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     },
   });
 
+  // Log checkout session items before creating order items
+  console.log(
+    "🔍 ORDER UTILS: Checkout session items:",
+    JSON.stringify(checkoutSession.items, null, 2)
+  );
+  console.log(
+    "🔍 ORDER UTILS: Discount fields in checkout session items:",
+    checkoutSession.items.map((item: any) => ({
+      product_id: item.product_id,
+      unit_price: item.unit_price,
+      original_price: item.original_price,
+      discount_amount: item.discount_amount,
+      coupon_applied: item.coupon_applied,
+    }))
+  );
+
   // Create order items - mapping to correct database column names
   const orderItems = checkoutSession.items.map((item) => ({
     order_id: order.id,
@@ -309,6 +325,10 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     quantity: item.quantity,
     unit_price: item.unit_price,
     total_price: item.total_price,
+    // Discount information (if coupon was applied)
+    original_price: item.original_price || null,
+    discount_amount: item.discount_amount || null,
+    coupon_applied: item.coupon_applied || null,
     variant: item.variant || null,
     customization_options: item.customization_options || {},
     cake_text: item.cake_text || null,
@@ -322,6 +342,11 @@ export async function createOrderFromCheckout(data: CreateOrderData) {
     item_status: "pending",
     preparation_notes: null,
   }));
+
+  console.log(
+    "📦 ORDER UTILS: Order items payload with discount fields:",
+    JSON.stringify(orderItems, null, 2)
+  );
 
   const { error: itemsError } = await supabase
     .from("order_items")

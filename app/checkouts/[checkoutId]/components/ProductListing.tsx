@@ -19,12 +19,28 @@ interface ProductItem {
   variant?: string;
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  type: "percentage" | "flat";
+  value: number;
+  is_active: boolean;
+  valid_from: string;
+  valid_until: string;
+  apply_to_specific: boolean;
+  restriction_type?: "products" | "categories";
+  applicable_categories?: string[];
+  applicable_products?: number[];
+}
+
 interface ProductListingProps {
   items: ProductItem[];
   checkoutData?: any;
   onRemoveItem?: (uid: string) => void;
   onUpdateQuantity?: (uid: string, quantity: number) => void;
   onUpdateCheckoutData?: (data: any) => void;
+  appliedCoupon?: Coupon | null;
+  categories?: Array<{ id: string; name: string }>;
 }
 
 export default function ProductListing({
@@ -33,7 +49,91 @@ export default function ProductListing({
   onRemoveItem,
   onUpdateQuantity,
   onUpdateCheckoutData,
+  appliedCoupon,
+  categories = [],
 }: ProductListingProps) {
+  // Helper function to get category ID by name
+  const getCategoryId = (categoryName: string): string | null => {
+    const category = categories.find((cat) => cat.name === categoryName);
+    return category ? category.id : null;
+  };
+
+  // Check if coupon is applicable to a specific item
+  const isCouponApplicableToItem = (item: ProductItem): boolean => {
+    if (!appliedCoupon || !appliedCoupon.apply_to_specific) {
+      return true; // Coupon applies to all items
+    }
+
+    if (
+      appliedCoupon.restriction_type === "categories" &&
+      appliedCoupon.applicable_categories
+    ) {
+      const categoryId = getCategoryId(item.category || "");
+      return categoryId
+        ? appliedCoupon.applicable_categories.includes(categoryId)
+        : false;
+    }
+
+    if (
+      appliedCoupon.restriction_type === "products" &&
+      appliedCoupon.applicable_products
+    ) {
+      const productId = checkoutData
+        ? parseInt(item.product_id || "0")
+        : parseInt(item.id || "0");
+      return appliedCoupon.applicable_products.includes(productId);
+    }
+
+    return false;
+  };
+
+  // Calculate discount for an item
+  const calculateItemDiscount = (item: ProductItem) => {
+    const originalPrice = checkoutData ? item.unit_price || 0 : item.price || 0;
+
+    // If checkout data has discount information, use it
+    if (checkoutData && item.original_price !== undefined) {
+      return {
+        originalPrice: item.original_price,
+        discountedPrice: item.unit_price || 0,
+        discountAmount: item.discount_amount || 0,
+      };
+    }
+
+    // Fallback to visual-only calculation for display
+    if (!appliedCoupon || !isCouponApplicableToItem(item)) {
+      return {
+        originalPrice,
+        discountedPrice: originalPrice,
+        discountAmount: 0,
+      };
+    }
+    let discountAmount = 0;
+
+    if (appliedCoupon.type === "percentage") {
+      discountAmount = (originalPrice * appliedCoupon.value) / 100;
+    } else {
+      discountAmount = appliedCoupon.value;
+    }
+
+    const discountedPrice = Math.max(0, originalPrice - discountAmount);
+
+    return {
+      originalPrice,
+      discountedPrice,
+      discountAmount,
+    };
+  };
+
+  // Calculate total savings
+  const calculateTotalSavings = () => {
+    return items.reduce((total, item) => {
+      const { discountAmount } = calculateItemDiscount(item);
+      const quantity = item.quantity || 1;
+      return total + discountAmount * quantity;
+    }, 0);
+  };
+
   const handleQuantityChange = (
     item: ProductItem,
     index: number,
@@ -132,9 +232,34 @@ export default function ProductListing({
                 {/* Bottom Row */}
                 <div className="flex items-center justify-between w-full">
                   {/* Price */}
-                  <p className="text-[16px] font-semibold text-black dark:text-gray-100">
-                    ₹{(checkoutData ? item.unit_price : item.price)?.toFixed(2)}
-                  </p>
+                  <div className="flex flex-col">
+                    {(() => {
+                      const { originalPrice, discountedPrice, discountAmount } =
+                        calculateItemDiscount(item);
+                      const isDiscounted = discountAmount > 0;
+
+                      if (isDiscounted) {
+                        return (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[16px] font-semibold text-black dark:text-gray-100">
+                                ₹{discountedPrice.toFixed(2)}
+                              </span>
+                              <span className="text-[14px] text-red-500 line-through">
+                                ₹{originalPrice.toFixed(2)}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      } else {
+                        return (
+                          <span className="text-[16px] font-semibold text-black dark:text-gray-100">
+                            ₹{originalPrice.toFixed(2)}
+                          </span>
+                        );
+                      }
+                    })()}
+                  </div>
 
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-2 bg-[#F5F4F7] rounded-full p-1 shrink-0">
@@ -164,6 +289,17 @@ export default function ProductListing({
           </div>
         );
       })}
+
+      {/* Savings Banner */}
+      {appliedCoupon && calculateTotalSavings() > 0 && (
+        <div className="bg-green-100 rounded-lg p-3 mt-4">
+          <div className="flex items-center justify-center">
+            <span className="text-green-700 font-medium text-sm">
+              You have saved ₹{calculateTotalSavings().toFixed(0)} 🎉
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

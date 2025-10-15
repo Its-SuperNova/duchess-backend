@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -35,22 +35,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, ArrowLeft } from "lucide-react";
+import { CalendarIcon, ArrowLeft, Search } from "lucide-react";
 import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
 import { Coupon } from "@/lib/supabase";
+import Image from "next/image";
 
-// Categories for coupon applicability
-const categories = [
-  { id: 1, name: "Cakes" },
-  { id: 2, name: "Cookies" },
-  { id: 3, name: "Pastries" },
-  { id: 4, name: "Breads" },
-  { id: 5, name: "Cupcakes" },
-  { id: 6, name: "Tarts" },
+// Hardcoded categories as fallback
+const hardcodedCategories = [
+  { id: "550e8400-e29b-41d4-a716-446655440001", name: "Brownies & Brookies" },
+  { id: "550e8400-e29b-41d4-a716-446655440002", name: "Cakes" },
+  { id: "550e8400-e29b-41d4-a716-446655440003", name: "Cookies" },
+  { id: "550e8400-e29b-41d4-a716-446655440004", name: "Pastries" },
 ];
 
 // Form schema for coupon editing
@@ -65,10 +64,15 @@ const formSchema = z.object({
   minOrderAmount: z.coerce.number().min(0),
   maxDiscountCap: z.coerce.number().min(0).optional(),
   usageLimit: z.coerce.number().min(1).optional().nullable(),
-  usagePerUser: z.coerce.number().min(1),
   validFrom: z.date(),
   validUntil: z.date(),
-  applicableCategories: z.array(z.number()).optional(),
+  applyToSpecific: z.boolean(),
+  restrictionType: z.enum(["products", "categories"]).optional(),
+  applicableCategories: z.array(z.string()).optional(),
+  applicableProducts: z.array(z.string()).optional(),
+  enableMinOrderAmount: z.boolean(),
+  enableMaxDiscountCap: z.boolean(),
+  enableUsageLimit: z.boolean(),
 });
 
 export default function EditCouponPage({
@@ -81,6 +85,27 @@ export default function EditCouponPage({
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [fetching, setFetching] = useState(true);
   const [couponId, setCouponId] = useState<string>("");
+
+  // New state for categories and products
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
+    []
+  );
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [products, setProducts] = useState<
+    {
+      id: number;
+      name: string;
+      category_id: string;
+      banner_image?: string;
+      categories?: { name: string };
+    }[]
+  >([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showOnlySelected, setShowOnlySelected] = useState(false);
 
   // Handle async params
   useEffect(() => {
@@ -99,12 +124,91 @@ export default function EditCouponPage({
       minOrderAmount: 0,
       maxDiscountCap: 0,
       usageLimit: 100,
-      usagePerUser: 1,
       validFrom: new Date(),
       validUntil: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      applyToSpecific: false,
+      restrictionType: "categories",
       applicableCategories: [],
+      applicableProducts: [],
+      enableMinOrderAmount: false,
+      enableMaxDiscountCap: false,
+      enableUsageLimit: false,
     },
   });
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/categories");
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        } else {
+          // Fallback to hardcoded categories
+          setCategories(hardcodedCategories);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setCategories(hardcodedCategories);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch products and set initial category
+  useEffect(() => {
+    const fetchProducts = async (categoryId: string) => {
+      try {
+        setProductsLoading(true);
+        const response = await fetch(
+          `/api/products/by-category?category_id=${categoryId}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setProducts(data.products || []);
+        } else {
+          // Fallback to mock products
+          setProducts([
+            {
+              id: 1,
+              name: "Chocolate Brownie",
+              category_id: categoryId,
+              banner_image: "/images/homePage-Product/brownie1.png",
+              categories: { name: "Brownies & Brookies" },
+            },
+            {
+              id: 2,
+              name: "Vanilla Brownie",
+              category_id: categoryId,
+              banner_image: "/images/homePage-Product/brownie2.png",
+              categories: { name: "Brownies & Brookies" },
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    if (categories.length > 0) {
+      // Find "Brownies & Brookies" category or use first category
+      const brownieCategory = categories.find(
+        (cat) => cat.name === "Brownies & Brookies"
+      );
+      const initialCategoryId = brownieCategory
+        ? brownieCategory.id
+        : categories[0].id;
+      setSelectedCategoryId(initialCategoryId);
+      fetchProducts(initialCategoryId);
+    }
+  }, [categories]);
 
   // Fetch coupon data
   useEffect(() => {
@@ -124,16 +228,21 @@ export default function EditCouponPage({
           code: couponData.code,
           type: couponData.type,
           value: couponData.value,
-          minOrderAmount: couponData.min_order_amount,
+          minOrderAmount: couponData.min_order_amount || 0,
           maxDiscountCap: couponData.max_discount_cap || 0,
-          usageLimit: couponData.usage_limit,
-          usagePerUser: couponData.usage_per_user,
+          usageLimit: couponData.usage_limit || 100,
           validFrom: new Date(couponData.valid_from),
           validUntil: new Date(couponData.valid_until),
-          applicableCategories:
-            couponData.applicable_categories?.map((cat: string) =>
-              parseInt(cat)
+          applyToSpecific: couponData.apply_to_specific || false,
+          restrictionType: couponData.restriction_type || "categories",
+          applicableCategories: couponData.applicable_categories || [],
+          applicableProducts:
+            couponData.applicable_products?.map((id: number) =>
+              id.toString()
             ) || [],
+          enableMinOrderAmount: couponData.enable_min_order_amount || false,
+          enableMaxDiscountCap: couponData.enable_max_discount_cap || false,
+          enableUsageLimit: couponData.enable_usage_limit || false,
         });
       } catch (error) {
         console.error("Error fetching coupon:", error);
@@ -147,6 +256,28 @@ export default function EditCouponPage({
     fetchCoupon();
   }, [couponId, form, router]);
 
+  // Filter products based on search and selection
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter((product) =>
+        product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by selected products only
+    if (showOnlySelected) {
+      const selectedProductIds = form.watch("applicableProducts") || [];
+      filtered = filtered.filter((product) =>
+        selectedProductIds.includes(product.id.toString())
+      );
+    }
+
+    return filtered;
+  }, [products, searchQuery, showOnlySelected, form]);
+
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -155,14 +286,21 @@ export default function EditCouponPage({
         code: values.code,
         type: values.type,
         value: values.value,
-        minOrderAmount: values.minOrderAmount,
-        maxDiscountCap: values.maxDiscountCap,
-        usageLimit: values.usageLimit,
-        usagePerUser: values.usagePerUser,
+        minOrderAmount: values.enableMinOrderAmount ? values.minOrderAmount : 0,
+        maxDiscountCap: values.enableMaxDiscountCap
+          ? values.maxDiscountCap
+          : null,
+        usageLimit: values.enableUsageLimit ? values.usageLimit : null,
         validFrom: values.validFrom.toISOString(),
         validUntil: values.validUntil.toISOString(),
-        applicableCategories:
-          values.applicableCategories?.map((id) => id.toString()) || [],
+        applyToSpecific: values.applyToSpecific,
+        restrictionType: values.restrictionType,
+        applicableCategories: values.applicableCategories || [],
+        applicableProducts:
+          values.applicableProducts?.map((id) => parseInt(id)) || [],
+        enableMinOrderAmount: values.enableMinOrderAmount,
+        enableMaxDiscountCap: values.enableMaxDiscountCap,
+        enableUsageLimit: values.enableUsageLimit,
       };
 
       const response = await fetch(`/api/coupons/${couponId}`, {
@@ -231,7 +369,7 @@ export default function EditCouponPage({
         <h1 className="text-2xl sm:text-3xl font-bold">Edit Coupon</h1>
       </div>
 
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle>Edit Coupon: {coupon.code}</CardTitle>
           <CardDescription>
@@ -300,99 +438,6 @@ export default function EditCouponPage({
                           </span>
                         </div>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="minOrderAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Minimum Order Amount</FormLabel>
-                      <FormControl>
-                        <div className="flex items-center">
-                          <span className="mr-2">₹</span>
-                          <Input type="number" {...field} min={0} />
-                        </div>
-                      </FormControl>
-                      <FormDescription>0 for no minimum</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {form.watch("type") === "percentage" && (
-                  <FormField
-                    control={form.control}
-                    name="maxDiscountCap"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Maximum Discount Cap</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-2">₹</span>
-                            <Input
-                              type="number"
-                              {...field}
-                              min={0}
-                              placeholder="No cap"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Maximum discount amount for percentage discounts (0
-                          for no cap)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="usageLimit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Total Usage Limit</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          value={field.value === null ? "" : field.value}
-                          onChange={(e) => {
-                            const value =
-                              e.target.value === ""
-                                ? null
-                                : Number.parseInt(e.target.value);
-                            field.onChange(value);
-                          }}
-                          min={1}
-                          placeholder="Unlimited"
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Leave empty for unlimited usage
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="usagePerUser"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Usage Per User</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} min={1} />
-                      </FormControl>
-                      <FormDescription>
-                        How many times each user can use this coupon
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -472,93 +517,362 @@ export default function EditCouponPage({
                 />
               </div>
 
-              <div className="space-y-4">
+              {/* Apply to Specific Products/Categories Toggle */}
+              <FormField
+                control={form.control}
+                name="applyToSpecific"
+                render={({ field }) => (
+                  <FormItem className="rounded-lg border p-4">
+                    <div className="flex flex-row items-center justify-between">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Apply to Specific Products/Categories
+                        </FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </FormControl>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {/* Restriction Type Dropdown */}
+              {form.watch("applyToSpecific") && (
                 <FormField
                   control={form.control}
-                  name="applicableCategories"
-                  render={() => (
+                  name="restrictionType"
+                  render={({ field }) => (
                     <FormItem>
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between">
-                          <FormLabel className="text-base">
-                            Applicable Categories
-                          </FormLabel>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const selected =
-                                form.watch("applicableCategories") || [];
-                              const allIds = categories.map((c) => c.id);
-                              const isAllSelected =
-                                selected.length === allIds.length;
-                              form.setValue(
-                                "applicableCategories",
-                                isAllSelected ? [] : allIds
-                              );
-                            }}
-                          >
-                            {(form.watch("applicableCategories")?.length ||
-                              0) === categories.length
-                              ? "Deselect All"
-                              : "Select All"}
-                          </Button>
-                        </div>
-                        <FormDescription>
-                          Select which product categories this coupon can be
-                          applied to
-                        </FormDescription>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {categories.map((category) => (
-                          <FormField
-                            key={category.id}
-                            control={form.control}
-                            name="applicableCategories"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={category.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(
-                                        category.id
-                                      )}
-                                      className="data-[state=checked]:bg-[#2664eb] data-[state=checked]:border-[#2664eb] focus-visible:ring-[#2664eb]"
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([
-                                              ...(field.value || []),
-                                              category.id,
-                                            ])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== category.id
-                                              )
-                                            );
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">
-                                    {category.name}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <FormDescription className="mt-4">
-                        Leave all unchecked to apply to all products
-                      </FormDescription>
+                      <FormLabel>Restriction Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select restriction type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="categories">Categories</SelectItem>
+                          <SelectItem value="products">Products</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
+              )}
+
+              {/* Categories Section */}
+              {form.watch("applyToSpecific") &&
+                form.watch("restrictionType") === "categories" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">Select Categories</h3>
+                      {categoriesLoading && (
+                        <div className="text-sm text-gray-500">Loading...</div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      {categories.map((category) => (
+                        <FormField
+                          key={category.id}
+                          control={form.control}
+                          name="applicableCategories"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Switch
+                                  checked={
+                                    field.value?.includes(category.id) || false
+                                  }
+                                  onCheckedChange={(checked) => {
+                                    const currentValues = field.value || [];
+                                    if (checked) {
+                                      field.onChange([
+                                        ...currentValues,
+                                        category.id,
+                                      ]);
+                                    } else {
+                                      field.onChange(
+                                        currentValues.filter(
+                                          (id) => id !== category.id
+                                        )
+                                      );
+                                    }
+                                  }}
+                                  className="data-[state=checked]:bg-blue-600"
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {category.name}
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Products Section */}
+              {form.watch("applyToSpecific") &&
+                form.watch("restrictionType") === "products" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">Select Products</h3>
+                      <div className="flex gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search products..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-8 w-64"
+                          />
+                        </div>
+                        <Select
+                          value={selectedCategoryId || ""}
+                          onValueChange={(value) => {
+                            setSelectedCategoryId(value);
+                            // Fetch products for selected category
+                            fetch(
+                              `/api/products/by-category?category_id=${value}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => setProducts(data.products || []))
+                              .catch(() => setProducts([]));
+                          }}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Filter by category" />
+                          </SelectTrigger>
+                          <SelectContent className="left-0">
+                            <div className="grid grid-cols-2 gap-1 p-1">
+                              {categories.map((category) => (
+                                <SelectItem
+                                  key={category.id}
+                                  value={category.id}
+                                >
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </div>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowOnlySelected(!showOnlySelected)}
+                        >
+                          {showOnlySelected ? "Show All" : "Show Selected"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {productsLoading ? (
+                      <div className="text-center py-8">
+                        Loading products...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredProducts.map((product) => (
+                          <div
+                            key={product.id}
+                            className="border rounded-lg p-4"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 pr-3">
+                                <div className="text-sm text-gray-500 mb-1">
+                                  {product.categories?.name}
+                                </div>
+                                <div className="font-medium">
+                                  {product.name}
+                                </div>
+                              </div>
+                              <FormField
+                                control={form.control}
+                                name="applicableProducts"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Switch
+                                        checked={
+                                          field.value?.includes(
+                                            product.id.toString()
+                                          ) || false
+                                        }
+                                        onCheckedChange={(checked) => {
+                                          const currentValues =
+                                            field.value || [];
+                                          if (checked) {
+                                            field.onChange([
+                                              ...currentValues,
+                                              product.id.toString(),
+                                            ]);
+                                          } else {
+                                            field.onChange(
+                                              currentValues.filter(
+                                                (id) =>
+                                                  id !== product.id.toString()
+                                              )
+                                            );
+                                          }
+                                        }}
+                                        className="data-[state=checked]:bg-blue-600"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              {/* Toggle-controlled fields */}
+              <FormField
+                control={form.control}
+                name="enableMinOrderAmount"
+                render={({ field }) => (
+                  <FormItem className="rounded-lg border p-4">
+                    <div className="flex flex-row items-center justify-between mb-3">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Minimum Order Amount
+                        </FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </FormControl>
+                    </div>
+                    {field.value && (
+                      <FormField
+                        control={form.control}
+                        name="minOrderAmount"
+                        render={({ field: inputField }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex items-center">
+                                <span className="mr-2">₹</span>
+                                <Input
+                                  type="number"
+                                  {...inputField}
+                                  min={0}
+                                  placeholder="Enter minimum order amount"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormDescription>0 for no minimum</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="enableMaxDiscountCap"
+                render={({ field }) => (
+                  <FormItem className="rounded-lg border p-4">
+                    <div className="flex flex-row items-center justify-between mb-3">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Maximum Discount Cap
+                        </FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </FormControl>
+                    </div>
+                    {field.value && (
+                      <FormField
+                        control={form.control}
+                        name="maxDiscountCap"
+                        render={({ field: inputField }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex items-center">
+                                <span className="mr-2">₹</span>
+                                <Input
+                                  type="number"
+                                  {...inputField}
+                                  min={0}
+                                  placeholder="Enter maximum discount cap"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="enableUsageLimit"
+                render={({ field }) => (
+                  <FormItem className="rounded-lg border p-4">
+                    <div className="flex flex-row items-center justify-between mb-3">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Total Usage Limit
+                        </FormLabel>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </FormControl>
+                    </div>
+                    {field.value && (
+                      <FormField
+                        control={form.control}
+                        name="usageLimit"
+                        render={({ field: inputField }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...inputField}
+                                min={1}
+                                placeholder="Enter usage limit"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </FormItem>
+                )}
+              />
 
               <div className="flex justify-end space-x-4">
                 <Button

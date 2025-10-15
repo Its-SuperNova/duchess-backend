@@ -58,20 +58,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare coupon data
+    // Prepare coupon data with new structure
     const couponData = {
       code: body.code.toUpperCase(),
       type: body.type,
       value: body.value,
+
+      // Conditional fields based on toggle states
       min_order_amount: body.minOrderAmount || 0,
       max_discount_cap: body.maxDiscountCap || null,
       usage_limit: body.usageLimit || null,
-      usage_per_user: body.usagePerUser || 1,
+
+      // Toggle states
+      enable_min_order_amount: body.enableMinOrderAmount || false,
+      enable_max_discount_cap: body.enableMaxDiscountCap || false,
+      enable_usage_limit: body.enableUsageLimit || false,
+
+      // Validity period
       valid_from: body.validFrom,
       valid_until: body.validUntil,
-      applicable_categories: body.applicableCategories || null,
-      is_active: body.isActive !== undefined ? body.isActive : true,
+
+      // Product/Category restrictions
+      applicable_categories:
+        body.applicableCategories?.length > 0
+          ? body.applicableCategories
+          : null,
+      applicable_products:
+        body.applicableProducts?.length > 0
+          ? body.applicableProducts.map((id) => parseInt(id))
+          : null,
+      apply_to_specific: body.applyToSpecific || false,
+      restriction_type: body.restrictionType || null,
+
+      // Default values
+      usage_per_user: 1, // Keep default for backward compatibility
+      is_active: true,
     };
+
+    console.log("Creating coupon with data:", couponData);
 
     const { data: coupon, error } = await supabaseAdmin
       .from("coupons")

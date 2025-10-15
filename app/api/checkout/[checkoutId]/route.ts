@@ -211,6 +211,24 @@ export async function PATCH(
       }
     }
 
+    // Log items data being updated
+    if (processedUpdates.items) {
+      console.log(
+        "📦 CHECKOUT UPDATE: Items being saved to session:",
+        JSON.stringify(processedUpdates.items, null, 2)
+      );
+      console.log(
+        "📦 CHECKOUT UPDATE: Discount fields in items:",
+        processedUpdates.items.map((item: any) => ({
+          product_id: item.product_id,
+          unit_price: item.unit_price,
+          original_price: item.original_price,
+          discount_amount: item.discount_amount,
+          coupon_applied: item.coupon_applied,
+        }))
+      );
+    }
+
     // Update checkout session
     const updatedSession = await CheckoutStore.updateSession(
       checkoutId,
@@ -222,6 +240,69 @@ export async function PATCH(
         { error: "Checkout session not found or expired" },
         { status: 404 }
       );
+    }
+
+    // Log the updated session items
+    if (updatedSession.items) {
+      console.log(
+        "✅ CHECKOUT UPDATE: Session updated, items in session:",
+        updatedSession.items.map((item: any) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          unit_price: item.unit_price,
+          original_price: item.original_price,
+          discount_amount: item.discount_amount,
+          coupon_applied: item.coupon_applied,
+          quantity: item.quantity,
+          total_price: item.total_price,
+          // Show coupon discount calculation if coupon is applied
+          ...(item.coupon_applied && {
+            couponDiscountCalculation: {
+              originalTotal:
+                (item.original_price || item.unit_price) * item.quantity,
+              discountedTotal: item.total_price,
+              savings:
+                ((item.original_price || item.unit_price) - item.unit_price) *
+                item.quantity,
+            },
+          }),
+        }))
+      );
+    }
+
+    // Log coupon application summary if coupon is applied
+    if (updates.couponCode && updatedSession.items) {
+      const couponAppliedItems = updatedSession.items.filter(
+        (item: any) => item.coupon_applied && item.coupon_applied !== false
+      );
+      if (couponAppliedItems.length > 0) {
+        console.log("🎟️ COUPON APPLICATION SUMMARY:", {
+          couponCode: updates.couponCode,
+          couponApplied: true,
+          totalItemsWithCoupon: couponAppliedItems.length,
+          couponDetails: couponAppliedItems.map((item: any) => ({
+            productId: item.product_id,
+            productName: item.product_name,
+            originalPrice: item.original_price || item.unit_price,
+            discountedPrice: item.unit_price,
+            discountAmount: item.discount_amount || 0,
+            quantity: item.quantity,
+            totalOriginalPrice:
+              (item.original_price || item.unit_price) * item.quantity,
+            totalDiscountedPrice: item.total_price,
+            totalSavings:
+              ((item.original_price || item.unit_price) - item.unit_price) *
+              item.quantity,
+          })),
+          totalSavings: couponAppliedItems.reduce(
+            (total: number, item: any) =>
+              total +
+              ((item.original_price || item.unit_price) - item.unit_price) *
+                item.quantity,
+            0
+          ),
+        });
+      }
     }
 
     // Log receiver details being added/updated in checkout session
@@ -294,6 +375,23 @@ export async function PATCH(
           sgstAmount: updates.sgstAmount || "No SGST update",
           totalAmount: updates.totalAmount || "No total amount update",
           couponCode: updates.couponCode || "No coupon update",
+          couponApplied: updates.couponCode ? true : false,
+          couponDetails: updates.couponCode
+            ? (updatedSession.items || [])
+                .filter(
+                  (item: any) =>
+                    item.coupon_applied && item.coupon_applied !== false
+                )
+                .map((item: any) => ({
+                  productId: item.product_id,
+                  productName: item.product_name,
+                  originalPrice: item.original_price || item.unit_price,
+                  discountedPrice: item.unit_price,
+                  discountAmount: item.discount_amount || 0,
+                  quantity: item.quantity,
+                  totalDiscount: (item.discount_amount || 0) * item.quantity,
+                }))
+            : [],
           status:
             updates.subtotal ||
             updates.discount ||

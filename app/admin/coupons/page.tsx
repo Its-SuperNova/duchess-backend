@@ -332,7 +332,7 @@ export default function CouponsPage() {
         </div>
         <div>
           {viewMode === "table" ? (
-            <div className="rounded-md border overflow-hidden">
+            <div className="rounded-md border overflow-hidden bg-white">
               <Table className="admin-table">
                 <TableHeader>
                   <TableRow>
@@ -489,11 +489,11 @@ export default function CouponsPage() {
                           {/* Save amount */}
                           <div className="mb-2">
                             <p className="text-lg font-semibold text-green-600">
-                              Save ₹
+                              Save{" "}
                               {coupon.type === "percentage"
-                                ? Math.round(coupon.value)
-                                : coupon.value}{" "}
-                              on orders!
+                                ? `${coupon.value}%`
+                                : `₹${coupon.value}`}{" "}
+                              on this order!
                             </p>
                           </div>
 
@@ -504,7 +504,7 @@ export default function CouponsPage() {
                           <div className="mb-3">
                             <p className="text-gray-600 text-sm leading-relaxed">
                               Use code {coupon.code} and get {discountText} on
-                              orders above ₹{coupon.min_order_amount || 0}
+                              orders with the products of category name
                               {coupon.max_discount_cap &&
                                 coupon.type === "percentage" && (
                                   <span>
