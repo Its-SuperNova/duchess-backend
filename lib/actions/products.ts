@@ -337,6 +337,7 @@ export async function getActiveProducts({
     banner_image: string | null;
     is_veg: boolean;
     price: number;
+    originalPrice?: number;
     categories: { name: string } | { name: string }[] | null;
   }[]
 > {
@@ -376,7 +377,8 @@ export async function getActiveProducts({
         // Calculate price for each product and return optimized data
         const productsWithPrice =
           products?.map((product) => {
-            const { price } = getProductPrice(product);
+            const { price, originalPrice } = getProductPrice(product);
+
             return {
               id: product.id,
               name: product.name,
@@ -386,6 +388,7 @@ export async function getActiveProducts({
                 : null,
               categories: product.categories,
               price: price,
+              originalPrice: originalPrice,
             };
           }) || [];
 
@@ -450,6 +453,8 @@ export async function getHomepageSectionsWithProducts() {
                 name,
                 banner_image,
                 is_veg,
+                has_offer,
+                offer_percentage,
                 weight_options,
                 piece_options,
                 categories (

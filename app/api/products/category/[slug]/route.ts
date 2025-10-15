@@ -178,7 +178,8 @@ export async function GET(
     // Calculate price for each product
     const productsWithPrice =
       products?.map((product) => {
-        const { price } = getProductPrice(product);
+        const { price, originalPrice } = getProductPrice(product);
+
         return {
           id: product.id,
           name: product.name,
@@ -186,6 +187,7 @@ export async function GET(
           banner_image: product.banner_image,
           categories: product.categories,
           price: price,
+          originalPrice: originalPrice,
         };
       }) || [];
 

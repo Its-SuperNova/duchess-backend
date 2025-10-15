@@ -11,6 +11,7 @@ interface Product {
   banner_image: string;
   is_veg: boolean;
   price: number;
+  originalPrice?: number;
   categories:
     | {
         name: string;
@@ -28,18 +29,15 @@ interface ProductListProps {
   initialHasMore: boolean;
 }
 
-// Price is now pre-calculated on the server, so we can use it directly
-const getProductPrice = (product: Product) => {
-  return {
-    price: product.price || 100,
-    originalPrice: product.price || 100, // Since price is already calculated with offers applied
-  };
-};
+// Import the correct getProductPrice function from utils
+import { getProductPrice } from "@/lib/utils";
 
 // Memoized ProductCard component for better performance
 const MemoizedProductCard = memo(
   ({ product, index }: { product: Product; index: number }) => {
-    const { price, originalPrice } = getProductPrice(product);
+    // Use the pre-calculated price from the API
+    const price = product.price || 0;
+    const originalPrice = product.originalPrice;
 
     return (
       <ProductCard
@@ -49,7 +47,9 @@ const MemoizedProductCard = memo(
         rating={4.5}
         imageUrl={product.banner_image || "/images/categories/cake.png"}
         price={price}
-        originalPrice={originalPrice > price ? originalPrice : undefined}
+        originalPrice={
+          originalPrice && originalPrice > price ? originalPrice : undefined
+        }
         isVeg={product.is_veg}
         description={product.name}
         category={

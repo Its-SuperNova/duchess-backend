@@ -50,6 +50,38 @@ export default function BillDetails({
     !contactInfo.phone ||
     isCalculatingDelivery;
 
+  // Generate helpful message for disabled state
+  const getDisabledMessage = () => {
+    if (isCalculatingDelivery) {
+      return "Calculating...";
+    }
+
+    const missing: string[] = [];
+
+    if (
+      !addressText ||
+      addressText === "2nd street, Barathipuram, Kannampalayam"
+    ) {
+      missing.push("address");
+    }
+
+    if (!contactInfo.name || !contactInfo.phone) {
+      if (!contactInfo.name && !contactInfo.phone) {
+        missing.push("receiver info");
+      } else if (!contactInfo.name) {
+        missing.push("receiver name");
+      } else {
+        missing.push("receiver phone");
+      }
+    }
+
+    if (missing.length === 0) {
+      return "Confirm Order";
+    }
+
+    return `Fill ${missing.join(" & ")}`;
+  };
+
   // Calculate amount needed for free delivery
   const amountNeededForFreeDelivery =
     freeDeliveryThreshold && !isFreeDelivery && subtotal > 0
@@ -155,13 +187,13 @@ export default function BillDetails({
             </div>
           </div>
         </div>
-        <div className="mt-4">
+        <div className="mt-4 hidden lg:block">
           <Button
             className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-[18px] text-[16px] font-medium h-auto disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isDisabled}
             onClick={onPaymentClick}
           >
-            Confirm Order
+            {getDisabledMessage()}
           </Button>
         </div>
       </div>
