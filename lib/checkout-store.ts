@@ -22,6 +22,10 @@ export interface CheckoutItem {
   item_has_candle?: boolean;
   item_has_message_card?: boolean;
   item_message_card_text?: string;
+  // Discount fields (if coupon was applied)
+  original_price?: number | null;
+  discount_amount?: number | null;
+  coupon_applied?: string | null;
 }
 
 export interface ContactInfo {

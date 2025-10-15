@@ -26,7 +26,9 @@ export async function trackCouponUsage(
     // Find the coupon by code
     const { data: coupon, error: couponError } = await supabaseAdmin
       .from("coupons")
-      .select("id, code, times_used, usage_limit, enable_usage_limit")
+      .select(
+        "id, code, times_used, usage_limit, enable_usage_limit, total_revenue"
+      )
       .eq("code", couponCode.toUpperCase())
       .eq("is_active", true)
       .single();
@@ -222,4 +224,3 @@ export async function getCouponUsageStats(couponId?: string) {
     };
   }
 }
-

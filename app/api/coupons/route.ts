@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
           : null,
       applicable_products:
         body.applicableProducts?.length > 0
-          ? body.applicableProducts.map((id) => parseInt(id))
+          ? body.applicableProducts.map((id: string) => parseInt(id))
           : null,
       apply_to_specific: body.applyToSpecific || false,
       restriction_type: body.restrictionType || null,

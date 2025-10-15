@@ -17,6 +17,10 @@ interface ProductItem {
   quantity?: number;
   category?: string;
   variant?: string;
+  // Discount fields
+  original_price?: number | null;
+  discount_amount?: number | null;
+  coupon_applied?: string | null;
 }
 
 interface Coupon {
@@ -246,7 +250,7 @@ export default function ProductListing({
                                 ₹{discountedPrice.toFixed(2)}
                               </span>
                               <span className="text-[14px] text-red-500 line-through">
-                                ₹{originalPrice.toFixed(2)}
+                                ₹{(originalPrice || 0).toFixed(2)}
                               </span>
                             </div>
                           </>
@@ -254,7 +258,7 @@ export default function ProductListing({
                       } else {
                         return (
                           <span className="text-[16px] font-semibold text-black dark:text-gray-100">
-                            ₹{originalPrice.toFixed(2)}
+                            ₹{(originalPrice || 0).toFixed(2)}
                           </span>
                         );
                       }

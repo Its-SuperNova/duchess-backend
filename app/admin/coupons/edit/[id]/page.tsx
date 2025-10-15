@@ -861,6 +861,7 @@ export default function EditCouponPage({
                               <Input
                                 type="number"
                                 {...inputField}
+                                value={inputField.value ?? ""}
                                 min={1}
                                 placeholder="Enter usage limit"
                               />
