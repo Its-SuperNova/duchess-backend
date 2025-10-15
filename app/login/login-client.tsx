@@ -23,8 +23,8 @@ export default function LoginClient() {
         {/* Left Section - Image */}
         <div className="relative hidden h-full min-h-[400px] md:block">
           <Image
-            src="/login-signup-banner.png"
-            alt="Delicious cookies on a plate"
+            src="https://res.cloudinary.com/dt85dgcrl/image/upload/v1760533609/Diwali_Deals_vp8zri.png"
+            alt="Diwali Deals"
             layout="fill"
             objectFit="cover"
             className="rounded-3xl"
