@@ -13,9 +13,9 @@ export async function GET(request: NextRequest) {
       {
         status: 200,
         headers: {
-          // Cache for 10 minutes, allow stale content for 2 hours while revalidating
-          // Categories change less frequently than products
-          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=7200",
+          // Shorter cache with revalidation for category order changes
+          // Cache for 1 minute, revalidate for 5 minutes
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
           // Allow CORS for better caching across origins
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET",

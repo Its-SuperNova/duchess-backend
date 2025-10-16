@@ -143,13 +143,16 @@ export default function EditCouponPage({
         const response = await fetch("/api/categories");
         if (response.ok) {
           const data = await response.json();
-          setCategories(data);
+          console.log("📋 Categories API response:", data);
+          // Fix: API returns {categories: [...], success: true}
+          setCategories(data.categories || []);
         } else {
+          console.warn("⚠️ Categories API failed, using fallback");
           // Fallback to hardcoded categories
           setCategories(hardcodedCategories);
         }
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error("❌ Error fetching categories:", error);
         setCategories(hardcodedCategories);
       } finally {
         setCategoriesLoading(false);
@@ -580,43 +583,45 @@ export default function EditCouponPage({
                       )}
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                      {categories.map((category) => (
-                        <FormField
-                          key={category.id}
-                          control={form.control}
-                          name="applicableCategories"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <Switch
-                                  checked={
-                                    field.value?.includes(category.id) || false
-                                  }
-                                  onCheckedChange={(checked) => {
-                                    const currentValues = field.value || [];
-                                    if (checked) {
-                                      field.onChange([
-                                        ...currentValues,
-                                        category.id,
-                                      ]);
-                                    } else {
-                                      field.onChange(
-                                        currentValues.filter(
-                                          (id) => id !== category.id
-                                        )
-                                      );
+                      {Array.isArray(categories) &&
+                        categories.map((category) => (
+                          <FormField
+                            key={category.id}
+                            control={form.control}
+                            name="applicableCategories"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <Switch
+                                    checked={
+                                      field.value?.includes(category.id) ||
+                                      false
                                     }
-                                  }}
-                                  className="data-[state=checked]:bg-blue-600"
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {category.name}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                                    onCheckedChange={(checked) => {
+                                      const currentValues = field.value || [];
+                                      if (checked) {
+                                        field.onChange([
+                                          ...currentValues,
+                                          category.id,
+                                        ]);
+                                      } else {
+                                        field.onChange(
+                                          currentValues.filter(
+                                            (id) => id !== category.id
+                                          )
+                                        );
+                                      }
+                                    }}
+                                    className="data-[state=checked]:bg-blue-600"
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {category.name}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
                     </div>
                   </div>
                 )}
@@ -655,14 +660,15 @@ export default function EditCouponPage({
                           </SelectTrigger>
                           <SelectContent className="left-0">
                             <div className="grid grid-cols-2 gap-1 p-1">
-                              {categories.map((category) => (
-                                <SelectItem
-                                  key={category.id}
-                                  value={category.id}
-                                >
-                                  {category.name}
-                                </SelectItem>
-                              ))}
+                              {Array.isArray(categories) &&
+                                categories.map((category) => (
+                                  <SelectItem
+                                    key={category.id}
+                                    value={category.id}
+                                  >
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
                             </div>
                           </SelectContent>
                         </Select>

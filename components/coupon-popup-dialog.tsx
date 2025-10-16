@@ -129,7 +129,7 @@ export default function CouponPopupDialog() {
             >
               {/* Desktop Image */}
               <Image
-                src="https://res.cloudinary.com/dt85dgcrl/image/upload/v1760590044/duchess-coupon_peum8t.png"
+                src="https://res.cloudinary.com/dt85dgcrl/image/upload/v1760602355/duchess-coupon_y3dtir.png"
                 alt="Special Coupon Offer"
                 width={1200}
                 height={900}
@@ -144,7 +144,7 @@ export default function CouponPopupDialog() {
 
               {/* Mobile Image */}
               <Image
-                src="https://res.cloudinary.com/dt85dgcrl/image/upload/v1760590043/Diwali_Deals_jsvavs.png"
+                src="https://res.cloudinary.com/dt85dgcrl/image/upload/v1760602354/Diwali_Deals_szlwer.png"
                 alt="Diwali Deals Offer"
                 width={400}
                 height={300}
