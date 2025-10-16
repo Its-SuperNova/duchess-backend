@@ -3,24 +3,21 @@ import { getOTPStore } from "@/lib/otp-store";
 
 export async function GET(request: NextRequest) {
   try {
-    const store = getOTPStore();
-    const entries = Object.entries(store).map(([email, data]) => ({
-      email,
-      otp: data.otp,
-      expiresAt: data.expiresAt,
-      expiresIn: new Date(data.expiresAt).toISOString(),
-      isExpired: Date.now() > data.expiresAt,
-    }));
+    const store = await getOTPStore();
 
     return NextResponse.json({
       success: true,
-      storeSize: Object.keys(store).length,
-      entries,
+      store,
+      count: Object.keys(store).length,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error in debug-otp API:", error);
+    console.error("Error in debug OTP store API:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }

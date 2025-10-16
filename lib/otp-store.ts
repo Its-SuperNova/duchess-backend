@@ -1,79 +1,199 @@
-import fs from "fs";
-import path from "path";
-
-// File-based OTP storage for persistence across API calls
-const OTP_FILE_PATH = path.join(process.cwd(), "otp-store.json");
+import { Redis } from "ioredis";
+import { getRedisConfig, isRedisConfigured } from "./redis-config";
 
 interface OTPData {
   otp: string;
   expiresAt: number;
 }
 
-interface OTPStore {
-  [email: string]: OTPData;
-}
+// Redis-based OTP storage for persistence across API calls
+let redis: Redis | null = null;
 
-// Read OTP store from file
-function readOTPStore(): OTPStore {
-  try {
-    if (fs.existsSync(OTP_FILE_PATH)) {
-      const data = fs.readFileSync(OTP_FILE_PATH, "utf8");
-      return JSON.parse(data);
+// Initialize Redis connection
+function getRedisClient(): Redis | null {
+  if (!isRedisConfigured()) {
+    console.warn("Redis not configured, falling back to in-memory storage");
+    return null;
+  }
+
+  if (!redis) {
+    try {
+      const config = getRedisConfig();
+      redis = new Redis(config);
+      console.log("Redis client initialized for OTP storage");
+    } catch (error) {
+      console.error("Failed to initialize Redis client:", error);
+      return null;
     }
-  } catch (error) {
-    console.error("Error reading OTP store:", error);
   }
-  return {};
+
+  return redis;
 }
 
-// Write OTP store to file
-function writeOTPStore(store: OTPStore) {
-  try {
-    fs.writeFileSync(OTP_FILE_PATH, JSON.stringify(store, null, 2));
-  } catch (error) {
-    console.error("Error writing OTP store:", error);
+// Fallback in-memory store for when Redis is not available
+let inMemoryStore: { [email: string]: OTPData } = {};
+
+export async function getOTPStore() {
+  const redisClient = getRedisClient();
+  if (redisClient) {
+    try {
+      const keys = await redisClient.keys("otp:*");
+      const store: { [email: string]: OTPData } = {};
+
+      for (const key of keys) {
+        const email = key.replace("otp:", "");
+        const data = await redisClient.get(key);
+        if (data) {
+          store[email] = JSON.parse(data);
+        }
+      }
+
+      return store;
+    } catch (error) {
+      console.error("Error reading OTP store from Redis:", error);
+      return inMemoryStore;
+    }
+  }
+
+  return inMemoryStore;
+}
+
+export async function setOTP(email: string, otp: string, expiresAt: number) {
+  const redisClient = getRedisClient();
+  const otpData = { otp, expiresAt };
+
+  if (redisClient) {
+    try {
+      // Calculate TTL in seconds (expiresAt is timestamp, we need seconds from now)
+      const ttlSeconds = Math.max(
+        0,
+        Math.floor((expiresAt - Date.now()) / 1000)
+      );
+
+      await redisClient.setex(
+        `otp:${email}`,
+        ttlSeconds,
+        JSON.stringify(otpData)
+      );
+      console.log("💾 OTP stored in Redis:", {
+        email,
+        otp,
+        expiresAt,
+        ttlSeconds,
+      });
+    } catch (error) {
+      console.error("Error storing OTP in Redis:", error);
+      // Fallback to in-memory storage
+      inMemoryStore[email] = otpData;
+      console.log("💾 OTP stored in memory (fallback):", {
+        email,
+        otp,
+        expiresAt,
+      });
+    }
+  } else {
+    // Use in-memory storage as fallback
+    inMemoryStore[email] = otpData;
+    console.log("💾 OTP stored in memory:", { email, otp, expiresAt });
   }
 }
 
-export function getOTPStore() {
-  return readOTPStore();
+export async function getOTP(email: string) {
+  const redisClient = getRedisClient();
+
+  if (redisClient) {
+    try {
+      const data = await redisClient.get(`otp:${email}`);
+      if (data) {
+        const otpData = JSON.parse(data);
+        console.log("🔍 OTP retrieved from Redis:", { email, data: otpData });
+        return otpData;
+      }
+      console.log("🔍 OTP not found in Redis:", email);
+      return null;
+    } catch (error) {
+      console.error("Error retrieving OTP from Redis:", error);
+      // Fallback to in-memory storage
+      const data = inMemoryStore[email];
+      console.log("🔍 OTP retrieved from memory (fallback):", { email, data });
+      return data || null;
+    }
+  }
+
+  // Use in-memory storage as fallback
+  const data = inMemoryStore[email];
+  console.log("🔍 OTP retrieved from memory:", { email, data });
+  return data || null;
 }
 
-export function setOTP(email: string, otp: string, expiresAt: number) {
-  const store = readOTPStore();
-  store[email] = { otp, expiresAt };
-  writeOTPStore(store);
-  console.log("💾 OTP stored:", { email, otp, expiresAt });
+export async function deleteOTP(email: string) {
+  const redisClient = getRedisClient();
+
+  if (redisClient) {
+    try {
+      await redisClient.del(`otp:${email}`);
+      console.log("🗑️ OTP deleted from Redis:", email);
+    } catch (error) {
+      console.error("Error deleting OTP from Redis:", error);
+      // Fallback to in-memory storage
+      delete inMemoryStore[email];
+      console.log("🗑️ OTP deleted from memory (fallback):", email);
+    }
+  } else {
+    // Use in-memory storage as fallback
+    delete inMemoryStore[email];
+    console.log("🗑️ OTP deleted from memory:", email);
+  }
 }
 
-export function getOTP(email: string) {
-  const store = readOTPStore();
-  const data = store[email];
-  console.log("🔍 OTP retrieved:", { email, data });
-  return data;
-}
-
-export function deleteOTP(email: string) {
-  const store = readOTPStore();
-  delete store[email];
-  writeOTPStore(store);
-  console.log("🗑️ OTP deleted:", email);
-}
-
-export function clearExpiredOTPs() {
+export async function clearExpiredOTPs() {
   const now = Date.now();
-  const store = readOTPStore();
-  let hasExpired = false;
+  const redisClient = getRedisClient();
 
-  for (const email in store) {
-    if (now > store[email].expiresAt) {
-      delete store[email];
-      hasExpired = true;
+  if (redisClient) {
+    try {
+      const keys = await redisClient.keys("otp:*");
+      let hasExpired = false;
+
+      for (const key of keys) {
+        const data = await redisClient.get(key);
+        if (data) {
+          const otpData = JSON.parse(data);
+          if (now > otpData.expiresAt) {
+            await redisClient.del(key);
+            hasExpired = true;
+          }
+        }
+      }
+
+      if (hasExpired) {
+        console.log("🧹 Expired OTPs cleared from Redis");
+      }
+    } catch (error) {
+      console.error("Error clearing expired OTPs from Redis:", error);
+      // Fallback to in-memory cleanup
+      let hasExpired = false;
+      for (const email in inMemoryStore) {
+        if (now > inMemoryStore[email].expiresAt) {
+          delete inMemoryStore[email];
+          hasExpired = true;
+        }
+      }
+      if (hasExpired) {
+        console.log("🧹 Expired OTPs cleared from memory (fallback)");
+      }
     }
-  }
-
-  if (hasExpired) {
-    writeOTPStore(store);
-    console.log("🧹 Expired OTPs cleared");
+  } else {
+    // Use in-memory storage cleanup
+    let hasExpired = false;
+    for (const email in inMemoryStore) {
+      if (now > inMemoryStore[email].expiresAt) {
+        delete inMemoryStore[email];
+        hasExpired = true;
+      }
+    }
+    if (hasExpired) {
+      console.log("🧹 Expired OTPs cleared from memory");
+    }
   }
 }

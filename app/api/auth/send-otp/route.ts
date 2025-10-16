@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Clear expired OTPs first
-    clearExpiredOTPs();
+    await clearExpiredOTPs();
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes from now
 
     // Store OTP using persistent store
-    setOTP(email, otp, expiresAt);
+    await setOTP(email, otp, expiresAt);
 
     console.log("📧 OTP Generated:", {
       email,

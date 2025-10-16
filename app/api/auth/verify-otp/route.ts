@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Clear expired OTPs first
-    clearExpiredOTPs();
+    await clearExpiredOTPs();
 
     // Check if OTP exists and is not expired
-    const storedOtpData = getOTP(email);
+    const storedOtpData = await getOTP(email);
     console.log("🔍 Stored OTP Data:", storedOtpData);
 
     if (!storedOtpData) {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     if (Date.now() > storedOtpData.expiresAt) {
       console.log("❌ OTP expired");
-      deleteOTP(email); // Clean up expired OTP
+      await deleteOTP(email); // Clean up expired OTP
       return NextResponse.json({ error: "OTP has expired" }, { status: 400 });
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ OTP verified successfully");
     // OTP is valid, clean it up
-    deleteOTP(email);
+    await deleteOTP(email);
 
     // Check if user exists, if not create them
     let user = await getUserByEmail(email);
