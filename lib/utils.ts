@@ -62,7 +62,7 @@ export function getProductPrice(product: any): {
       const piecePrices = optionsToUse.map(
         (opt: any) => parseInt(opt.price) || 0
       );
-      allPrices.push(...piecePrices.filter((price) => price > 0));
+      allPrices.push(...piecePrices.filter((price: number) => price > 0));
     }
   }
 
@@ -83,7 +83,7 @@ export function getProductPrice(product: any): {
       const weightPrices = optionsToUse.map(
         (opt: any) => parseInt(opt.price) || 0
       );
-      allPrices.push(...weightPrices.filter((price) => price > 0));
+      allPrices.push(...weightPrices.filter((price: number) => price > 0));
     }
   }
 
