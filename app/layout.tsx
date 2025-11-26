@@ -2,6 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
 import LayoutWrapper from "./layout-wrapper";
 import AuthSessionProvider from "@/components/providers/session-provider";
 import ErrorBoundary from "@/components/error-boundary";
@@ -28,6 +29,7 @@ export default function RootLayout({
           <AuthSessionProvider>
             <OTPAuthProvider>
               <LayoutWrapper>{children}</LayoutWrapper>
+              <Analytics />
             </OTPAuthProvider>
           </AuthSessionProvider>
         </ErrorBoundary>
