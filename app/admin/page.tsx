@@ -41,6 +41,7 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 import { SummaryCardsSkeleton } from "@/components/summary-cards-skeleton";
 import { AnalyticsChart } from "@/components/analytics-chart";
@@ -83,6 +84,11 @@ interface DashboardData {
   }[];
 }
 
+// Dynamically import Lottie for empty state animations
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+});
+
 // Icon mapping for summary cards
 const iconMap = {
   "Total Orders": ShoppingBag,
@@ -109,8 +115,8 @@ const fallbackSummaryCards = [
   },
   {
     title: "Reviews & Feedback",
-    value: "47",
-    change: "+12.5%",
+    value: "0",
+    change: "0%",
     trend: "up" as const,
     icon: Star,
   },
@@ -208,11 +214,23 @@ export default function AdminDashboard() {
 
         const data = await response.json();
 
-        // Add icons to summary cards
-        const summaryCardsWithIcons = data.summaryCards.map((card: any) => ({
-          ...card,
-          icon: iconMap[card.title as keyof typeof iconMap] || ShoppingBag,
-        }));
+        // Add icons to summary cards and force "Reviews & Feedback" to zero
+        const summaryCardsWithIcons = data.summaryCards.map((card: any) => {
+          const baseCard = {
+            ...card,
+            icon: iconMap[card.title as keyof typeof iconMap] || ShoppingBag,
+          };
+
+          if (card.title === "Reviews & Feedback") {
+            return {
+              ...baseCard,
+              value: "0",
+              change: "0%",
+            };
+          }
+
+          return baseCard;
+        });
 
         setDashboardData({
           summaryCards: summaryCardsWithIcons,
@@ -416,103 +434,120 @@ export default function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-                  <Table className="min-w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="hidden sm:table-cell">
-                          Order ID
-                        </TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead className="hidden sm:table-cell">
-                          Amount
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Status
-                        </TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dashboardData.recentOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium hidden sm:table-cell">
-                            {order.id}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8 hidden sm:flex">
-                                <AvatarImage
-                                  src={`https://api.dicebear.com/7.x/initials/svg?seed=${order.customer}`}
-                                />
-                                <AvatarFallback>
-                                  {order.customer.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-medium leading-none">
-                                  {order.customer}
-                                </p>
-                                <p className="text-xs text-muted-foreground hidden xs:block">
-                                  {order.email}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            {order.amount}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <Badge
-                              className={getStatusColor(order.status)}
-                              variant="outline"
-                            >
-                              {order.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{order.date}</TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Actions</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  View details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  Update status
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  Contact customer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              {dashboardData.recentOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="w-48 h-48">
+                    <Lottie
+                      animationData={require("../../public/Lottie/Empty-Order.json")}
+                      loop
+                      autoplay
+                    />
+                  </div>
+                  <p className="mt-4 text-sm text-muted-foreground text-center">
+                    No recent orders yet. New orders will appear here.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="hidden sm:table-cell">
+                            Order ID
+                          </TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            Amount
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell">
+                            Status
+                          </TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dashboardData.recentOrders.map((order) => (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-medium hidden sm:table-cell">
+                              {order.id}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8 hidden sm:flex">
+                                  <AvatarImage
+                                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${order.customer}`}
+                                  />
+                                  <AvatarFallback>
+                                    {order.customer.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-medium leading-none">
+                                    {order.customer}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground hidden xs:block">
+                                    {order.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {order.amount}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Badge
+                                className={getStatusColor(order.status)}
+                                variant="outline"
+                              >
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{order.date}</TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    View details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Update status
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Contact customer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
             </CardContent>
-            <CardFooter className="flex flex-col xs:flex-row items-center justify-between border-t px-4 py-4 sm:px-6">
-              <p className="text-sm text-muted-foreground mb-2 xs:mb-0">
-                Showing 5 of 24 orders
-              </p>
-              <Button variant="outline" size="sm" className="w-full xs:w-auto">
-                View All Orders
-              </Button>
-            </CardFooter>
+            {dashboardData.recentOrders.length > 0 && (
+              <CardFooter className="flex flex-col xs:flex-row items-center justify-between border-t px-4 py-4 sm:px-6">
+                <p className="text-sm text-muted-foreground mb-2 xs:mb-0">
+                  Showing 5 of 24 orders
+                </p>
+                <Button variant="outline" size="sm" className="w-full xs:w-auto">
+                  View All Orders
+                </Button>
+              </CardFooter>
+            )}
           </Card>
         </div>
 
@@ -527,44 +562,63 @@ export default function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {dashboardData.topProducts.map((product, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="relative h-16 w-16 overflow-hidden rounded-md flex-shrink-0">
-                    <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      className="h-full w-full object-cover"
+              {dashboardData.topProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="w-48 h-48">
+                    <Lottie
+                      animationData={require("../../public/Lottie/Empty-Order.json")}
+                      loop
+                      autoplay
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium truncate">
-                      {product.name}
-                    </h4>
-                    <div className="mt-1 flex items-center text-sm text-muted-foreground">
-                      <ShoppingCart className="mr-1 h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{product.sales} sales</span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-sm font-medium text-blue-600">
-                        {product.revenue}
-                      </span>
-                      <div className="flex items-center">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <p className="mt-4 text-sm text-muted-foreground text-center">
+                    No product data available yet. Top products will show here once you have orders.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {dashboardData.topProducts.map((product, index) => (
+                    <div key={index} className="flex items-center gap-4">
+                      <div className="relative h-16 w-16 overflow-hidden rounded-md flex-shrink-0">
+                        <img
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium truncate">
+                          {product.name}
+                        </h4>
+                        <div className="mt-1 flex items-center text-sm text-muted-foreground">
+                          <ShoppingCart className="mr-1 h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{product.sales} sales</span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-blue-600">
+                            {product.revenue}
+                          </span>
+                          <div className="flex items-center">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  ))}
+                </>
+              )}
             </CardContent>
-            <CardFooter className="border-t px-4 py-4 sm:px-6">
-              <Button variant="outline" className="w-full">
-                View All Products
-              </Button>
-            </CardFooter>
+            {dashboardData.topProducts.length > 0 && (
+              <CardFooter className="border-t px-4 py-4 sm:px-6">
+                <Button variant="outline" className="w-full">
+                  View All Products
+                </Button>
+              </CardFooter>
+            )}
           </Card>
 
         </div>

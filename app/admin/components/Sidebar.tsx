@@ -203,7 +203,8 @@ export default function Sidebar({
           </Button>
         )}
       </div>
-      <div className="flex flex-col h-[calc(100%-8rem)]">
+      {/* Fill the remaining height below the 4rem (h-16) header so the footer sits at the very bottom */}
+      <div className="flex flex-col h-[calc(100%-4rem)]">
         <ScrollArea className="flex-1 py-4">
           <nav className="flex flex-col gap-1 px-2">
             {mainRoutes.map((route) => {

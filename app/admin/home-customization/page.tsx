@@ -31,7 +31,7 @@ export default function HomeCustomizationPage() {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Category Management */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-white"
           onClick={() => router.push("/admin/category-management")}
         >
           <CardContent className="p-6">
@@ -55,7 +55,7 @@ export default function HomeCustomizationPage() {
 
         {/* Product Management */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-white"
           onClick={() =>
             router.push("/admin/home-customization/product-management")
           }

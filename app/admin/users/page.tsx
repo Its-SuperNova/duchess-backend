@@ -482,7 +482,7 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         {/* Page Header Skeleton */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
@@ -532,7 +532,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Page Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -577,7 +577,7 @@ export default function UsersPage() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
@@ -636,7 +636,7 @@ export default function UsersPage() {
       </Card>
 
       {/* Users Table */}
-      <Card>
+      <Card className="bg-white">
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
