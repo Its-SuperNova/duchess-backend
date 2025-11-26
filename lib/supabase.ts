@@ -203,6 +203,22 @@ export interface Coupon {
   updated_at: string;
 }
 
+export interface PopupBannerRow {
+  id: string;
+  device_type: "desktop" | "mobile";
+  background_image_url: string | null;
+  background_public_id: string | null;
+  button_url: string | null;
+  coupon_code: string | null;
+  show_primary_button: boolean;
+  show_coupon_button: boolean;
+  enable_backdrop: boolean;
+  delay_seconds: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -266,6 +282,29 @@ export interface Database {
             | "total_revenue"
           >
         >;
+      };
+      popup_banners: {
+        Row: PopupBannerRow;
+        Insert: Partial<
+          Pick<
+            PopupBannerRow,
+            | "id"
+            | "created_at"
+            | "updated_at"
+            | "background_image_url"
+            | "background_public_id"
+            | "button_url"
+            | "coupon_code"
+          >
+        > & {
+          device_type: PopupBannerRow["device_type"];
+          show_primary_button?: boolean;
+          show_coupon_button?: boolean;
+          enable_backdrop?: boolean;
+          delay_seconds?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<PopupBannerRow>;
       };
     };
   };

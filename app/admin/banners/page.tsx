@@ -20,7 +20,7 @@ export default function BannersPage() {
       <div className="flex gap-6">
         {/* Hero Slider Card */}
         <Card
-          className="shadow-sm w-64 cursor-pointer hover:shadow-md transition-shadow"
+          className="shadow-sm w-64 cursor-pointer hover:shadow-md transition-shadow bg-white"
           onClick={() => router.push("/admin/banners/hero-slider")}
         >
           <CardHeader className="pb-2">
@@ -35,11 +35,26 @@ export default function BannersPage() {
 
         {/* Footer Banner Card */}
         <Card
-          className="shadow-sm w-64 cursor-pointer hover:shadow-md transition-shadow"
+          className="shadow-sm w-64 cursor-pointer hover:shadow-md transition-shadow bg-white"
           onClick={() => router.push("/admin/banners/footer-banner")}
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-center">Footer Banner</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="h-16 flex items-center justify-center">
+              <GalleryMinimalistic weight="Broken" color="black" size={40} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Popup Banner Card */}
+        <Card
+          className="shadow-sm w-64 cursor-pointer hover:shadow-md transition-shadow bg-white"
+          onClick={() => router.push("/admin/banners/popup-banner")}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-center">Popup Banner</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="h-16 flex items-center justify-center">

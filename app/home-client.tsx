@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { toast } from "sonner";
 import Hero from "@/components/block/hero";
 import ProductCard from "@/components/productcard";
 import { ProcessedProduct } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import CouponPopupDialog from "@/components/coupon-popup-dialog";
+import PopupBannerViewer from "@/components/popup-banner-viewer";
 
 // Skeleton loader for products
 const ProductSkeleton = () => (
@@ -119,8 +118,8 @@ export default function HomeClient({
 
   return (
     <div className="w-full overflow-x-hidden bg-white dark:bg-gray-900">
-      {/* Coupon Popup Dialog */}
-      <CouponPopupDialog />
+      {/* Popup Banner */}
+      <PopupBannerViewer />
 
       {/* Hero section */}
       <Hero />
