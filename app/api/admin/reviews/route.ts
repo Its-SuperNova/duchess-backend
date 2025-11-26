@@ -90,7 +90,8 @@ export async function GET() {
         : 0;
 
     const pending = reviews.filter((r) => r.status === "pending").length;
-    const reported = reviews.filter((r) => r.status === "reported").length;
+    // Currently we don't derive "reported" status from data; keep it zero for now
+    const reported = 0;
 
     return NextResponse.json({
       reviews,
