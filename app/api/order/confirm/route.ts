@@ -136,55 +136,46 @@ export async function POST(req: Request) {
 
     console.log("Items with corrected prices:", itemsWithPrices);
 
-    // Calculate totals
-    console.log(
-      "Items received for email:",
-      JSON.stringify(itemsWithPrices, null, 2)
-    );
-
-    const subtotal = itemsWithPrices.reduce((sum: number, item: any) => {
-      const price = parseFloat(item.price) || 0;
-      const quantity = parseInt(item.quantity) || 0;
-      const itemTotal = price * quantity;
-      console.log(
-        `Item: ${item.name}, Price: ${price}, Qty: ${quantity}, Total: ${itemTotal}`
-      );
-      return sum + itemTotal;
-    }, 0);
-
-    console.log("Subtotal calculated:", subtotal);
-
-    // Use actual order data for calculations
+    // Use actual order data for all financial calculations
+    const subtotal = order.item_total || 0;
     const deliveryCharge = order.delivery_charge || 0;
+    const discountAmount = order.discount_amount || 0;
     const cgst = order.cgst || 0;
     const sgst = order.sgst || 0;
-    const total = order.total_amount || subtotal + deliveryCharge + cgst + sgst;
+    const total = order.total_amount || 0;
 
     console.log("Final calculations from order data:", {
       subtotal,
       deliveryCharge,
+      discountAmount,
       cgst,
       sgst,
       total,
     });
 
-    const orderDetails = itemsWithPrices
+    const orderDetails = items
       .map(
         (item: any) => `
           <tr>
             <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0;">
               <div style="font-weight: 500; color: #1a1a1a; margin-bottom: 4px;">${
-                item.name
+                item.product_name || item.name
               }</div>
+              ${
+                item.variant
+                  ? `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${item.variant}</div>`
+                  : ""
+              }
             </td>
             <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-align: center;">
               <span style="background: #f8f9fa; color: #6b7280; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">
-                Qty: ${item.quantity}
+                ${item.quantity}
               </span>
             </td>
             <td style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
               <div style="font-weight: 600; color: #2d3748;">₹${(
-                (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)
+                (parseFloat(item.unit_price) || 0) *
+                (parseInt(item.quantity) || 0)
               ).toFixed(2)}</div>
             </td>
           </tr>
@@ -393,16 +384,28 @@ export async function POST(req: Request) {
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #2d3748;">Bill Details</h3>
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Subtotal:</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Item Total:</td>
                     <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${subtotal.toFixed(
                       2
                     )}</td>
                   </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Delivery Charge:</td>
-                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${deliveryCharge.toFixed(
+                  ${
+                    discountAmount > 0
+                      ? `<tr>
+                    <td style="padding: 8px 0; color: #10b981; font-weight: 500; text-align: left;">Discount:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #10b981; text-align: right;">- ₹${discountAmount.toFixed(
                       2
                     )}</td>
+                  </tr>`
+                      : ""
+                  }
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Delivery Charge:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">${
+                      deliveryCharge === 0
+                        ? '<span style="color: #10b981; font-weight: 600;">FREE</span>'
+                        : `₹${deliveryCharge.toFixed(2)}`
+                    }</td>
                   </tr>
                   <tr>
                     <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (2.5%):</td>
@@ -416,7 +419,7 @@ export async function POST(req: Request) {
                       2
                     )}</td>
                   </tr>
-                  <tr style="border-top: 1px solid #e2e8f0;">
+                  <tr style="border-top: 2px solid #e2e8f0;">
                     <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 16px; text-align: left;">Total Amount:</td>
                     <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 18px; text-align: right;">₹${total.toFixed(
                       2
@@ -659,16 +662,28 @@ export async function POST(req: Request) {
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #2d3748;">Bill Details</h3>
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Subtotal:</td>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Item Total:</td>
                     <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${subtotal.toFixed(
                       2
                     )}</td>
                   </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Delivery Charge:</td>
-                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">₹${deliveryCharge.toFixed(
+                  ${
+                    discountAmount > 0
+                      ? `<tr>
+                    <td style="padding: 8px 0; color: #10b981; font-weight: 500; text-align: left;">Discount:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #10b981; text-align: right;">- ₹${discountAmount.toFixed(
                       2
                     )}</td>
+                  </tr>`
+                      : ""
+                  }
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">Delivery Charge:</td>
+                    <td style="padding: 8px 0; font-weight: 600; color: #2d3748; text-align: right;">${
+                      deliveryCharge === 0
+                        ? '<span style="color: #10b981; font-weight: 600;">FREE</span>'
+                        : `₹${deliveryCharge.toFixed(2)}`
+                    }</td>
                   </tr>
                   <tr>
                     <td style="padding: 8px 0; color: #6b7280; font-weight: 500; text-align: left;">CGST (2.5%):</td>
@@ -682,7 +697,7 @@ export async function POST(req: Request) {
                       2
                     )}</td>
                   </tr>
-                  <tr style="border-top: 1px solid #e2e8f0;">
+                  <tr style="border-top: 2px solid #e2e8f0;">
                     <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 16px; text-align: left;">Total Amount:</td>
                     <td style="padding: 16px 0 8px 0; font-weight: 700; color: #2d3748; font-size: 18px; text-align: right;">₹${total.toFixed(
                       2

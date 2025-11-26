@@ -234,12 +234,31 @@ export default function ProductPage() {
           setOrderType("piece");
         }
 
-        // Set initial selected options
+        // Set initial selected options - select the lowest price (lowest weight) by default
         if ((productData as any).weight_options?.length > 0) {
-          const firstActiveWeight = (
+          const activeWeightOptions = (
             productData as any
-          ).weight_options.findIndex((opt: any) => opt.isActive);
-          setSelectedWeightOption(Math.max(0, firstActiveWeight));
+          ).weight_options.filter((opt: any) => opt.isActive);
+          if (activeWeightOptions.length > 0) {
+            // Find the option with the lowest price
+            const lowestPriceOption = activeWeightOptions.reduce(
+              (lowest: any, current: any) => {
+                const currentPrice = parseInt(current.price) || 0;
+                const lowestPrice = parseInt(lowest.price) || 0;
+                return currentPrice < lowestPrice ? current : lowest;
+              }
+            );
+
+            // Find the index of the lowest price option in the original array
+            const lowestPriceIndex = (
+              productData as any
+            ).weight_options.findIndex(
+              (opt: any) =>
+                opt.weight === lowestPriceOption.weight &&
+                opt.price === lowestPriceOption.price
+            );
+            setSelectedWeightOption(Math.max(0, lowestPriceIndex));
+          }
         }
 
         if ((productData as any).piece_options?.length > 0) {

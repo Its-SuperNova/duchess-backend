@@ -446,6 +446,19 @@ export default function CouponButton({
 
     fetchData();
   }, [checkoutId]);
+  // Check if there are cart items that could potentially have applicable coupons
+  const hasCartItems = checkoutData?.items && checkoutData.items.length > 0;
+
+  // Don't render the component if no coupons are applicable and not loading
+  if (!loading && !featuredCoupon && !appliedCoupon && !hasExistingDiscounts) {
+    return null;
+  }
+
+  // Don't show loading state if there are no cart items (no point in checking for coupons)
+  if (loading && !hasCartItems && !appliedCoupon && !hasExistingDiscounts) {
+    return null;
+  }
+
   return (
     <>
       <div className="bg-white mx-4 rounded-2xl border border-gray-200 dark:border-gray-600 overflow-hidden">

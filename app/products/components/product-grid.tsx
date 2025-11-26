@@ -11,14 +11,6 @@ const ProductGridComponent = ({
   products,
   startIndex = 0,
 }: ProductGridProps) => {
-  // Price is now pre-calculated on the server
-  const getProductPrice = (product: Product) => {
-    return {
-      price: product.price || 100,
-      originalPrice: product.price || 100,
-    };
-  };
-
   if (products.length === 0) {
     return (
       <div className="text-center py-12">
@@ -36,7 +28,9 @@ const ProductGridComponent = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((product: Product, i) => {
-        const { price, originalPrice } = getProductPrice(product);
+        // Use the pre-calculated price from the API (already calculated server-side)
+        const price = product.price || 0;
+        const originalPrice = product.originalPrice;
         const globalIndex = startIndex + i;
 
         return (
@@ -47,7 +41,9 @@ const ProductGridComponent = ({
             rating={4.5}
             imageUrl={product.banner_image || "/images/categories/cake.png"}
             price={price}
-            originalPrice={originalPrice > price ? originalPrice : undefined}
+            originalPrice={
+              originalPrice && originalPrice > price ? originalPrice : undefined
+            }
             isVeg={product.is_veg}
             description={product.name}
             category={

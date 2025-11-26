@@ -2564,7 +2564,36 @@ export default function CheckoutClient() {
                 }
                 className="w-full bg-primary hover:bg-primary/90 text-white rounded-[18px] h-[48px] text-[16px] font-medium"
               >
-                Proceed to Payment
+                {(() => {
+                  if (isCalculatingDelivery) {
+                    return "Calculating...";
+                  }
+
+                  const missing: string[] = [];
+
+                  if (
+                    !addressText ||
+                    addressText === "2nd street, Barathipuram, Kannampalayam"
+                  ) {
+                    missing.push("address");
+                  }
+
+                  if (!contactInfo.name || !contactInfo.phone) {
+                    if (!contactInfo.name && !contactInfo.phone) {
+                      missing.push("receiver info");
+                    } else if (!contactInfo.name) {
+                      missing.push("receiver name");
+                    } else {
+                      missing.push("receiver phone");
+                    }
+                  }
+
+                  if (missing.length === 0) {
+                    return "Proceed to Payment";
+                  }
+
+                  return `Fill ${missing.join(" & ")}`;
+                })()}
               </Button>
             </div>
           </div>

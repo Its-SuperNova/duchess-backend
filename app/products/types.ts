@@ -4,6 +4,7 @@ export interface Product {
   banner_image: string | null; // Now can be null and contains Cloudinary URL
   is_veg: boolean;
   price: number;
+  originalPrice?: number;
   categories:
     | {
         name: string;

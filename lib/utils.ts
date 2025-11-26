@@ -36,40 +36,60 @@ export interface ProcessedProduct {
   };
 }
 
-// Extract the minimum price from piece options first, then weight options
+// Extract the absolute minimum price from ALL options (both piece and weight)
 export function getProductPrice(product: any): {
   price: number;
   originalPrice?: number;
 } {
   let minPrice = 0;
   let originalPrice: number | undefined;
+  const allPrices: number[] = [];
 
-  // Check piece options first (prioritize piece prices)
+  // Collect all prices from piece options
   if (product.piece_options && product.piece_options.length > 0) {
     const activePieceOptions = product.piece_options.filter(
-      (opt: any) => opt.isActive
+      (opt: any) =>
+        opt.isActive === true || opt.isActive === "true" || opt.isActive === 1
     );
-    if (activePieceOptions.length > 0) {
-      minPrice = Math.min(
-        ...activePieceOptions.map((opt: any) => parseInt(opt.price) || 0)
+
+    // If no active options found, consider all options (fallback)
+    const optionsToUse =
+      activePieceOptions.length > 0
+        ? activePieceOptions
+        : product.piece_options;
+
+    if (optionsToUse.length > 0) {
+      const piecePrices = optionsToUse.map(
+        (opt: any) => parseInt(opt.price) || 0
       );
+      allPrices.push(...piecePrices.filter((price: number) => price > 0));
     }
   }
 
-  // Check weight options if no piece options or piece options have no price
-  if (
-    minPrice === 0 &&
-    product.weight_options &&
-    product.weight_options.length > 0
-  ) {
+  // Collect all prices from weight options
+  if (product.weight_options && product.weight_options.length > 0) {
     const activeWeightOptions = product.weight_options.filter(
-      (opt: any) => opt.isActive
+      (opt: any) =>
+        opt.isActive === true || opt.isActive === "true" || opt.isActive === 1
     );
-    if (activeWeightOptions.length > 0) {
-      minPrice = Math.min(
-        ...activeWeightOptions.map((opt: any) => parseInt(opt.price) || 0)
+
+    // If no active options found, consider all options (fallback)
+    const optionsToUse =
+      activeWeightOptions.length > 0
+        ? activeWeightOptions
+        : product.weight_options;
+
+    if (optionsToUse.length > 0) {
+      const weightPrices = optionsToUse.map(
+        (opt: any) => parseInt(opt.price) || 0
       );
+      allPrices.push(...weightPrices.filter((price: number) => price > 0));
     }
+  }
+
+  // Find the absolute minimum price from all collected prices
+  if (allPrices.length > 0) {
+    minPrice = Math.min(...allPrices);
   }
 
   // Calculate original price if there's an offer
@@ -101,8 +121,8 @@ export function processProductForHomepage(dbProduct: any): ProcessedProduct {
     isVeg: dbProduct.is_veg,
     description: "Delicious pastry made with premium ingredients", // Default description
     category: dbProduct.categories?.name || "Pastry",
-    hasOffer: false, // No offer data in optimized query
-    offerPercentage: undefined, // No offer data in optimized query
+    hasOffer: dbProduct.has_offer || false,
+    offerPercentage: dbProduct.offer_percentage || undefined,
     categories: dbProduct.categories,
   };
 }

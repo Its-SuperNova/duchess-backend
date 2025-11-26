@@ -6,6 +6,11 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { categoryOrders } = body;
 
+    console.log("📦 Received category order update request:", {
+      categoryOrders,
+      count: categoryOrders?.length,
+    });
+
     if (!categoryOrders || !Array.isArray(categoryOrders)) {
       return NextResponse.json(
         { error: "Invalid category orders data", success: false },
@@ -14,6 +19,8 @@ export async function PUT(request: NextRequest) {
     }
 
     const result = await updateCategoryOrder(categoryOrders);
+
+    console.log("✅ Category order updated successfully:", result);
 
     return NextResponse.json(
       {
@@ -24,7 +31,7 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error updating category order:", error);
+    console.error("❌ Error updating category order:", error);
     return NextResponse.json(
       {
         error:

@@ -199,10 +199,15 @@ const ProductCard = memo(function ProductCard({
           </div>
 
           {/* Price on the right */}
-          <div className="flex items-center">
-            <p className="font-bold text-lg text-gray-900 dark:text-white">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-lg text-gray-900 dark:text-white">
               ₹{price}
-            </p>
+            </span>
+            {originalPrice && originalPrice > price && (
+              <span className="text-sm text-gray-500 line-through">
+                ₹{originalPrice}
+              </span>
+            )}
           </div>
         </div>
       </div>

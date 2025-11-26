@@ -8,7 +8,6 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { CartProvider } from "@/context/cart-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { ThemeProvider } from "@/context/theme-context";
-import AuthNotification from "@/components/auth/auth-notification";
 import ClientLayout from "./ClientLayout";
 
 export default function LayoutWrapper({
@@ -34,7 +33,6 @@ export default function LayoutWrapper({
       <ThemeProvider>
         <FavoritesProvider>
           <CartProvider>
-            <AuthNotification />
             <main className="flex-1">{children}</main>
             <Toaster />
             <SonnerToaster />

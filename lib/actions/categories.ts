@@ -271,16 +271,23 @@ export async function updateCategoryOrder(
 ) {
   try {
     return await withRetry(async () => {
+      console.log("🔄 Starting category order update:", {
+        receivedOrders: categoryOrders,
+      });
+
       // Get current categories to map IDs to names
       const { data: categories, error: categoriesError } = await supabaseAdmin
         .from("categories")
         .select("id, name");
 
       if (categoriesError) {
+        console.error("❌ Failed to fetch categories:", categoriesError);
         throw new Error(
           `Failed to fetch categories: ${categoriesError.message}`
         );
       }
+
+      console.log("📋 Fetched categories from database:", categories);
 
       // Create ordered array of category names based on the new order
       const orderedCategoryNames = categoryOrders
@@ -290,6 +297,8 @@ export async function updateCategoryOrder(
           return category?.name;
         })
         .filter(Boolean); // Remove any undefined values
+
+      console.log("📝 Ordered category names to save:", orderedCategoryNames);
 
       // Save the new order to the settings table
       const { data, error } = await supabaseAdmin
@@ -303,19 +312,27 @@ export async function updateCategoryOrder(
           {
             onConflict: "setting_key",
           }
-        );
+        )
+        .select(); // Add select to get the inserted/updated data
 
       if (error) {
-        console.error("Error updating category order:", error);
+        console.error("❌ Error updating category order in database:", error);
         throw new Error(`Failed to update category order: ${error.message}`);
       }
 
+      console.log("💾 Successfully saved to database:", data);
+
+      // Revalidate paths to reflect new order
       revalidatePath("/admin/category-management");
       revalidatePath("/"); // Revalidate home page to reflect new order
-      return { success: true };
+      revalidatePath("/api/categories"); // Revalidate API route to clear cache
+
+      console.log("🔄 Revalidated paths");
+
+      return { success: true, data };
     });
   } catch (error) {
-    console.error("Error in updateCategoryOrder:", error);
+    console.error("❌ Error in updateCategoryOrder:", error);
     throw new Error("Failed to update category order");
   }
 }
